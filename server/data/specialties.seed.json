@@ -1,0 +1,176 @@
+[
+  {
+    "code": "HIS-CS-AI",
+    "title": "B.Sc. Artificial Intelligence & Software Engineering",
+    "department": "Computer Science",
+    "description": "Builds strong foundations in algorithms, programming, systems design, and applied AI.",
+    "weights": {
+      "MATH": 1.4,
+      "PHYSICS": 1.2,
+      "ENGLISH": 0.8,
+      "FRENCH": 0.5,
+      "NATURAL_SCIENCES": 0.4
+    },
+    "streamModifiers": {
+      "MATHEMATICS": 1,
+      "EXPERIMENTAL_SCIENCES": 0.97,
+      "TECHNICAL_MATHEMATICS": 0.98,
+      "MANAGEMENT_ECONOMY": 0.82,
+      "FOREIGN_LANGUAGES": 0.75,
+      "LITERATURE_PHILOSOPHY": 0.7
+    },
+    "riasecBenchmark": {
+      "R": 62,
+      "I": 92,
+      "A": 38,
+      "S": 34,
+      "E": 54,
+      "C": 66
+    }
+  },
+  {
+    "code": "HIS-DS-STAT",
+    "title": "B.Sc. Data Science & Applied Statistics",
+    "department": "Computing and Analytics",
+    "description": "Focuses on probability, statistics, machine learning, and data-driven decision making.",
+    "weights": {
+      "MATH": 1.5,
+      "PHYSICS": 0.9,
+      "ECONOMICS": 0.7,
+      "ACCOUNTING_FINANCE": 0.5,
+      "ENGLISH": 0.6
+    },
+    "streamModifiers": {
+      "MATHEMATICS": 1,
+      "EXPERIMENTAL_SCIENCES": 0.96,
+      "TECHNICAL_MATHEMATICS": 0.97,
+      "MANAGEMENT_ECONOMY": 0.92,
+      "FOREIGN_LANGUAGES": 0.76,
+      "LITERATURE_PHILOSOPHY": 0.72
+    },
+    "riasecBenchmark": {
+      "R": 50,
+      "I": 95,
+      "A": 34,
+      "S": 44,
+      "E": 58,
+      "C": 72
+    }
+  },
+  {
+    "code": "HIS-BUS-FIN",
+    "title": "B.Sc. Financial Technology & Analytics",
+    "department": "Business Administration",
+    "description": "Combines finance, economics, data literacy, and digital business operations.",
+    "weights": {
+      "MATH": 1,
+      "ECONOMICS": 1.3,
+      "ACCOUNTING_FINANCE": 1.4,
+      "ENGLISH": 0.7,
+      "HISTORY_GEOGRAPHY": 0.4
+    },
+    "streamModifiers": {
+      "MATHEMATICS": 0.95,
+      "EXPERIMENTAL_SCIENCES": 0.84,
+      "TECHNICAL_MATHEMATICS": 0.9,
+      "MANAGEMENT_ECONOMY": 1,
+      "FOREIGN_LANGUAGES": 0.8,
+      "LITERATURE_PHILOSOPHY": 0.76
+    },
+    "riasecBenchmark": {
+      "R": 42,
+      "I": 72,
+      "A": 28,
+      "S": 48,
+      "E": 86,
+      "C": 82
+    }
+  },
+  {
+    "code": "HIS-BIO-HEALTH",
+    "title": "B.Sc. Biotechnology & Health Sciences",
+    "department": "Life Sciences",
+    "description": "Prepares students for laboratory science, applied biology, and health innovation.",
+    "weights": {
+      "NATURAL_SCIENCES": 1.5,
+      "PHYSICS": 1,
+      "MATH": 0.9,
+      "ENGLISH": 0.6,
+      "ARABIC": 0.3
+    },
+    "streamModifiers": {
+      "MATHEMATICS": 0.92,
+      "EXPERIMENTAL_SCIENCES": 1,
+      "TECHNICAL_MATHEMATICS": 0.88,
+      "MANAGEMENT_ECONOMY": 0.75,
+      "FOREIGN_LANGUAGES": 0.72,
+      "LITERATURE_PHILOSOPHY": 0.7
+    },
+    "riasecBenchmark": {
+      "R": 64,
+      "I": 90,
+      "A": 30,
+      "S": 58,
+      "E": 40,
+      "C": 60
+    }
+  },
+  {
+    "code": "HIS-IR-COMM",
+    "title": "B.A. International Relations & Communication",
+    "department": "Humanities and Languages",
+    "description": "Centers on communication, languages, diplomacy, and social analysis.",
+    "weights": {
+      "ENGLISH": 1.2,
+      "FRENCH": 1.1,
+      "ARABIC": 0.9,
+      "HISTORY_GEOGRAPHY": 1,
+      "PHILOSOPHY": 0.7
+    },
+    "streamModifiers": {
+      "MATHEMATICS": 0.78,
+      "EXPERIMENTAL_SCIENCES": 0.8,
+      "TECHNICAL_MATHEMATICS": 0.76,
+      "MANAGEMENT_ECONOMY": 0.9,
+      "FOREIGN_LANGUAGES": 1,
+      "LITERATURE_PHILOSOPHY": 0.97
+    },
+    "riasecBenchmark": {
+      "R": 22,
+      "I": 58,
+      "A": 68,
+      "S": 84,
+      "E": 70,
+      "C": 42
+    }
+  },
+  {
+    "code": "HIS-DESIGN-MEDIA",
+    "title": "B.A. Digital Media Design",
+    "department": "Creative Technologies",
+    "description": "Blends visual storytelling, design systems, and digital production skills.",
+    "weights": {
+      "ENGLISH": 0.9,
+      "FRENCH": 0.7,
+      "PHILOSOPHY": 0.9,
+      "ARABIC": 0.8,
+      "HISTORY_GEOGRAPHY": 0.6
+    },
+    "streamModifiers": {
+      "MATHEMATICS": 0.8,
+      "EXPERIMENTAL_SCIENCES": 0.82,
+      "TECHNICAL_MATHEMATICS": 0.84,
+      "MANAGEMENT_ECONOMY": 0.86,
+      "FOREIGN_LANGUAGES": 0.98,
+      "LITERATURE_PHILOSOPHY": 1
+    },
+    "riasecBenchmark": {
+      "R": 30,
+      "I": 46,
+      "A": 96,
+      "S": 60,
+      "E": 55,
+      "C": 36
+    }
+  }
+]
