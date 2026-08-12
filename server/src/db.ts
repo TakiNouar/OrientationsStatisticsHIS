@@ -220,6 +220,9 @@ export const getActiveSpecialties = (): HisSpecialtyConfig[] => {
   }));
 };
 
+// Tables must exist before statements are prepared (module load order).
+createTables();
+
 const insertStudent = db.prepare(`
   INSERT INTO students (id, full_name, bac_stream, overall_bac_mark)
   VALUES (?, ?, ?, ?)
