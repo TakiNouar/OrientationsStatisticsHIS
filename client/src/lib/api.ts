@@ -22,8 +22,22 @@ export async function calculateRecommendations(
   if (!response.ok) {
     let message = `Calculation failed (${response.status})`;
     try {
-      const body = (await response.json()) as { message?: string };
-      if (body.message) message = body.message;
+      const body = (await response.json()) as {
+        message?: string;
+        issues?: Array<{ path?: (string | number)[]; message?: string }>;
+      };
+      if (body.message) {
+        message = body.message;
+      }
+      if (body.issues && body.issues.length > 0) {
+        const details = body.issues
+          .map((issue) => {
+            const path = issue.path?.join(".") || "payload";
+            return `${path}: ${issue.message ?? "invalid"}`;
+          })
+          .join(" | ");
+        message = `${message} — ${details}`;
+      }
     } catch {
       // ignore parse errors
     }
