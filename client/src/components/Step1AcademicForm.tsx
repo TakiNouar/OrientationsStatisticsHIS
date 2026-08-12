@@ -1,0 +1,104 @@
+import type { BacStream, ConfigResponse, SubjectCode } from "../types";
+import { STREAM_LABELS, SUBJECT_LABELS } from "../types";
+import type { WizardFormState } from "../hooks/useRecommendationWizard";
+
+type Props = {
+  config: ConfigResponse;
+  form: WizardFormState;
+  requiredSubjects: SubjectCode[];
+  onFullName: (v: string) => void;
+  onBacStream: (v: BacStream) => void;
+  onOverallBacMark: (v: string) => void;
+  onGrade: (subject: SubjectCode, value: string) => void;
+};
+
+export function Step1AcademicForm({
+  config,
+  form,
+  requiredSubjects,
+  onFullName,
+  onBacStream,
+  onOverallBacMark,
+  onGrade,
+}: Props) {
+  return (
+    <div className="space-y-6 text-left">
+      <div>
+        <h2 className="text-xl font-semibold text-slate-900 dark:text-slate-100">
+          Academic profile
+        </h2>
+        <p className="mt-1 text-sm text-slate-500">
+          Enter BAC stream, overall mark, and required subject grades (0–20).
+        </p>
+      </div>
+
+      <label className="block">
+        <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Full name</span>
+        <input
+          type="text"
+          className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
+          value={form.fullName}
+          onChange={(e) => onFullName(e.target.value)}
+          placeholder="Student full name"
+        />
+      </label>
+
+      <label className="block">
+        <span className="text-sm font-medium text-slate-700 dark:text-slate-300">BAC stream</span>
+        <select
+          className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
+          value={form.bacStream}
+          onChange={(e) => onBacStream(e.target.value as BacStream)}
+        >
+          <option value="">Select stream…</option>
+          {config.bacStreams.map((stream) => (
+            <option key={stream} value={stream}>
+              {STREAM_LABELS[stream]}
+            </option>
+          ))}
+        </select>
+      </label>
+
+      <label className="block">
+        <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
+          Overall BAC mark (0–20)
+        </span>
+        <input
+          type="number"
+          min={0}
+          max={20}
+          step={0.01}
+          className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
+          value={form.overallBacMark}
+          onChange={(e) => onOverallBacMark(e.target.value)}
+        />
+      </label>
+
+      {form.bacStream && (
+        <div>
+          <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-200 mb-3">
+            Required subjects for {STREAM_LABELS[form.bacStream]}
+          </h3>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {requiredSubjects.map((subject) => (
+              <label key={subject} className="block">
+                <span className="text-sm text-slate-600 dark:text-slate-400">
+                  {SUBJECT_LABELS[subject]}
+                </span>
+                <input
+                  type="number"
+                  min={0}
+                  max={20}
+                  step={0.01}
+                  className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
+                  value={form.grades[subject] ?? ""}
+                  onChange={(e) => onGrade(subject, e.target.value)}
+                />
+              </label>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
