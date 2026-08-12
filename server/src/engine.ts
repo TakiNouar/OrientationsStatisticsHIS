@@ -153,7 +153,7 @@ const calculateAcademicScore = (
   };
 };
 
-export const calculateRecommendation = (
+export const calculateRecommendations = (
   studentProfile: StudentProfile,
   specialties: HisSpecialtyConfig[],
 ): CalculationResult => {
