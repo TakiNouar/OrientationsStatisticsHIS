@@ -1,122 +1,143 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
+import { useEffect, useState } from "react";
+import { StepIndicator } from "./components/StepIndicator";
+import { Step1AcademicForm } from "./components/Step1AcademicForm";
+import { Step2RiasecForm } from "./components/Step2RiasecForm";
+import { Step3Results } from "./components/Step3Results";
+import { useRecommendationWizard } from "./hooks/useRecommendationWizard";
+import { fetchConfig } from "./lib/api";
+import type { ConfigResponse, TopRiasecProfile } from "./types";
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [config, setConfig] = useState<ConfigResponse | null>(null);
+  const [configError, setConfigError] = useState<string | null>(null);
+  const [configLoading, setConfigLoading] = useState(true);
+
+  const wizard = useRecommendationWizard(config);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const data = await fetchConfig();
+        if (!cancelled) setConfig(data);
+      } catch (e) {
+        if (!cancelled) {
+          setConfigError(
+            e instanceof Error
+              ? e.message
+              : "Could not reach the backend. Start the server on port 3001.",
+          );
+        }
+      } finally {
+        if (!cancelled) setConfigLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
+    <div className="min-h-svh bg-slate-100 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
+      <header className="border-b border-slate-200 bg-white/90 backdrop-blur dark:border-slate-800 dark:bg-slate-900/90">
+        <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-4">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wider text-indigo-600">
+              HIS University
+            </p>
+            <h1 className="text-lg font-bold sm:text-xl">Statistical Recommendation Engine</h1>
+          </div>
+          <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+            Offline LAN
+          </span>
         </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+      </header>
 
-      <div className="ticks"></div>
+      <main className="mx-auto max-w-3xl px-4 py-8">
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-8 dark:border-slate-800 dark:bg-slate-900">
+          {configLoading && (
+            <p className="text-center text-sm text-slate-500">Loading configuration…</p>
+          )}
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
+          {configError && (
+            <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200">
+              <p className="font-semibold">Backend unavailable</p>
+              <p className="mt-1">{configError}</p>
+              <p className="mt-2 text-xs opacity-80">
+                From <code>server/</code> run <code>npm run dev</code> (port 3001).
+              </p>
+            </div>
+          )}
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+          {config && (
+            <>
+              <StepIndicator step={wizard.step} />
+
+              {wizard.step === 1 && (
+                <Step1AcademicForm
+                  config={config}
+                  form={wizard.form}
+                  requiredSubjects={wizard.requiredSubjects}
+                  onFullName={wizard.setFullName}
+                  onBacStream={wizard.setBacStream}
+                  onOverallBacMark={wizard.setOverallBacMark}
+                  onGrade={wizard.setGrade}
+                />
+              )}
+
+              {wizard.step === 2 && (
+                <Step2RiasecForm
+                  config={config}
+                  form={wizard.form}
+                  availableLetters={wizard.availableLetters}
+                  onSlotChange={wizard.setTopRiasecSlot}
+                />
+              )}
+
+              {wizard.step === 3 && wizard.result && (
+                <Step3Results
+                  result={wizard.result}
+                  topRiasec={wizard.form.topRiasec as TopRiasecProfile}
+                  onReset={wizard.reset}
+                />
+              )}
+
+              {wizard.error && (
+                <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
+                  {wizard.error}
+                </div>
+              )}
+
+              {wizard.step !== 3 && (
+                <div className="mt-8 flex items-center justify-between gap-3">
+                  <button
+                    type="button"
+                    onClick={wizard.goBack}
+                    disabled={wizard.step === 1 || wizard.loading}
+                    className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 disabled:opacity-40 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800"
+                  >
+                    Back
+                  </button>
+                  <button
+                    type="button"
+                    onClick={wizard.goNext}
+                    disabled={wizard.loading}
+                    className="rounded-lg bg-indigo-600 px-5 py-2 text-sm font-semibold text-white shadow hover:bg-indigo-500 disabled:opacity-60"
+                  >
+                    {wizard.loading
+                      ? "Calculating…"
+                      : wizard.step === 2
+                        ? "Calculate matches"
+                        : "Continue"}
+                  </button>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </main>
+    </div>
+  );
 }
 
-export default App
+export default App;
