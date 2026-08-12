@@ -1,16 +1,29 @@
 import type {
   CalculationResult,
   HisSpecialtyConfig,
+  HollandCode,
+  RiasecLetter,
   RiasecVector,
   SpecialtyMatchBreakdown,
   StudentProfile,
   SubjectCode,
   TopRiasecProfile,
 } from "./types.js";
-import { topRiasecToVector } from "./types.js";
+import {
+  isTechnicalBacStream,
+  labelFromFinalScore,
+  MATCH_LABEL_TEXT,
+  topRiasecToVector,
+} from "./types.js";
 
-const ACADEMIC_WEIGHT = 0.7;
-const PSYCHOMETRIC_WEIGHT = 0.3;
+/** Phase A weights: academic / RIASEC / technical alignment */
+const ACADEMIC_WEIGHT = 0.4;
+const RIASEC_WEIGHT = 0.3;
+const TECHNICAL_WEIGHT = 0.3;
+
+/** Hybrid RIASEC: emphasize Holland code match over pure cosine */
+const COSINE_BLEND = 0.3;
+const CODE_MATCH_BLEND = 0.7;
 
 const toFixedNumber = (value: number, digits = 2): number =>
   Number.parseFloat(value.toFixed(digits));
@@ -24,92 +37,153 @@ const getVectorValues = (vector: RiasecVector): number[] => [
   vector.conventional,
 ];
 
-const dotProduct = (left: number[], right: number[]): number =>
-  left.reduce((sum, value, index) => sum + value * (right[index] ?? 0), 0);
+const cosineSimilarity = (a: RiasecVector, b: RiasecVector): number => {
+  const va = getVectorValues(a);
+  const vb = getVectorValues(b);
 
-const magnitude = (vector: number[]): number =>
-  Math.sqrt(vector.reduce((sum, value) => sum + value * value, 0));
+  let dot = 0;
+  let normA = 0;
+  let normB = 0;
 
-const calculateAcademicBase = (
-  grades: Partial<Record<SubjectCode, number>>,
-  weights: Partial<Record<SubjectCode, number>>,
-): number => {
-  const weightedEntries = Object.entries(weights).filter(
-    ([subject, weight]) =>
-      typeof grades[subject as SubjectCode] === "number" && typeof weight === "number",
-  );
+  for (let i = 0; i < va.length; i += 1) {
+    dot += va[i] * vb[i];
+    normA += va[i] * va[i];
+    normB += vb[i] * vb[i];
+  }
 
-  if (weightedEntries.length === 0) {
+  if (normA === 0 || normB === 0) {
     return 0;
   }
 
-  const numerator = weightedEntries.reduce((sum, [subject, weight]) => {
-    const grade = grades[subject as SubjectCode] ?? 0;
-    return sum + grade * weight;
-  }, 0);
-
-  const denominator = weightedEntries.reduce((sum, [, weight]) => sum + 20 * weight, 0);
-
-  if (denominator === 0) {
-    return 0;
-  }
-
-  return (numerator / denominator) * 100;
+  return dot / (Math.sqrt(normA) * Math.sqrt(normB));
 };
 
 /**
- * Top-3 RIASEC scoring:
- * 1. Expand the three weighted letters into a sparse 6D vector (others = 0)
- * 2. Cosine similarity against the specialty's full 6D benchmark
- * 3. Neutral 50% fallback when either vector has zero magnitude
+ * Holland-code match (0–100).
+ * Specialty code positions weighted 50 / 35 / 15.
+ * Presence of letter + student weight strength + same-rank bonus.
  */
-const calculatePsychometricScore = (
-  topRiasec: TopRiasecProfile,
-  benchmarkVector: RiasecVector,
-): { cosineSimilarity: number; percentage: number } => {
-  const studentValues = getVectorValues(topRiasecToVector(topRiasec));
-  const benchmarkValues = getVectorValues(benchmarkVector);
-  const studentMagnitude = magnitude(studentValues);
-  const benchmarkMagnitude = magnitude(benchmarkValues);
+export const codeMatchScore = (
+  top: TopRiasecProfile,
+  hollandCode: HollandCode,
+): number => {
+  const studentOrder = top.map((entry) => entry.letter) as RiasecLetter[];
+  const weightByLetter: Partial<Record<RiasecLetter, number>> = {};
+  for (const entry of top) {
+    weightByLetter[entry.letter] = entry.weight;
+  }
 
-  if (studentMagnitude === 0 || benchmarkMagnitude === 0) {
+  const maxWeight = Math.max(...top.map((entry) => entry.weight), 1);
+  const positionWeights = [50, 35, 15];
+  const maxPossible = positionWeights.reduce((sum, value) => sum + value, 0);
+
+  let score = 0;
+
+  for (let i = 0; i < 3; i += 1) {
+    const letter = hollandCode[i];
+    const studentWeight = weightByLetter[letter];
+    if (studentWeight === undefined) {
+      continue;
+    }
+
+    const studentIdx = studentOrder.indexOf(letter);
+    const strength = studentWeight / maxWeight;
+    let credit = positionWeights[i] * (0.45 + 0.55 * strength);
+
+    if (studentIdx === i) {
+      credit *= 1.2;
+    }
+
+    score += credit;
+  }
+
+  return toFixedNumber(Math.min(100, (score / maxPossible) * 100));
+};
+
+export const technicalAlignmentScore = (
+  bacStream: StudentProfile["bacStream"],
+  specialtyIsTechnical: boolean,
+): number => {
+  const studentTechnical = isTechnicalBacStream(bacStream);
+
+  if (studentTechnical && specialtyIsTechnical) return 100;
+  if (studentTechnical && !specialtyIsTechnical) return 20;
+  if (!studentTechnical && !specialtyIsTechnical) return 80;
+  return 30;
+};
+
+const calculateAcademicScore = (
+  studentProfile: StudentProfile,
+  specialty: HisSpecialtyConfig,
+): { academicScore: number; rawAcademicPercentage: number; streamModifier: number } => {
+  const streamModifier = specialty.streamModifiers[studentProfile.bacStream] ?? 0.75;
+  const weightEntries = Object.entries(specialty.subjectWeights.weights) as [
+    SubjectCode,
+    number,
+  ][];
+
+  let weightedSum = 0;
+  let totalWeight = 0;
+
+  for (const [subject, weight] of weightEntries) {
+    const grade = studentProfile.academicPerformance.grades[subject];
+    if (typeof grade !== "number") {
+      continue;
+    }
+
+    weightedSum += grade * weight;
+    totalWeight += weight;
+  }
+
+  if (totalWeight === 0) {
     return {
-      cosineSimilarity: 0.5,
-      percentage: 50,
+      academicScore: 0,
+      rawAcademicPercentage: 0,
+      streamModifier,
     };
   }
 
-  const cosineSimilarity =
-    dotProduct(studentValues, benchmarkValues) / (studentMagnitude * benchmarkMagnitude);
-
-  // Cosine on non-negative vectors is in [0, 1]
-  const clamped = Math.max(0, Math.min(1, cosineSimilarity));
+  const rawAcademicPercentage = (weightedSum / totalWeight / 20) * 100;
+  const academicScore = rawAcademicPercentage * streamModifier;
 
   return {
-    cosineSimilarity: clamped,
-    percentage: clamped * 100,
+    academicScore: toFixedNumber(Math.min(academicScore, 100)),
+    rawAcademicPercentage: toFixedNumber(rawAcademicPercentage),
+    streamModifier,
   };
 };
 
-export const calculateRecommendations = (
+export const calculateRecommendation = (
   studentProfile: StudentProfile,
   specialties: HisSpecialtyConfig[],
 ): CalculationResult => {
-  const rankedMatches: SpecialtyMatchBreakdown[] = specialties
+  const studentVector = topRiasecToVector(studentProfile.topRiasec);
+  const technicalStream = isTechnicalBacStream(studentProfile.bacStream);
+
+  const matches: SpecialtyMatchBreakdown[] = specialties
     .filter((specialty) => specialty.isActive)
     .map((specialty) => {
-      const rawAcademicPercentage = calculateAcademicBase(
-        studentProfile.academicPerformance.grades,
-        specialty.subjectWeights.weights,
+      const academic = calculateAcademicScore(studentProfile, specialty);
+
+      const cosine = cosineSimilarity(studentVector, specialty.riasecBenchmark.vector);
+      const cosineScore = cosine * 100;
+      const codeScore = codeMatchScore(studentProfile.topRiasec, specialty.hollandCode);
+      const psychometricScore = toFixedNumber(
+        COSINE_BLEND * cosineScore + CODE_MATCH_BLEND * codeScore,
       );
-      const streamModifierApplied = specialty.streamModifiers[studentProfile.bacStream];
-      const academicScore = rawAcademicPercentage * streamModifierApplied;
-      const psychometric = calculatePsychometricScore(
-        studentProfile.topRiasec,
-        specialty.riasecBenchmark.vector,
+
+      const technicalScore = technicalAlignmentScore(
+        studentProfile.bacStream,
+        specialty.isTechnical,
       );
-      const finalScore =
-        academicScore * ACADEMIC_WEIGHT + psychometric.percentage * PSYCHOMETRIC_WEIGHT;
+
+      const finalScore = toFixedNumber(
+        ACADEMIC_WEIGHT * academic.academicScore +
+          RIASEC_WEIGHT * psychometricScore +
+          TECHNICAL_WEIGHT * technicalScore,
+      );
+
+      const matchLabel = labelFromFinalScore(finalScore);
 
       return {
         specialtyId: specialty.id,
@@ -117,18 +191,26 @@ export const calculateRecommendations = (
         specialtyTitle: specialty.title,
         department: specialty.department,
         description: specialty.description,
-        academicScore: toFixedNumber(academicScore),
-        psychometricScore: toFixedNumber(psychometric.percentage),
-        finalScore: toFixedNumber(finalScore),
+        isTechnical: specialty.isTechnical,
+        hollandCode: specialty.hollandCode,
+        academicScore: academic.academicScore,
+        psychometricScore,
+        technicalScore,
+        finalScore,
+        matchLabel,
+        matchLabelText: MATCH_LABEL_TEXT[matchLabel],
         rank: 0,
         details: {
-          streamModifierApplied: toFixedNumber(streamModifierApplied),
-          rawAcademicPercentage: toFixedNumber(rawAcademicPercentage),
-          vectorCosineSimilarity: toFixedNumber(psychometric.cosineSimilarity, 3),
+          streamModifierApplied: academic.streamModifier,
+          rawAcademicPercentage: academic.rawAcademicPercentage,
+          vectorCosineSimilarity: toFixedNumber(cosine, 4),
+          codeMatchScore: codeScore,
+          cosineComponent: toFixedNumber(COSINE_BLEND * cosineScore),
+          codeMatchComponent: toFixedNumber(CODE_MATCH_BLEND * codeScore),
         },
       };
     })
-    .sort((left, right) => right.finalScore - left.finalScore)
+    .sort((a, b) => b.finalScore - a.finalScore)
     .map((match, index) => ({
       ...match,
       rank: index + 1,
@@ -139,6 +221,12 @@ export const calculateRecommendations = (
     timestamp: new Date().toISOString(),
     studentName: studentProfile.fullName,
     bacStream: studentProfile.bacStream,
-    matches: rankedMatches,
+    isTechnicalStream: technicalStream,
+    weights: {
+      academic: ACADEMIC_WEIGHT,
+      riasec: RIASEC_WEIGHT,
+      technical: TECHNICAL_WEIGHT,
+    },
+    matches,
   };
 };
