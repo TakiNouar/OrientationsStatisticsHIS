@@ -26,6 +26,27 @@ export type BacStream = (typeof BAC_STREAMS)[number];
 export type SubjectCode = (typeof SUBJECT_CODES)[number];
 export type RiasecLetter = (typeof RIASEC_LETTERS)[number];
 
+export const TECHNICAL_BAC_STREAMS: readonly BacStream[] = [
+  "MATHEMATICS",
+  "EXPERIMENTAL_SCIENCES",
+  "TECHNICAL_MATHEMATICS",
+] as const;
+
+export type MatchLabel =
+  | "STRONG_MATCH"
+  | "STRONG_MATCH_CONVERSATION"
+  | "POSSIBLE_FIT"
+  | "PROFILE_DEVELOPING"
+  | "WEAK_MATCH";
+
+export const MATCH_LABEL_TEXT: Record<MatchLabel, string> = {
+  STRONG_MATCH: "Strong match",
+  STRONG_MATCH_CONVERSATION: "Strong match — worth a conversation",
+  POSSIBLE_FIT: "Possible fit / ambiguous",
+  PROFILE_DEVELOPING: "Interested, profile still developing",
+  WEAK_MATCH: "Weak match — explore other options",
+};
+
 export interface BacGrades {
   grades: Partial<Record<SubjectCode, number>>;
   overallBacMark: number;
@@ -66,12 +87,16 @@ export interface RiasecBenchmark {
   vector: RiasecVector;
 }
 
+export type HollandCode = [RiasecLetter, RiasecLetter, RiasecLetter];
+
 export interface HisSpecialtyConfig {
   id: string;
   code: string;
   title: string;
   department: string;
   description: string;
+  isTechnical: boolean;
+  hollandCode: HollandCode;
   subjectWeights: SubjectWeightMap;
   streamModifiers: Record<BacStream, number>;
   riasecBenchmark: RiasecBenchmark;
@@ -84,14 +109,22 @@ export interface SpecialtyMatchBreakdown {
   specialtyTitle: string;
   department: string;
   description: string;
+  isTechnical: boolean;
+  hollandCode: HollandCode;
   academicScore: number;
   psychometricScore: number;
+  technicalScore: number;
   finalScore: number;
+  matchLabel: MatchLabel;
+  matchLabelText: string;
   rank: number;
   details: {
     streamModifierApplied: number;
     rawAcademicPercentage: number;
     vectorCosineSimilarity: number;
+    codeMatchScore: number;
+    cosineComponent: number;
+    codeMatchComponent: number;
   };
 }
 
@@ -100,6 +133,12 @@ export interface CalculationResult {
   timestamp: string;
   studentName: string;
   bacStream: BacStream;
+  isTechnicalStream: boolean;
+  weights: {
+    academic: number;
+    riasec: number;
+    technical: number;
+  };
   matches: SpecialtyMatchBreakdown[];
 }
 
@@ -108,6 +147,8 @@ export type SeedSpecialty = {
   title: string;
   department: string;
   description: string;
+  isTechnical: boolean;
+  hollandCode: [RiasecLetter, RiasecLetter, RiasecLetter];
   weights: Partial<Record<SubjectCode, number>>;
   streamModifiers: Record<BacStream, number>;
   riasecBenchmark: {
@@ -164,4 +205,15 @@ export const topRiasecToVector = (top: TopRiasecProfile): RiasecVector => {
   }
 
   return vector;
+};
+
+export const isTechnicalBacStream = (stream: BacStream): boolean =>
+  (TECHNICAL_BAC_STREAMS as readonly string[]).includes(stream);
+
+export const labelFromFinalScore = (finalScore: number): MatchLabel => {
+  if (finalScore >= 80) return "STRONG_MATCH";
+  if (finalScore >= 65) return "STRONG_MATCH_CONVERSATION";
+  if (finalScore >= 50) return "POSSIBLE_FIT";
+  if (finalScore >= 35) return "PROFILE_DEVELOPING";
+  return "WEAK_MATCH";
 };
