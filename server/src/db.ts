@@ -8,6 +8,7 @@ import type {
   StudentProfile,
   SubjectCode,
 } from "./types.js";
+import { topRiasecToVector } from "./types.js";
 
 const dataDir = path.resolve(process.cwd(), "data");
 const dbPath = path.join(dataDir, "his-sre.db");
@@ -45,7 +46,8 @@ const createTables = (): void => {
       artistic_score NUMERIC NOT NULL CHECK (artistic_score >= 0.00),
       social_score NUMERIC NOT NULL CHECK (social_score >= 0.00),
       enterprising_score NUMERIC NOT NULL CHECK (enterprising_score >= 0.00),
-      conventional_score NUMERIC NOT NULL CHECK (conventional_score >= 0.00)
+      conventional_score NUMERIC NOT NULL CHECK (conventional_score >= 0.00),
+      top_riasec_json TEXT
     );
 
     CREATE TABLE IF NOT EXISTS his_specialties (
@@ -76,6 +78,12 @@ const createTables = (): void => {
     CREATE INDEX IF NOT EXISTS idx_evaluations_specialty ON match_evaluations(specialty_id);
     CREATE INDEX IF NOT EXISTS idx_evaluations_final_score ON match_evaluations(final_score DESC);
   `);
+
+  try {
+    db.exec(`ALTER TABLE riasec_profiles ADD COLUMN top_riasec_json TEXT`);
+  } catch {
+    // Column already exists.
+  }
 };
 
 const loadSeedData = (): SeedSpecialty[] => {
@@ -231,8 +239,9 @@ const insertRiasec = db.prepare(`
     artistic_score,
     social_score,
     enterprising_score,
-    conventional_score
-  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    conventional_score,
+    top_riasec_json
+  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
 `);
 
 const insertEvaluation = db.prepare(`
@@ -258,20 +267,25 @@ export const persistEvaluation = (studentProfile: StudentProfile, result: Calcul
       studentProfile.academicPerformance.overallBacMark,
     );
 
-    const gradeEntries = Object.entries(studentProfile.academicPerformance.grades) as [SubjectCode, number][];
+    const gradeEntries = Object.entries(studentProfile.academicPerformance.grades) as [
+      SubjectCode,
+      number,
+    ][];
     for (const [subjectCode, grade] of gradeEntries) {
       insertGrade.run(crypto.randomUUID(), studentId, subjectCode, grade);
     }
 
+    const expanded = topRiasecToVector(studentProfile.topRiasec);
     insertRiasec.run(
       crypto.randomUUID(),
       studentId,
-      studentProfile.psychometricProfile.realistic,
-      studentProfile.psychometricProfile.investigative,
-      studentProfile.psychometricProfile.artistic,
-      studentProfile.psychometricProfile.social,
-      studentProfile.psychometricProfile.enterprising,
-      studentProfile.psychometricProfile.conventional,
+      expanded.realistic,
+      expanded.investigative,
+      expanded.artistic,
+      expanded.social,
+      expanded.enterprising,
+      expanded.conventional,
+      JSON.stringify(studentProfile.topRiasec),
     );
 
     for (const match of result.matches) {
