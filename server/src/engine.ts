@@ -5,7 +5,9 @@ import type {
   SpecialtyMatchBreakdown,
   StudentProfile,
   SubjectCode,
+  TopRiasecProfile,
 } from "./types.js";
+import { topRiasecToVector } from "./types.js";
 
 const ACADEMIC_WEIGHT = 0.7;
 const PSYCHOMETRIC_WEIGHT = 0.3;
@@ -33,7 +35,8 @@ const calculateAcademicBase = (
   weights: Partial<Record<SubjectCode, number>>,
 ): number => {
   const weightedEntries = Object.entries(weights).filter(
-    ([subject, weight]) => typeof grades[subject as SubjectCode] === "number" && typeof weight === "number",
+    ([subject, weight]) =>
+      typeof grades[subject as SubjectCode] === "number" && typeof weight === "number",
   );
 
   if (weightedEntries.length === 0) {
@@ -54,16 +57,21 @@ const calculateAcademicBase = (
   return (numerator / denominator) * 100;
 };
 
+/**
+ * Top-3 RIASEC scoring:
+ * 1. Expand the three weighted letters into a sparse 6D vector (others = 0)
+ * 2. Cosine similarity against the specialty's full 6D benchmark
+ * 3. Neutral 50% fallback when either vector has zero magnitude
+ */
 const calculatePsychometricScore = (
-  studentVector: RiasecVector,
+  topRiasec: TopRiasecProfile,
   benchmarkVector: RiasecVector,
 ): { cosineSimilarity: number; percentage: number } => {
-  const studentValues = getVectorValues(studentVector);
+  const studentValues = getVectorValues(topRiasecToVector(topRiasec));
   const benchmarkValues = getVectorValues(benchmarkVector);
   const studentMagnitude = magnitude(studentValues);
   const benchmarkMagnitude = magnitude(benchmarkValues);
 
-  // Neutral fallback aligned with the specification's zero-vector handling.
   if (studentMagnitude === 0 || benchmarkMagnitude === 0) {
     return {
       cosineSimilarity: 0.5,
@@ -71,11 +79,15 @@ const calculatePsychometricScore = (
     };
   }
 
-  const cosineSimilarity = dotProduct(studentValues, benchmarkValues) / (studentMagnitude * benchmarkMagnitude);
+  const cosineSimilarity =
+    dotProduct(studentValues, benchmarkValues) / (studentMagnitude * benchmarkMagnitude);
+
+  // Cosine on non-negative vectors is in [0, 1]
+  const clamped = Math.max(0, Math.min(1, cosineSimilarity));
 
   return {
-    cosineSimilarity,
-    percentage: cosineSimilarity * 100,
+    cosineSimilarity: clamped,
+    percentage: clamped * 100,
   };
 };
 
@@ -93,10 +105,11 @@ export const calculateRecommendations = (
       const streamModifierApplied = specialty.streamModifiers[studentProfile.bacStream];
       const academicScore = rawAcademicPercentage * streamModifierApplied;
       const psychometric = calculatePsychometricScore(
-        studentProfile.psychometricProfile,
+        studentProfile.topRiasec,
         specialty.riasecBenchmark.vector,
       );
-      const finalScore = academicScore * ACADEMIC_WEIGHT + psychometric.percentage * PSYCHOMETRIC_WEIGHT;
+      const finalScore =
+        academicScore * ACADEMIC_WEIGHT + psychometric.percentage * PSYCHOMETRIC_WEIGHT;
 
       return {
         specialtyId: specialty.id,

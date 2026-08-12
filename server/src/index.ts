@@ -4,7 +4,15 @@ import { ZodError } from "zod";
 import { getActiveSpecialties, exportEvaluationsAsCsv, initDatabase, persistEvaluation } from "./db.js";
 import { calculateRecommendations } from "./engine.js";
 import { CalculateRecommendationSchema } from "./schema.js";
-import { STREAM_SUBJECT_MAP, SUBJECT_CODES, BAC_STREAMS, type StudentProfile } from "./types.js";
+import {
+  STREAM_SUBJECT_MAP,
+  SUBJECT_CODES,
+  BAC_STREAMS,
+  RIASEC_LETTERS,
+  RIASEC_LABELS,
+  type StudentProfile,
+  type TopRiasecProfile,
+} from "./types.js";
 
 initDatabase();
 
@@ -27,6 +35,8 @@ app.get("/api/v1/config", (_req, res) => {
     bacStreams: BAC_STREAMS,
     subjectCodes: SUBJECT_CODES,
     streamSubjects: STREAM_SUBJECT_MAP,
+    riasecLetters: RIASEC_LETTERS,
+    riasecLabels: RIASEC_LABELS,
     specialties: getActiveSpecialties().map((specialty) => ({
       id: specialty.id,
       code: specialty.code,
@@ -64,7 +74,7 @@ app.post("/api/v1/recommendations/calculate", (req, res) => {
         overallBacMark: input.overallBacMark,
         grades: input.grades,
       },
-      psychometricProfile: input.riasec,
+      topRiasec: input.topRiasec as TopRiasecProfile,
     };
 
     const specialties = getActiveSpecialties();
