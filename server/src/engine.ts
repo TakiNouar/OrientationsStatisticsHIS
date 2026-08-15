@@ -22,21 +22,16 @@ import {
   topRiasecToVector,
 } from "./types.js";
 
-/** Phase A weights */
+/** Phase A weights — product-locked */
 const ACADEMIC_WEIGHT = 0.5;
 const RIASEC_WEIGHT = 0.3;
 const TECHNICAL_WEIGHT = 0.2;
 
-/** Hybrid RIASEC */
 const COSINE_BLEND = 0.3;
 const CODE_MATCH_BLEND = 0.7;
 
-/** technicalFit = stream + marks */
 const STREAM_BLEND = 0.45;
 const MARKS_BLEND = 0.55;
-
-/** Default affinity when specialty has no weight entry for a subject. */
-const AFFINITY_MISSING = 0.75;
 
 const GENIE_BIAS: Record<TechnicalMathOption, Partial<Record<string, number>>> = {
   GENIE_ELECTRIQUE: {
@@ -191,9 +186,41 @@ export const technicalAlignmentScore = (
   };
 };
 
+/** Map a raw seed weight onto [AFFINITY_MIN, AFFINITY_MAX] given specialty min/max. */
+const mapWeightToMultiplier = (subjectW: number, minW: number, maxW: number): number => {
+  if (maxW <= minW) {
+    return (AFFINITY_MIN + AFFINITY_MAX) / 2;
+  }
+  const ratio = (subjectW - minW) / (maxW - minW);
+  return AFFINITY_MIN + (AFFINITY_MAX - AFFINITY_MIN) * ratio;
+};
+
 /**
- * Map specialty seed weight → aggressive multiplier in [AFFINITY_MIN, AFFINITY_MAX].
+ * When a specialty has no weight entry for a graded subject, use the mean of that
+ * specialty's *existing* mapped multipliers.
+ *
+ * Why not a fixed 0.75?
+ * - Aggressive range is 0.6–1.8 (midpoint 1.2). A fixed 0.75 is a silent penalty
+ *   below midpoint, so incomplete seed rows under-scored students unfairly.
+ * - Specialty-average stays relative to how that programme weights subjects overall,
+ *   without inventing importance for an unlisted subject.
+ * - If the specialty has zero weights, fall back to 1.0 (true neutral on the clamp scale).
  */
+const specialtyAverageMappedMultiplier = (specialty: HisSpecialtyConfig): number => {
+  const weights = specialty.subjectWeights.weights;
+  const values = Object.values(weights).filter((v): v is number => typeof v === "number" && v > 0);
+  if (values.length === 0) {
+    return 1.0;
+  }
+  const minW = Math.min(...values);
+  const maxW = Math.max(...values);
+  const mapped = values.map((w) => mapWeightToMultiplier(w, minW, maxW));
+  return mapped.reduce((a, b) => a + b, 0) / mapped.length;
+};
+
+/** Named export of the missing-subject policy for clarity in reports/debug. */
+export const AFFINITY_MISSING_POLICY = "specialty_average_mapped_multiplier" as const;
+
 const subjectMultiplier = (
   specialty: HisSpecialtyConfig,
   subject: SubjectCode,
@@ -207,24 +234,14 @@ const subjectMultiplier = (
 
   const subjectW = weights[subject];
   if (typeof subjectW !== "number" || subjectW <= 0) {
-    return AFFINITY_MISSING;
+    return specialtyAverageMappedMultiplier(specialty);
   }
 
   const minW = Math.min(...values);
   const maxW = Math.max(...values);
-
-  if (maxW <= minW) {
-    return (AFFINITY_MIN + AFFINITY_MAX) / 2;
-  }
-
-  const ratio = (subjectW - minW) / (maxW - minW);
-  return AFFINITY_MIN + (AFFINITY_MAX - AFFINITY_MIN) * ratio;
+  return mapWeightToMultiplier(subjectW, minW, maxW);
 };
 
-/**
- * Academic = slot mix × grade% × specialty subject multipliers only.
- * Stream modifiers are not applied.
- */
 const calculateAcademicScore = (
   studentProfile: StudentProfile,
   specialty: HisSpecialtyConfig,
