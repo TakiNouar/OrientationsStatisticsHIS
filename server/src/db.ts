@@ -13,6 +13,7 @@ import { topRiasecToVector } from "./types.js";
 const dataDir = path.resolve(process.cwd(), "data");
 const dbPath = path.join(dataDir, "his-sre.db");
 const seedPath = path.join(dataDir, "specialties.seed.json");
+const careerSeedPath = path.join(dataDir, "career-paths.seed.json");
 
 fs.mkdirSync(dataDir, { recursive: true });
 
@@ -79,6 +80,23 @@ const createTables = (): void => {
     CREATE INDEX IF NOT EXISTS idx_evaluations_student ON match_evaluations(student_id);
     CREATE INDEX IF NOT EXISTS idx_evaluations_specialty ON match_evaluations(specialty_id);
     CREATE INDEX IF NOT EXISTS idx_evaluations_final_score ON match_evaluations(final_score DESC);
+
+    CREATE TABLE IF NOT EXISTS career_paths (
+      id TEXT PRIMARY KEY,
+      specialty_code TEXT NOT NULL,
+      title_fr TEXT NOT NULL,
+      title_en TEXT NOT NULL,
+      sector_fr TEXT NOT NULL,
+      sector_en TEXT NOT NULL,
+      level TEXT NOT NULL,
+      description_fr TEXT NOT NULL,
+      description_en TEXT NOT NULL,
+      examples_fr_json TEXT NOT NULL,
+      examples_en_json TEXT NOT NULL,
+      is_active INTEGER DEFAULT 1
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_career_paths_specialty ON career_paths(specialty_code);
   `);
 
   try {
@@ -136,29 +154,11 @@ const normalizeSeed = (seed: SeedSpecialty): HisSpecialtyConfig => ({
 const upsertSpecialties = (): void => {
   const insert = db.prepare(`
     INSERT INTO his_specialties (
-      id,
-      code,
-      title,
-      department,
-      description,
-      is_technical,
-      holland_code_json,
-      subject_weights_json,
-      stream_modifiers_json,
-      riasec_benchmark_json,
-      is_active
+      id, code, title, department, description, is_technical, holland_code_json,
+      subject_weights_json, stream_modifiers_json, riasec_benchmark_json, is_active
     ) VALUES (
-      @id,
-      @code,
-      @title,
-      @department,
-      @description,
-      @isTechnical,
-      @hollandCodeJson,
-      @subjectWeightsJson,
-      @streamModifiersJson,
-      @riasecBenchmarkJson,
-      @isActive
+      @id, @code, @title, @department, @description, @isTechnical, @hollandCodeJson,
+      @subjectWeightsJson, @streamModifiersJson, @riasecBenchmarkJson, @isActive
     )
     ON CONFLICT(code) DO UPDATE SET
       title = excluded.title,
@@ -193,9 +193,126 @@ const upsertSpecialties = (): void => {
   run(loadSeedData().map(normalizeSeed));
 };
 
+type CareerPathSeed = {
+  id: string;
+  specialtyCode: string;
+  titleFr: string;
+  titleEn: string;
+  sectorFr: string;
+  sectorEn: string;
+  level: string;
+  descriptionFr: string;
+  descriptionEn: string;
+  examplesFr: string[];
+  examplesEn: string[];
+};
+
+export type CareerPathRecord = {
+  id: string;
+  specialtyCode: string;
+  titleFr: string;
+  titleEn: string;
+  sectorFr: string;
+  sectorEn: string;
+  level: string;
+  descriptionFr: string;
+  descriptionEn: string;
+  examplesFr: string[];
+  examplesEn: string[];
+};
+
+const upsertCareerPaths = (): void => {
+  if (!fs.existsSync(careerSeedPath)) {
+    return;
+  }
+  const seeds = JSON.parse(fs.readFileSync(careerSeedPath, "utf8")) as CareerPathSeed[];
+  const insert = db.prepare(`
+    INSERT INTO career_paths (
+      id, specialty_code, title_fr, title_en, sector_fr, sector_en, level,
+      description_fr, description_en, examples_fr_json, examples_en_json, is_active
+    ) VALUES (
+      @id, @specialtyCode, @titleFr, @titleEn, @sectorFr, @sectorEn, @level,
+      @descriptionFr, @descriptionEn, @examplesFrJson, @examplesEnJson, 1
+    )
+    ON CONFLICT(id) DO UPDATE SET
+      specialty_code = excluded.specialty_code,
+      title_fr = excluded.title_fr,
+      title_en = excluded.title_en,
+      sector_fr = excluded.sector_fr,
+      sector_en = excluded.sector_en,
+      level = excluded.level,
+      description_fr = excluded.description_fr,
+      description_en = excluded.description_en,
+      examples_fr_json = excluded.examples_fr_json,
+      examples_en_json = excluded.examples_en_json,
+      is_active = 1
+  `);
+  const run = db.transaction((rows: CareerPathSeed[]) => {
+    for (const row of rows) {
+      insert.run({
+        id: row.id,
+        specialtyCode: row.specialtyCode,
+        titleFr: row.titleFr,
+        titleEn: row.titleEn,
+        sectorFr: row.sectorFr,
+        sectorEn: row.sectorEn,
+        level: row.level,
+        descriptionFr: row.descriptionFr,
+        descriptionEn: row.descriptionEn,
+        examplesFrJson: JSON.stringify(row.examplesFr ?? []),
+        examplesEnJson: JSON.stringify(row.examplesEn ?? []),
+      });
+    }
+  });
+  run(seeds);
+};
+
+export const getCareerPathsBySpecialty = (): Record<string, CareerPathRecord[]> => {
+  const rows = db
+    .prepare(
+      `SELECT id, specialty_code, title_fr, title_en, sector_fr, sector_en, level,
+              description_fr, description_en, examples_fr_json, examples_en_json
+       FROM career_paths WHERE is_active = 1 ORDER BY specialty_code, level, title_fr`,
+    )
+    .all() as Array<{
+    id: string;
+    specialty_code: string;
+    title_fr: string;
+    title_en: string;
+    sector_fr: string;
+    sector_en: string;
+    level: string;
+    description_fr: string;
+    description_en: string;
+    examples_fr_json: string;
+    examples_en_json: string;
+  }>;
+
+  const map: Record<string, CareerPathRecord[]> = {};
+  for (const row of rows) {
+    const item: CareerPathRecord = {
+      id: row.id,
+      specialtyCode: row.specialty_code,
+      titleFr: row.title_fr,
+      titleEn: row.title_en,
+      sectorFr: row.sector_fr,
+      sectorEn: row.sector_en,
+      level: row.level,
+      descriptionFr: row.description_fr,
+      descriptionEn: row.description_en,
+      examplesFr: JSON.parse(row.examples_fr_json || "[]") as string[],
+      examplesEn: JSON.parse(row.examples_en_json || "[]") as string[],
+    };
+    if (!map[item.specialtyCode]) map[item.specialtyCode] = [];
+    map[item.specialtyCode].push(item);
+  }
+  return map;
+};
+
 export const initDatabase = (): void => {
   createTables();
   upsertSpecialties();
+  upsertCareerPaths();
 };
 
 type SpecialtyRow = {
@@ -216,21 +333,9 @@ export const getActiveSpecialties = (): HisSpecialtyConfig[] => {
   const rows = db
     .prepare(
       `
-        SELECT
-          id,
-          code,
-          title,
-          department,
-          description,
-          is_technical,
-          holland_code_json,
-          subject_weights_json,
-          stream_modifiers_json,
-          riasec_benchmark_json,
-          is_active
-        FROM his_specialties
-        WHERE is_active = 1
-        ORDER BY department, title
+        SELECT id, code, title, department, description, is_technical, holland_code_json,
+               subject_weights_json, stream_modifiers_json, riasec_benchmark_json, is_active
+        FROM his_specialties WHERE is_active = 1 ORDER BY department, title
       `,
     )
     .all() as SpecialtyRow[];
@@ -250,7 +355,6 @@ export const getActiveSpecialties = (): HisSpecialtyConfig[] => {
   }));
 };
 
-// Tables must exist before statements are prepared (module load order).
 createTables();
 
 const insertStudent = db.prepare(`
@@ -265,28 +369,14 @@ const insertGrade = db.prepare(`
 
 const insertRiasec = db.prepare(`
   INSERT INTO riasec_profiles (
-    id,
-    student_id,
-    realistic_score,
-    investigative_score,
-    artistic_score,
-    social_score,
-    enterprising_score,
-    conventional_score,
-    top_riasec_json
+    id, student_id, realistic_score, investigative_score, artistic_score,
+    social_score, enterprising_score, conventional_score, top_riasec_json
   ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
 `);
 
 const insertEvaluation = db.prepare(`
   INSERT INTO match_evaluations (
-    id,
-    student_id,
-    specialty_id,
-    academic_score,
-    riasec_score,
-    final_score,
-    rank_position,
-    evaluated_at
+    id, student_id, specialty_id, academic_score, riasec_score, final_score, rank_position, evaluated_at
   ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 `);
 
