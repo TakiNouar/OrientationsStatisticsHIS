@@ -63,6 +63,11 @@ function LabelBadge({ label, text }: { label: MatchLabel; text: string }) {
   );
 }
 
+function fmt(value: number | undefined | null, digits = 1, fallback = "—"): string {
+  if (typeof value !== "number" || Number.isNaN(value)) return fallback;
+  return value.toFixed(digits);
+}
+
 export function Step3Results({ result, topRiasec, onReset }: Props) {
   const topCode = topRiasec.map((e) => e.letter).join("");
   const top = result.matches[0];
@@ -71,16 +76,15 @@ export function Step3Results({ result, topRiasec, onReset }: Props) {
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-xl font-semibold text-slate-900 dark:text-slate-50">Your results</h2>
-          <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-            Ranked recommendations for <strong>{result.studentName}</strong> (
-            {STREAM_LABELS[result.bacStream]}
-            {result.isTechnicalStream ? " · technical stream" : ""} · code{" "}
-            <span className="font-semibold text-indigo-600 dark:text-indigo-300">{topCode}</span>).
+          <h2 className="text-xl font-semibold text-slate-900 dark:text-slate-100">Results</h2>
+          <p className="mt-1 text-sm text-slate-500">
+            {result.studentName} · {STREAM_LABELS[result.bacStream]}
+            {result.technicalOption ? ` · ${result.technicalOption}` : ""}
+            {" · "}RIASEC {topCode}
           </p>
-          <p className="mt-1 text-xs text-slate-500">
+          <p className="mt-1 text-xs text-slate-400">
             Weights: academic {(result.weights.academic * 100).toFixed(0)}% · RIASEC{" "}
-            {(result.weights.riasec * 100).toFixed(0)}% · technical alignment{" "}
+            {(result.weights.riasec * 100).toFixed(0)}% · technical{" "}
             {(result.weights.technical * 100).toFixed(0)}%
           </p>
         </div>
@@ -94,38 +98,30 @@ export function Step3Results({ result, topRiasec, onReset }: Props) {
       </div>
 
       {top && (
-        <div className="rounded-xl border-2 border-indigo-200 bg-indigo-50/60 p-4 dark:border-indigo-800 dark:bg-indigo-950/30">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="text-xs font-semibold uppercase tracking-wide text-indigo-600 dark:text-indigo-300">
-              Best match
-            </div>
+        <div className="rounded-xl border border-indigo-200 bg-indigo-50/80 p-4 dark:border-indigo-900 dark:bg-indigo-950/40">
+          <p className="text-xs font-semibold uppercase tracking-wide text-indigo-600 dark:text-indigo-300">
+            Top recommendation
+          </p>
+          <div className="mt-1 flex flex-wrap items-center gap-2">
+            <h3 className="text-lg font-bold text-slate-900 dark:text-slate-50">{top.specialtyTitle}</h3>
             <LabelBadge label={top.matchLabel} text={top.matchLabelText} />
           </div>
-          <div className="mt-1 text-2xl font-bold text-slate-900 dark:text-slate-50">
-            {top.specialtyTitle}
-          </div>
-          <div className="text-sm text-slate-600 dark:text-slate-400">
-            {top.specialtyCode} · {top.department} · Holland {top.hollandCode.join("-")}
-            {top.isTechnical ? " · technical" : ""}
-          </div>
-          <div className="mt-2 text-3xl font-bold text-indigo-600 dark:text-indigo-300">
-            {top.finalScore.toFixed(1)}%
-          </div>
+          <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
+            {fmt(top.finalScore, 1)}% final fit · rank #{top.rank}
+          </p>
         </div>
       )}
 
-      <div className="space-y-3">
+      <div className="space-y-4">
         {result.matches.map((match) => (
           <article
             key={match.specialtyId}
-            className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900"
+            className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900"
           >
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="inline-flex h-7 min-w-7 items-center justify-center rounded-full bg-indigo-600 px-2 text-xs font-bold text-white">
-                    #{match.rank}
-                  </span>
+                  <span className="text-xs font-semibold text-slate-400">#{match.rank}</span>
                   <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">
                     {match.specialtyTitle}
                   </h3>
@@ -138,7 +134,7 @@ export function Step3Results({ result, topRiasec, onReset }: Props) {
               </div>
               <div className="text-right">
                 <div className="text-2xl font-bold text-indigo-600 dark:text-indigo-300">
-                  {match.finalScore.toFixed(1)}%
+                  {fmt(match.finalScore, 1)}%
                 </div>
                 <div className="text-[11px] text-slate-500">final fit</div>
               </div>
@@ -150,9 +146,9 @@ export function Step3Results({ result, topRiasec, onReset }: Props) {
 
             <div className="mt-3">
               <ScoreBar
-                academic={match.academicScore}
-                psychometric={match.psychometricScore}
-                technical={match.technicalScore}
+                academic={match.academicScore ?? 0}
+                psychometric={match.psychometricScore ?? 0}
+                technical={match.technicalScore ?? 0}
               />
             </div>
 
@@ -160,28 +156,34 @@ export function Step3Results({ result, topRiasec, onReset }: Props) {
               <div>
                 <dt>Code match</dt>
                 <dd className="font-semibold text-slate-800 dark:text-slate-200">
-                  {match.details.codeMatchScore.toFixed(1)}%
+                  {fmt(match.details?.codeMatchScore, 1)}%
                 </dd>
               </div>
               <div>
                 <dt>CosSim</dt>
                 <dd className="font-semibold text-slate-800 dark:text-slate-200">
-                  {match.details.vectorCosineSimilarity.toFixed(3)}
+                  {fmt(match.details?.vectorCosineSimilarity, 3)}
                 </dd>
               </div>
               <div>
-                <dt>Stream μ</dt>
+                <dt>Marks→tech</dt>
                 <dd className="font-semibold text-slate-800 dark:text-slate-200">
-                  {match.details.streamModifierApplied.toFixed(2)}
+                  {fmt(match.details?.technicalMarksComponent, 0)}%
                 </dd>
               </div>
               <div>
                 <dt>Tech align</dt>
                 <dd className="font-semibold text-slate-800 dark:text-slate-200">
-                  {match.technicalScore.toFixed(0)}%
+                  {fmt(match.technicalScore, 0)}%
                 </dd>
               </div>
             </dl>
+
+            {match.details?.genieBiasPoints != null && match.details.genieBiasPoints > 0 && (
+              <p className="mt-2 text-xs text-cyan-700 dark:text-cyan-300">
+                Génie bias: +{fmt(match.details.genieBiasPoints, 0)} pts
+              </p>
+            )}
           </article>
         ))}
       </div>

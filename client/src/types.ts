@@ -72,12 +72,11 @@ export interface SpecialtyMatchBreakdown {
   matchLabelText: string;
   rank: number;
   details: {
-    streamModifierApplied: number;
-    rawAcademicPercentage: number;
-    vectorCosineSimilarity: number;
-    codeMatchScore: number;
-    cosineComponent: number;
-    codeMatchComponent: number;
+    rawAcademicPercentage?: number;
+    vectorCosineSimilarity?: number;
+    codeMatchScore?: number;
+    cosineComponent?: number;
+    codeMatchComponent?: number;
     genieBiasPoints?: number;
     slotBreakdown?: {
       main1: number;
@@ -85,6 +84,14 @@ export interface SpecialtyMatchBreakdown {
       opposite: number;
       english: number;
     };
+    affinityBreakdown?: {
+      main1: number;
+      main2: number;
+      opposite: number;
+      english: number;
+    };
+    technicalStreamBase?: number;
+    technicalMarksComponent?: number;
   };
 }
 
