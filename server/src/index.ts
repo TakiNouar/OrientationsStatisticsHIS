@@ -9,7 +9,8 @@ import {
   getCareerPathsBySpecialty,
   exportEvaluationsAsCsv,
   getAnalyticsSummary,
-  getRecentEvaluationsAnonymized,
+  getRecentSessions,
+  getStudentProfile,
   initDatabase,
   persistEvaluation,
 } from "./db.js";
@@ -160,13 +161,35 @@ app.get("/api/v1/analytics/recent", (req, res) => {
     const filters = parseAnalyticsFilters(req);
     const limitRaw = typeof req.query.limit === "string" ? Number(req.query.limit) : 50;
     const limit = Number.isFinite(limitRaw) ? limitRaw : 50;
-    const rows = getRecentEvaluationsAnonymized(filters, limit);
+    const rows = getRecentSessions(filters, limit);
     res.json({ rows, filters, limit });
   } catch (error) {
     logger.error("analytics_recent_failed", {
       err: error instanceof Error ? error.message : String(error),
     });
     res.status(500).json({ message: "Failed to load recent evaluations." });
+  }
+});
+
+app.get("/api/v1/analytics/students/:studentId", (req, res) => {
+  try {
+    const studentId = req.params.studentId;
+    if (!studentId || studentId.length < 8) {
+      res.status(400).json({ message: "Invalid student id." });
+      return;
+    }
+    const profile = getStudentProfile(studentId);
+    if (!profile) {
+      res.status(404).json({ message: "Student not found." });
+      return;
+    }
+    res.json(profile);
+  } catch (error) {
+    logger.error("student_profile_failed", {
+      err: error instanceof Error ? error.message : String(error),
+      studentId: req.params.studentId,
+    });
+    res.status(500).json({ message: "Failed to load student profile." });
   }
 });
 
@@ -185,9 +208,10 @@ app.get("/api/v1/export/evaluations", (req, res) => {
     typeof req.query.bacStream === "string" ? (req.query.bacStream as BacStream) : undefined;
   const specialtyCode =
     typeof req.query.specialtyCode === "string" ? req.query.specialtyCode : undefined;
-  // Default anonymized for B0 safety; pass anonymized=0 to include names.
-  const anonymizedParam = typeof req.query.anonymized === "string" ? req.query.anonymized : "1";
-  const anonymized = anonymizedParam !== "0" && anonymizedParam.toLowerCase() !== "false";
+  // Default named for counsellor LAN; pass anonymized=1 to strip names.
+  const anonymizedParam = typeof req.query.anonymized === "string" ? req.query.anonymized : "0";
+  const anonymized =
+    anonymizedParam === "1" || anonymizedParam.toLowerCase() === "true";
 
   try {
     const csv = exportEvaluationsAsCsv({ from, to, bacStream, specialtyCode, anonymized });
