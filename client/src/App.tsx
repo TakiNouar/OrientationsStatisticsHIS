@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { StepIndicator } from "./components/StepIndicator";
 import { Step1AcademicForm } from "./components/Step1AcademicForm";
 import { Step2RiasecForm } from "./components/Step2RiasecForm";
@@ -15,6 +15,7 @@ function App() {
   const [configLoading, setConfigLoading] = useState(true);
   const [lang, setLang] = useState<Lang>("fr");
   const t = strings[lang];
+  const loadedOnce = useRef(false);
 
   const wizard = useRecommendationWizard(config, lang);
 
@@ -24,14 +25,16 @@ function App() {
     try {
       const data = await fetchConfig();
       setConfig(data);
+      loadedOnce.current = true;
     } catch (e) {
-      setConfigError(e instanceof Error ? e.message : t.configError);
+      setConfigError(e instanceof Error ? e.message : strings.fr.configError);
     } finally {
       setConfigLoading(false);
     }
-  }, [t.configError]);
+  }, []);
 
   useEffect(() => {
+    if (loadedOnce.current) return;
     void loadConfig();
   }, [loadConfig]);
 

@@ -35,29 +35,54 @@ initDatabase();
 const app = express();
 const port = Number(process.env.PORT ?? 3001);
 const host = process.env.HOST ?? "127.0.0.1";
+const isDev = (process.env.NODE_ENV ?? "development") !== "production";
 
-const allowedOrigins = (process.env.ALLOWED_ORIGINS ?? "http://localhost:5173,http://127.0.0.1:5173")
+const allowedOrigins = (
+  process.env.ALLOWED_ORIGINS ??
+  "http://localhost:5173,http://127.0.0.1:5173,http://localhost:5174,http://127.0.0.1:5174"
+)
   .split(",")
   .map((s) => s.trim())
   .filter(Boolean);
 
-app.use(helmet());
+const isLocalDevOrigin = (origin: string): boolean =>
+  /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(origin);
+
+app.use(
+  helmet({
+    // API-only server; relax CORP so browser clients can read JSON responses.
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+  }),
+);
+
 app.use(
   cors({
     origin(origin, callback) {
-      if (!origin || allowedOrigins.includes(origin)) {
+      // Non-browser or same-origin proxy requests have no Origin header.
+      if (!origin) {
         callback(null, true);
         return;
       }
-      callback(new Error(`CORS blocked for origin: ${origin}`));
+      if (allowedOrigins.includes(origin)) {
+        callback(null, true);
+        return;
+      }
+      // In development, allow any localhost / 127.0.0.1 port (Vite may pick 5174+).
+      if (isDev && isLocalDevOrigin(origin)) {
+        callback(null, true);
+        return;
+      }
+      logger.warn("cors_blocked", { origin });
+      callback(null, false);
     },
   }),
 );
+
 app.use(express.json({ limit: "100kb" }));
 
 const calculateLimiter = rateLimit({
   windowMs: 60_000,
-  max: 60,
+  max: isDev ? 120 : 60,
   standardHeaders: true,
   legacyHeaders: false,
   message: { message: "Too many calculation requests. Try again shortly." },
@@ -72,31 +97,38 @@ app.get("/api/v1/health", (_req, res) => {
 });
 
 app.get("/api/v1/config", (_req, res) => {
-  res.json({
-    bacStreams: BAC_STREAMS,
-    subjectCodes: SUBJECT_CODES,
-    streamSubjects: STREAM_SUBJECT_MAP,
-    streamGradeSlots: STREAM_GRADE_SLOTS,
-    academicSlotWeights: ACADEMIC_SLOT_WEIGHTS,
-    affinityRange: { min: AFFINITY_MIN, max: AFFINITY_MAX },
-    technicalMathOptions: TECHNICAL_MATH_OPTIONS,
-    technicalMathOptionLabels: TECHNICAL_MATH_OPTION_LABELS,
-    riasecLetters: RIASEC_LETTERS,
-    riasecLabels: RIASEC_LABELS,
-    formulaWeights: { academic: 0.5, riasec: 0.3, technical: 0.2 },
-    specialties: getActiveSpecialties().map((specialty) => ({
-      id: specialty.id,
-      code: specialty.code,
-      title: specialty.title,
-      department: specialty.department,
-      description: specialty.description,
-      isTechnical: specialty.isTechnical,
-      hollandCode: specialty.hollandCode,
-      streamModifiers: specialty.streamModifiers,
-      subjectWeights: specialty.subjectWeights.weights,
-      riasecBenchmark: specialty.riasecBenchmark.vector,
-    })),
-  });
+  try {
+    res.json({
+      bacStreams: BAC_STREAMS,
+      subjectCodes: SUBJECT_CODES,
+      streamSubjects: STREAM_SUBJECT_MAP,
+      streamGradeSlots: STREAM_GRADE_SLOTS,
+      academicSlotWeights: ACADEMIC_SLOT_WEIGHTS,
+      affinityRange: { min: AFFINITY_MIN, max: AFFINITY_MAX },
+      technicalMathOptions: TECHNICAL_MATH_OPTIONS,
+      technicalMathOptionLabels: TECHNICAL_MATH_OPTION_LABELS,
+      riasecLetters: RIASEC_LETTERS,
+      riasecLabels: RIASEC_LABELS,
+      formulaWeights: { academic: 0.5, riasec: 0.3, technical: 0.2 },
+      specialties: getActiveSpecialties().map((specialty) => ({
+        id: specialty.id,
+        code: specialty.code,
+        title: specialty.title,
+        department: specialty.department,
+        description: specialty.description,
+        isTechnical: specialty.isTechnical,
+        hollandCode: specialty.hollandCode,
+        streamModifiers: specialty.streamModifiers,
+        subjectWeights: specialty.subjectWeights.weights,
+        riasecBenchmark: specialty.riasecBenchmark.vector,
+      })),
+    });
+  } catch (error) {
+    logger.error("config_failed", {
+      err: error instanceof Error ? error.message : String(error),
+    });
+    res.status(500).json({ message: "Failed to load configuration." });
+  }
 });
 
 app.get("/api/v1/export/evaluations", (req, res) => {
@@ -144,6 +176,13 @@ app.post("/api/v1/recommendations/calculate", calculateLimiter, (req, res) => {
     };
 
     const specialties = getActiveSpecialties();
+    if (specialties.length === 0) {
+      res.status(503).json({
+        message: "No active specialties loaded. Check server seed data.",
+      });
+      return;
+    }
+
     const result = calculateRecommendations(studentProfile, specialties);
 
     queueMicrotask(() => {
@@ -184,5 +223,11 @@ app.use((_req, res) => {
 });
 
 app.listen(port, host, () => {
-  logger.info("server_started", { host, port, allowedOrigins });
+  logger.info("server_started", {
+    host,
+    port,
+    isDev,
+    allowedOrigins,
+    health: `http://${host === "0.0.0.0" ? "127.0.0.1" : host}:${port}/api/v1/health`,
+  });
 });

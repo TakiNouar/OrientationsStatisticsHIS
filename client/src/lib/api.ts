@@ -1,7 +1,16 @@
 import type { CalculationResult, ConfigResponse, RecommendationInput } from "../types";
 
-const API_BASE = import.meta.env.VITE_API_BASE ?? "http://localhost:3001";
+/**
+ * Dev stability: default to same-origin `/api` so Vite proxy handles the backend
+ * (no CORS). Set VITE_API_BASE only when calling the API directly (e.g. LAN IP).
+ */
+const API_BASE = (import.meta.env.VITE_API_BASE as string | undefined)?.replace(/\/$/, "") ?? "";
 const REQUEST_TIMEOUT_MS = 10_000;
+
+function apiUrl(path: string): string {
+  const p = path.startsWith("/") ? path : `/${path}`;
+  return `${API_BASE}${p}`;
+}
 
 async function fetchWithTimeout(
   input: RequestInfo | URL,
@@ -14,7 +23,14 @@ async function fetchWithTimeout(
     return await fetch(input, { ...init, signal: controller.signal });
   } catch (error) {
     if (error instanceof DOMException && error.name === "AbortError") {
-      throw new Error("Server not responding (timeout). Check that the API is running.");
+      throw new Error(
+        "Server not responding (timeout). Is the API running on port 3001?",
+      );
+    }
+    if (error instanceof TypeError) {
+      throw new Error(
+        "Cannot reach the API. Start the server (cd server && npm run dev) and keep Vite proxy on.",
+      );
     }
     throw error;
   } finally {
@@ -24,7 +40,7 @@ async function fetchWithTimeout(
 
 export async function fetchConfig(): Promise<ConfigResponse> {
   const attempt = async (): Promise<ConfigResponse> => {
-    const response = await fetchWithTimeout(`${API_BASE}/api/v1/config`);
+    const response = await fetchWithTimeout(apiUrl("/api/v1/config"));
     if (!response.ok) {
       throw new Error(`Failed to load config (${response.status})`);
     }
@@ -34,7 +50,6 @@ export async function fetchConfig(): Promise<ConfigResponse> {
   try {
     return await attempt();
   } catch (firstError) {
-    // One silent retry with short backoff before surfacing to the wizard.
     await new Promise((r) => setTimeout(r, 600));
     try {
       return await attempt();
@@ -49,7 +64,7 @@ export async function fetchConfig(): Promise<ConfigResponse> {
 export async function calculateRecommendations(
   input: RecommendationInput,
 ): Promise<CalculationResult> {
-  const response = await fetchWithTimeout(`${API_BASE}/api/v1/recommendations/calculate`, {
+  const response = await fetchWithTimeout(apiUrl("/api/v1/recommendations/calculate"), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(input),
@@ -81,4 +96,16 @@ export async function calculateRecommendations(
   }
 
   return response.json() as Promise<CalculationResult>;
+}
+
+export function exportEvaluationsUrl(params?: {
+  from?: string;
+  to?: string;
+  bacStream?: string;
+}): string {
+  const q = new URLSearchParams({ format: "csv" });
+  if (params?.from) q.set("from", params.from);
+  if (params?.to) q.set("to", params.to);
+  if (params?.bacStream) q.set("bacStream", params.bacStream);
+  return apiUrl(`/api/v1/export/evaluations?${q.toString()}`);
 }

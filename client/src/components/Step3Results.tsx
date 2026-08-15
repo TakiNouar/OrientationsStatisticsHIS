@@ -3,6 +3,7 @@ import type { CalculationResult, MatchLabel, TopRiasecProfile } from "../types";
 import { LABEL_STYLES } from "../types";
 import type { Lang } from "../i18n/strings";
 import { STREAM_LABELS_I18N, matchLabelText, strings } from "../i18n/strings";
+import { exportEvaluationsUrl } from "../lib/api";
 
 type Props = {
   result: CalculationResult;
@@ -77,8 +78,7 @@ export function Step3Results({ result, topRiasec, onReset, lang, genieLabels }: 
       ? genieLabels[result.technicalOption]
       : result.technicalOption;
 
-  const apiBase = import.meta.env.VITE_API_BASE ?? "http://localhost:3001";
-  const exportUrl = `${apiBase}/api/v1/export/evaluations?format=csv`;
+  const exportUrl = exportEvaluationsUrl();
 
   return (
     <div className="space-y-6">
@@ -104,10 +104,7 @@ export function Step3Results({ result, topRiasec, onReset, lang, genieLabels }: 
           >
             {t.newEvaluation}
           </button>
-          <a
-            href={exportUrl}
-            className="text-xs text-slate-500 underline-offset-2 hover:underline"
-          >
+          <a href={exportUrl} className="text-xs text-slate-500 underline-offset-2 hover:underline">
             {t.exportCsv}
           </a>
           <button
