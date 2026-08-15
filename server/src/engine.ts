@@ -222,9 +222,8 @@ const subjectMultiplier = (
 };
 
 /**
- * Academic = slot mix × grade% × specialty subject multipliers × stream modifier μ.
- * Both levers active: subject multipliers differentiate marks per specialty;
- * stream μ biases by BAC stream fit to that specialty.
+ * Academic = slot mix × grade% × specialty subject multipliers only.
+ * Stream modifiers are not applied.
  */
 const calculateAcademicScore = (
   studentProfile: StudentProfile,
@@ -232,11 +231,9 @@ const calculateAcademicScore = (
 ): {
   academicScore: number;
   rawAcademicPercentage: number;
-  streamModifier: number;
   slotBreakdown: { main1: number; main2: number; opposite: number; english: number };
   affinityBreakdown: { main1: number; main2: number; opposite: number; english: number };
 } => {
-  const streamModifier = specialty.streamModifiers[studentProfile.bacStream] ?? 0.75;
   const slots = STREAM_GRADE_SLOTS[studentProfile.bacStream];
   const grades = studentProfile.academicPerformance.grades;
 
@@ -267,14 +264,11 @@ const calculateAcademicScore = (
   }
 
   const rawAcademicPercentage = toFixedNumber(weighted);
-  const academicScore = toFixedNumber(
-    Math.min(Math.max(rawAcademicPercentage * streamModifier, 0), 100),
-  );
+  const academicScore = toFixedNumber(Math.min(Math.max(rawAcademicPercentage, 0), 100));
 
   return {
     academicScore,
     rawAcademicPercentage,
-    streamModifier,
     slotBreakdown,
     affinityBreakdown,
   };
@@ -338,7 +332,6 @@ export const calculateRecommendations = (
         matchLabelText: MATCH_LABEL_TEXT[matchLabel],
         rank: 0,
         details: {
-          streamModifierApplied: academic.streamModifier,
           rawAcademicPercentage: academic.rawAcademicPercentage,
           vectorCosineSimilarity: toFixedNumber(cosine, 4),
           codeMatchScore: codeScore,

@@ -166,9 +166,9 @@ export function Step3Results({ result, topRiasec, onReset }: Props) {
                 </dd>
               </div>
               <div>
-                <dt>Stream μ</dt>
+                <dt>Marks→tech</dt>
                 <dd className="font-semibold text-slate-800 dark:text-slate-200">
-                  {fmt(match.details?.streamModifierApplied, 2)}
+                  {fmt(match.details?.technicalMarksComponent, 0)}%
                 </dd>
               </div>
               <div>
