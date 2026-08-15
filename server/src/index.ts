@@ -14,6 +14,7 @@ import {
   initDatabase,
   persistEvaluation,
 } from "./db.js";
+import { getAnalyticsDashboard } from "./analytics-dashboard.js";
 import { calculateRecommendations } from "./engine.js";
 import { logger } from "./logger.js";
 import { CalculateRecommendationSchema } from "./schema.js";
@@ -156,6 +157,19 @@ app.get("/api/v1/analytics/summary", (req, res) => {
   }
 });
 
+app.get("/api/v1/analytics/dashboard", (req, res) => {
+  try {
+    const filters = parseAnalyticsFilters(req);
+    const dashboard = getAnalyticsDashboard(filters);
+    res.json(dashboard);
+  } catch (error) {
+    logger.error("analytics_dashboard_failed", {
+      err: error instanceof Error ? error.message : String(error),
+    });
+    res.status(500).json({ message: "Failed to load analytics dashboard." });
+  }
+});
+
 app.get("/api/v1/analytics/recent", (req, res) => {
   try {
     const filters = parseAnalyticsFilters(req);
@@ -208,7 +222,6 @@ app.get("/api/v1/export/evaluations", (req, res) => {
     typeof req.query.bacStream === "string" ? (req.query.bacStream as BacStream) : undefined;
   const specialtyCode =
     typeof req.query.specialtyCode === "string" ? req.query.specialtyCode : undefined;
-  // Default named for counsellor LAN; pass anonymized=1 to strip names.
   const anonymizedParam = typeof req.query.anonymized === "string" ? req.query.anonymized : "0";
   const anonymized =
     anonymizedParam === "1" || anonymizedParam.toLowerCase() === "true";
