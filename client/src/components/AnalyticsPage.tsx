@@ -3,6 +3,7 @@ import {
   exportEvaluationsUrl,
   fetchAnalyticsRecent,
   fetchAnalyticsSummary,
+  fetchStudentProfile,
 } from "../lib/api";
 import type {
   AnalyticsRecentResponse,
@@ -10,10 +11,17 @@ import type {
   BacStream,
   ConfigResponse,
   MatchLabel,
+  StudentProfileDetail,
+  SubjectCode,
 } from "../types";
 import { LABEL_STYLES } from "../types";
 import type { Lang } from "../i18n/strings";
-import { STREAM_LABELS_I18N, matchLabelText, strings } from "../i18n/strings";
+import {
+  STREAM_LABELS_I18N,
+  SUBJECT_LABELS_I18N,
+  matchLabelText,
+  strings,
+} from "../i18n/strings";
 
 type Props = {
   config: ConfigResponse;
@@ -76,6 +84,146 @@ function CountList({
   );
 }
 
+function StudentProfileView({
+  profile,
+  lang,
+  onClose,
+}: {
+  profile: StudentProfileDetail;
+  lang: Lang;
+  onClose: () => void;
+}) {
+  const t = strings[lang];
+  const streamLabels = STREAM_LABELS_I18N[lang];
+  const subjectLabels = SUBJECT_LABELS_I18N[lang];
+  const top = profile.matches[0];
+
+  return (
+    <div className="space-y-5">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="mb-2 text-xs font-medium text-indigo-600 hover:underline dark:text-indigo-300"
+          >
+            ← {t.backToList}
+          </button>
+          <h2 className="text-xl font-bold text-slate-900 dark:text-slate-50">{profile.fullName}</h2>
+          <p className="mt-1 text-sm text-slate-500">
+            {streamLabels[profile.bacStream as BacStream] ?? profile.bacStream}
+            {" · "}{t.overallMarkShort}: {profile.overallBacMark.toFixed(2)}/20
+            {profile.topRiasec
+              ? ` · RIASEC ${profile.topRiasec.map((e) => e.letter).join("")}`
+              : ""}
+          </p>
+          <p className="mt-0.5 text-xs text-slate-400">
+            {t.evaluatedAt}: {profile.matches[0]?.evaluatedAt?.slice(0, 19).replace("T", " ") ?? profile.createdAt}
+          </p>
+        </div>
+      </div>
+
+      {top && (
+        <div className="rounded-xl border-2 border-indigo-300 bg-indigo-50/90 p-4 dark:border-indigo-800 dark:bg-indigo-950/50">
+          <p className="text-xs font-semibold uppercase tracking-wide text-indigo-600 dark:text-indigo-300">
+            {t.topRecommendation}
+          </p>
+          <div className="mt-1 flex flex-wrap items-center gap-2">
+            <h3 className="text-lg font-bold text-slate-900 dark:text-slate-50">{top.specialtyTitle}</h3>
+            <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${LABEL_STYLES[top.matchLabel]}`}>
+              {matchLabelText(lang, top.matchLabel)}
+            </span>
+          </div>
+          <p className="mt-1 text-2xl font-bold text-indigo-600 dark:text-indigo-300">
+            {top.finalScore.toFixed(1)}%
+          </p>
+        </div>
+      )}
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <section className="rounded-xl border border-slate-200 p-4 dark:border-slate-700">
+          <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-100">{t.gradesHeading}</h3>
+          <ul className="mt-2 space-y-1 text-sm">
+            {Object.entries(profile.grades).map(([code, value]) => (
+              <li key={code} className="flex justify-between gap-2">
+                <span className="text-slate-600 dark:text-slate-300">
+                  {subjectLabels[code as SubjectCode] ?? code}
+                </span>
+                <span className="font-semibold tabular-nums">{Number(value).toFixed(2)}</span>
+              </li>
+            ))}
+            {Object.keys(profile.grades).length === 0 && (
+              <li className="text-slate-500">—</li>
+            )}
+          </ul>
+        </section>
+
+        <section className="rounded-xl border border-slate-200 p-4 dark:border-slate-700">
+          <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-100">{t.riasecTitle}</h3>
+          {profile.topRiasec && profile.topRiasec.length > 0 ? (
+            <ul className="mt-2 space-y-1 text-sm">
+              {profile.topRiasec.map((entry, i) => (
+                <li key={`${entry.letter}-${i}`} className="flex justify-between gap-2">
+                  <span className="font-medium text-slate-700 dark:text-slate-200">
+                    #{i + 1} {entry.letter}
+                  </span>
+                  <span className="tabular-nums text-slate-600">{entry.weight}</span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="mt-2 text-sm text-slate-500">—</p>
+          )}
+        </section>
+      </div>
+
+      <section>
+        <h3 className="mb-2 text-sm font-semibold text-slate-800 dark:text-slate-100">{t.allMatches}</h3>
+        <div className="space-y-2">
+          {profile.matches.map((match) => (
+            <article
+              key={match.specialtyId}
+              className={`rounded-lg border p-3 ${
+                match.rank === 1
+                  ? "border-indigo-200 bg-indigo-50/50 dark:border-indigo-900 dark:bg-indigo-950/30"
+                  : "border-slate-200 dark:border-slate-700"
+              }`}
+            >
+              <div className="flex flex-wrap items-start justify-between gap-2">
+                <div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-xs text-slate-400">#{match.rank}</span>
+                    <h4 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                      {match.specialtyTitle}
+                    </h4>
+                    <span className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold ${LABEL_STYLES[match.matchLabel]}`}>
+                      {matchLabelText(lang, match.matchLabel)}
+                    </span>
+                  </div>
+                  <p className="mt-0.5 text-xs text-slate-500">
+                    {match.specialtyCode} · {match.department} · {match.hollandCode.join("-")}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <div className="text-lg font-bold text-indigo-600 dark:text-indigo-300">
+                    {match.finalScore.toFixed(1)}%
+                  </div>
+                  <div className="text-[10px] text-slate-500">
+                    A {match.academicScore.toFixed(0)} · R {match.psychometricScore.toFixed(0)}
+                  </div>
+                </div>
+              </div>
+            </article>
+          ))}
+          {profile.matches.length === 0 && (
+            <p className="text-sm text-slate-500">{t.noMatches}</p>
+          )}
+        </div>
+      </section>
+    </div>
+  );
+}
+
 export function AnalyticsPage({ config, lang, onBack }: Props) {
   const t = strings[lang];
   const streamLabels = STREAM_LABELS_I18N[lang];
@@ -85,34 +233,68 @@ export function AnalyticsPage({ config, lang, onBack }: Props) {
   const [recent, setRecent] = useState<AnalyticsRecentResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
+  const [profile, setProfile] = useState<StudentProfileDetail | null>(null);
+  const [profileLoading, setProfileLoading] = useState(false);
+  const [profileError, setProfileError] = useState<string | null>(null);
 
-  const load = useCallback(async (f: Filters) => {
-    setLoading(true);
-    setError(null);
-    const params = {
-      from: f.from || undefined,
-      to: f.to || undefined,
-      bacStream: f.bacStream || undefined,
-      specialtyCode: f.specialtyCode || undefined,
-      limit: 50,
-    };
-    try {
-      const [s, r] = await Promise.all([
-        fetchAnalyticsSummary(params),
-        fetchAnalyticsRecent(params),
-      ]);
-      setSummary(s);
-      setRecent(r);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : t.analyticsError);
-    } finally {
-      setLoading(false);
-    }
-  }, [t.analyticsError]);
+  const load = useCallback(
+    async (f: Filters) => {
+      setLoading(true);
+      setError(null);
+      const params = {
+        from: f.from || undefined,
+        to: f.to || undefined,
+        bacStream: f.bacStream || undefined,
+        specialtyCode: f.specialtyCode || undefined,
+        limit: 50,
+      };
+      try {
+        const [s, r] = await Promise.all([
+          fetchAnalyticsSummary(params),
+          fetchAnalyticsRecent(params),
+        ]);
+        setSummary(s);
+        setRecent(r);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : t.analyticsError);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [t.analyticsError],
+  );
 
   useEffect(() => {
     void load(applied);
   }, [applied, load]);
+
+  useEffect(() => {
+    if (!selectedStudentId) {
+      setProfile(null);
+      setProfileError(null);
+      return;
+    }
+    let cancelled = false;
+    setProfileLoading(true);
+    setProfileError(null);
+    void fetchStudentProfile(selectedStudentId)
+      .then((p) => {
+        if (!cancelled) setProfile(p);
+      })
+      .catch((e) => {
+        if (!cancelled) {
+          setProfileError(e instanceof Error ? e.message : t.profileError);
+          setProfile(null);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setProfileLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedStudentId, t.profileError]);
 
   const applyFilters = () => setApplied({ ...filters });
   const resetFilters = () => {
@@ -126,10 +308,37 @@ export function AnalyticsPage({ config, lang, onBack }: Props) {
     to: applied.to || undefined,
     bacStream: applied.bacStream || undefined,
     specialtyCode: applied.specialtyCode || undefined,
-    anonymized: true,
+    anonymized: false,
   });
 
   const specialties = config.specialties ?? [];
+
+  if (selectedStudentId) {
+    return (
+      <div className="space-y-4">
+        {profileLoading && <p className="text-sm text-slate-500">{t.profileLoading}</p>}
+        {profileError && (
+          <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200">
+            {profileError}
+            <button
+              type="button"
+              className="ml-3 underline"
+              onClick={() => setSelectedStudentId(null)}
+            >
+              {t.backToList}
+            </button>
+          </div>
+        )}
+        {profile && !profileLoading && (
+          <StudentProfileView
+            profile={profile}
+            lang={lang}
+            onClose={() => setSelectedStudentId(null)}
+          />
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -139,7 +348,7 @@ export function AnalyticsPage({ config, lang, onBack }: Props) {
             {t.analyticsTitle}
           </h2>
           <p className="mt-1 text-sm text-slate-500">{t.analyticsSubtitle}</p>
-          <p className="mt-1 text-xs text-amber-700 dark:text-amber-300">{t.analyticsAnonNote}</p>
+          <p className="mt-1 text-xs text-slate-500">{t.analyticsClickHint}</p>
         </div>
         <button
           type="button"
@@ -225,7 +434,7 @@ export function AnalyticsPage({ config, lang, onBack }: Props) {
             href={exportUrl}
             className="rounded-lg border border-slate-300 px-4 py-1.5 text-sm font-medium text-slate-700 hover:bg-white dark:border-slate-600 dark:text-slate-200"
           >
-            {t.exportAnonymizedCsv}
+            {t.exportCsv}
           </a>
         </div>
       </div>
@@ -279,7 +488,7 @@ export function AnalyticsPage({ config, lang, onBack }: Props) {
             <table className="min-w-full text-left text-xs">
               <thead className="border-b border-slate-200 text-slate-500 dark:border-slate-700">
                 <tr>
-                  <th className="px-2 py-2 font-medium">{t.colSession}</th>
+                  <th className="px-2 py-2 font-medium">{t.colName}</th>
                   <th className="px-2 py-2 font-medium">{t.colDate}</th>
                   <th className="px-2 py-2 font-medium">{t.colStream}</th>
                   <th className="px-2 py-2 font-medium">{t.colTopSpecialty}</th>
@@ -297,11 +506,20 @@ export function AnalyticsPage({ config, lang, onBack }: Props) {
                 ) : (
                   recent.rows.map((row) => (
                     <tr
-                      key={`${row.sessionRef}-${row.evaluatedAt}`}
-                      className="border-b border-slate-100 dark:border-slate-800"
+                      key={row.studentId}
+                      className="cursor-pointer border-b border-slate-100 hover:bg-indigo-50/60 dark:border-slate-800 dark:hover:bg-indigo-950/40"
+                      onClick={() => setSelectedStudentId(row.studentId)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          setSelectedStudentId(row.studentId);
+                        }
+                      }}
+                      tabIndex={0}
+                      role="button"
                     >
-                      <td className="px-2 py-2 font-mono text-slate-600 dark:text-slate-300">
-                        {row.sessionRef}
+                      <td className="px-2 py-2 font-medium text-indigo-700 dark:text-indigo-300">
+                        {row.fullName}
                       </td>
                       <td className="px-2 py-2 text-slate-600 dark:text-slate-300">
                         {row.evaluatedAt?.slice(0, 19).replace("T", " ")}
