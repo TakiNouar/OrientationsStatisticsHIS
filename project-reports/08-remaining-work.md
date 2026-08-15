@@ -1,22 +1,26 @@
 # 08 — Remaining work
 
-## Optional polish
+## Still optional
 
-- [ ] Tune seed subject weights / génie bias after counsellor feedback
-- [ ] Show affinity multipliers on results UI (debug mode)
-- [ ] Persist `technicalOption` explicitly in DB columns if needed for reporting
-- [ ] French UI copy for HIS staff
-- [ ] LAN deploy notes (bind host, static client build)
+- [ ] Counsellor feedback loop to tune seed subject weights / génie bias
+- [ ] Full FR copy on Step1/Step2 field labels (header/results done)
+- [ ] Serve `client/dist` from Express static for single-port deploy
 
-## Explicitly out of scope
+## Done this hardening pass
 
-- Phase B analytics dashboard
-- Unit/integration test suite (product decision)
+- [x] Debug scoring details on results
+- [x] FR/EN language toggle (default FR)
+- [x] DEPLOYMENT.md (Windows Task Scheduler)
+- [x] API timeout + config retry
+- [x] Export date/stream filters
+- [x] Security headers, CORS, rate limit, logger, persist error logging
+- [x] AFFINITY missing policy documented + fixed
+- [x] `.gitignore` + remove prompt PDF
+
+## Out of scope
+
+- Phase B analytics
+- **Unit/integration tests** (confirmed skip)
 - Docker / Postgres
 - Arts stream
-- Re-introducing stream μ on academic (removed by product choice)
-
-## Known ops notes
-
-- Windows: `better-sqlite3` may need C++ build tools + `npm install-scripts approve better-sqlite3`
-- After seed/schema changes: delete `server/data/his-sre.db*` and restart server
+- Re-introducing stream μ on academic

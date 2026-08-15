@@ -1,27 +1,23 @@
 # 01 — Executive status
 
-**Status:** Phase A operational (end-to-end wizard + engine + persistence).
+**Status:** Phase A operational + hardening polish (2026-08-15).
 
 ## Done
 
 - Offline Express API + SQLite (no Docker)
-- 8 verified HIS licence seeds with Holland codes + subject weights
-- Fixed BAC grade slots (2 mains + opposite + English) per stream
-- Technical Mathematics génie sub-option with bias points
-- Engine: 50% academic / 30% RIASEC / 20% technical fit
-- Academic: slot mix × aggressive specialty subject multipliers (×0.6–×1.8 from seed weights); **no stream μ**
-- RIASEC: hybrid 0.3 cosine + 0.7 Holland code match on top-3 weighted letters
-- Technical fit: 0.45 stream base + 0.55 marks-driven fit
-- React multi-step wizard (Academic → RIASEC → Results with bars + labels)
-- CSV export of evaluations
+- 8 HIS licence seeds; fixed BAC grade slots; génie option + bias
+- Engine locked: **50% academic / 30% RIASEC / 20% technical fit** (+ génie bias)
+- Academic multipliers from seed weights (×0.6–×1.8); **no stream μ**
+- Missing subject weight → **specialty average mapped multiplier** (not fixed 0.75)
+- Wizard + FR default i18n toggle + scoring debug panel
+- API: helmet, CORS allow-list, rate limit on calculate, dotenv, structured logger, safe persist
+- CSV export filters: `from`, `to`, `bacStream`
+- Client fetch timeout (10s) + config retry
+- Repo hygiene: root `.gitignore`, removed prompt PDF & Vite dead assets
+- `DEPLOYMENT.md` (Windows-first LAN)
 
-## Not in scope (locked)
+## Explicitly skipped
 
-- Phase B (extended analytics / ML)
-- Formal automated test suite
-- Docker / remote DB
-- Arts BAC stream
-
-## Health
-
-App runs locally: server `:3001`, client via Vite. Results render after latest UI fix for removed detail fields.
+- Automated test suite (product decision retained: **no tests**)
+- Phase B, Docker, Postgres
+- Formula / seed weight *values* unchanged except missing-affinity policy
