@@ -62,7 +62,6 @@ export const TECHNICAL_MATH_OPTION_LABELS: Record<TechnicalMathOption, string> =
   GENIE_PROCEDES: "Génie des procédés",
 };
 
-/** Fixed grade slots per stream: 2 mains + opposite + English. */
 export type StreamGradeSlots = {
   main1: SubjectCode;
   main2: SubjectCode;
@@ -109,7 +108,6 @@ export const STREAM_GRADE_SLOTS: Record<BacStream, StreamGradeSlots> = {
   },
 };
 
-/** Slot contribution weights inside the academic score (sum = 1). */
 export const ACADEMIC_SLOT_WEIGHTS = {
   main1: 0.35,
   main2: 0.3,
@@ -117,7 +115,6 @@ export const ACADEMIC_SLOT_WEIGHTS = {
   english: 0.1,
 } as const;
 
-/** Required subject list derived from fixed slots (for validation / UI). */
 export const STREAM_SUBJECT_MAP: Record<BacStream, SubjectCode[]> = {
   MATHEMATICS: ["MATH", "PHYSICS", "ARABIC", "ENGLISH"],
   EXPERIMENTAL_SCIENCES: ["MATH", "PHYSICS", "ARABIC", "ENGLISH"],
@@ -152,7 +149,6 @@ export interface StudentProfile {
   studentId?: string;
   fullName: string;
   bacStream: BacStream;
-  /** Required when bacStream is TECHNICAL_MATHEMATICS. */
   technicalOption?: TechnicalMathOption;
   academicPerformance: BacGrades;
   topRiasec: TopRiasecProfile;
@@ -212,6 +208,8 @@ export interface SpecialtyMatchBreakdown {
       opposite: number;
       english: number;
     };
+    technicalStreamBase: number;
+    technicalMarksComponent: number;
   };
 }
 

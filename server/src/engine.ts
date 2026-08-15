@@ -34,8 +34,14 @@ const AFFINITY_MIN = 1.0;
 const AFFINITY_MAX = 1.35;
 
 /**
+ * technicalFit = STREAM_BLEND * streamBase + MARKS_BLEND * marksFit
+ * Marks are first-class, not a minor tweak.
+ */
+const STREAM_BLEND = 0.45;
+const MARKS_BLEND = 0.55;
+
+/**
  * Génie option → specialty code bias points (added to final score, clamped).
- * Strongest on matching technical HIS programmes.
  */
 const GENIE_BIAS: Record<TechnicalMathOption, Partial<Record<string, number>>> = {
   GENIE_ELECTRIQUE: {
@@ -129,13 +135,26 @@ export const codeMatchScore = (
   return toFixedNumber(Math.min(100, (score / maxPossible) * 100));
 };
 
-export const technicalAlignmentScore = (
-  bacStream: BacStream,
-  specialtyIsTechnical: boolean,
-): number => {
-  const studentTechnical = isTechnicalBacStream(bacStream);
+const averageGradePct = (
+  grades: Partial<Record<SubjectCode, number>>,
+  subjects: SubjectCode[],
+): number | null => {
+  const values: number[] = [];
+  for (const subject of subjects) {
+    const g = grades[subject];
+    if (typeof g === "number") {
+      values.push((g / 20) * 100);
+    }
+  }
+  if (values.length === 0) return null;
+  return values.reduce((a, b) => a + b, 0) / values.length;
+};
 
-  // Softened cross-stream penalties so strong opposite grades can still flip ranks.
+/**
+ * Stream-only base (0–100). Softened so marks can still move ranks.
+ */
+const streamBaseFit = (bacStream: BacStream, specialtyIsTechnical: boolean): number => {
+  const studentTechnical = isTechnicalBacStream(bacStream);
   if (studentTechnical && specialtyIsTechnical) return 100;
   if (studentTechnical && !specialtyIsTechnical) return 35;
   if (!studentTechnical && !specialtyIsTechnical) return 85;
@@ -143,8 +162,61 @@ export const technicalAlignmentScore = (
 };
 
 /**
+ * Marks-driven fit (0–100).
+ * - Technical specialty ← strength of main (technical) modules + mild English
+ * - Non-technical specialty ← strength of opposite module + mild English
+ *
+ * So a technical-stream student with excellent Arabic can still score well on
+ * non-tech specialties inside technicalFit itself, not only via academic.
+ */
+const marksFit = (
+  studentProfile: StudentProfile,
+  specialtyIsTechnical: boolean,
+): number => {
+  const slots = STREAM_GRADE_SLOTS[studentProfile.bacStream];
+  const grades = studentProfile.academicPerformance.grades;
+
+  const mainsPct = averageGradePct(grades, [slots.main1, slots.main2]);
+  const oppositePct = averageGradePct(grades, [slots.opposite]);
+  const englishPct = averageGradePct(grades, [slots.english]);
+  const overallPct = (studentProfile.academicPerformance.overallBacMark / 20) * 100;
+
+  // Fallbacks if a slot is missing (should not happen after validation).
+  const mains = mainsPct ?? overallPct;
+  const opposite = oppositePct ?? overallPct;
+  const english = englishPct ?? overallPct;
+
+  if (specialtyIsTechnical) {
+    // Mains dominate for technical programmes; English helps slightly.
+    return toFixedNumber(0.75 * mains + 0.15 * opposite + 0.1 * english);
+  }
+
+  // Non-technical programmes: opposite is the primary mark signal.
+  return toFixedNumber(0.7 * opposite + 0.2 * mains + 0.1 * english);
+};
+
+/**
+ * technicalFit = 0.45 * streamBase + 0.55 * marksFit
+ */
+export const technicalAlignmentScore = (
+  studentProfile: StudentProfile,
+  specialtyIsTechnical: boolean,
+): { technicalScore: number; streamBase: number; marksComponent: number } => {
+  const streamBase = streamBaseFit(studentProfile.bacStream, specialtyIsTechnical);
+  const marksComponent = marksFit(studentProfile, specialtyIsTechnical);
+  const technicalScore = toFixedNumber(
+    STREAM_BLEND * streamBase + MARKS_BLEND * marksComponent,
+  );
+
+  return {
+    technicalScore: Math.min(100, Math.max(0, technicalScore)),
+    streamBase,
+    marksComponent,
+  };
+};
+
+/**
  * Specialty affinity for a subject: boost only (never < 1).
- * Uses the specialty's subjectWeights relative to its max weight.
  */
 const subjectAffinity = (
   specialty: HisSpecialtyConfig,
@@ -160,7 +232,7 @@ const subjectAffinity = (
     return AFFINITY_MIN;
   }
 
-  const ratio = subjectW / maxW; // 0..1
+  const ratio = subjectW / maxW;
   return AFFINITY_MIN + (AFFINITY_MAX - AFFINITY_MIN) * ratio;
 };
 
@@ -199,7 +271,6 @@ const calculateAcademicScore = (
     weighted += contribution;
   }
 
-  // Affinity can push slightly above 100; clamp after stream modifier.
   const rawAcademicPercentage = toFixedNumber(Math.min(weighted, 140));
   const academicScore = toFixedNumber(Math.min(rawAcademicPercentage * streamModifier, 100));
 
@@ -241,17 +312,14 @@ export const calculateRecommendations = (
         COSINE_BLEND * cosineScore + CODE_MATCH_BLEND * codeScore,
       );
 
-      const technicalScore = technicalAlignmentScore(
-        studentProfile.bacStream,
-        specialty.isTechnical,
-      );
+      const tech = technicalAlignmentScore(studentProfile, specialty.isTechnical);
 
       const bias = genieBiasPoints(studentProfile, specialty.code);
 
       const blended = toFixedNumber(
         ACADEMIC_WEIGHT * academic.academicScore +
           RIASEC_WEIGHT * psychometricScore +
-          TECHNICAL_WEIGHT * technicalScore,
+          TECHNICAL_WEIGHT * tech.technicalScore,
       );
 
       const finalScore = toFixedNumber(Math.min(100, Math.max(0, blended + bias)));
@@ -267,7 +335,7 @@ export const calculateRecommendations = (
         hollandCode: specialty.hollandCode,
         academicScore: academic.academicScore,
         psychometricScore,
-        technicalScore,
+        technicalScore: tech.technicalScore,
         finalScore,
         matchLabel,
         matchLabelText: MATCH_LABEL_TEXT[matchLabel],
@@ -281,6 +349,8 @@ export const calculateRecommendations = (
           codeMatchComponent: toFixedNumber(CODE_MATCH_BLEND * codeScore),
           genieBiasPoints: bias,
           slotBreakdown: academic.slotBreakdown,
+          technicalStreamBase: tech.streamBase,
+          technicalMarksComponent: tech.marksComponent,
         },
       };
     })
