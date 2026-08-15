@@ -8,6 +8,8 @@ import {
   getActiveSpecialties,
   getCareerPathsBySpecialty,
   exportEvaluationsAsCsv,
+  getAnalyticsSummary,
+  getRecentEvaluationsAnonymized,
   initDatabase,
   persistEvaluation,
 } from "./db.js";
@@ -130,6 +132,44 @@ app.get("/api/v1/config", (_req, res) => {
   }
 });
 
+const parseAnalyticsFilters = (req: express.Request) => {
+  const from = typeof req.query.from === "string" ? req.query.from : undefined;
+  const to = typeof req.query.to === "string" ? req.query.to : undefined;
+  const bacStream =
+    typeof req.query.bacStream === "string" ? (req.query.bacStream as BacStream) : undefined;
+  const specialtyCode =
+    typeof req.query.specialtyCode === "string" ? req.query.specialtyCode : undefined;
+  return { from, to, bacStream, specialtyCode };
+};
+
+app.get("/api/v1/analytics/summary", (req, res) => {
+  try {
+    const filters = parseAnalyticsFilters(req);
+    const summary = getAnalyticsSummary(filters);
+    res.json(summary);
+  } catch (error) {
+    logger.error("analytics_summary_failed", {
+      err: error instanceof Error ? error.message : String(error),
+    });
+    res.status(500).json({ message: "Failed to load analytics summary." });
+  }
+});
+
+app.get("/api/v1/analytics/recent", (req, res) => {
+  try {
+    const filters = parseAnalyticsFilters(req);
+    const limitRaw = typeof req.query.limit === "string" ? Number(req.query.limit) : 50;
+    const limit = Number.isFinite(limitRaw) ? limitRaw : 50;
+    const rows = getRecentEvaluationsAnonymized(filters, limit);
+    res.json({ rows, filters, limit });
+  } catch (error) {
+    logger.error("analytics_recent_failed", {
+      err: error instanceof Error ? error.message : String(error),
+    });
+    res.status(500).json({ message: "Failed to load recent evaluations." });
+  }
+});
+
 app.get("/api/v1/export/evaluations", (req, res) => {
   const format = req.query.format;
   if (format !== "csv") {
@@ -143,11 +183,17 @@ app.get("/api/v1/export/evaluations", (req, res) => {
   const to = typeof req.query.to === "string" ? req.query.to : undefined;
   const bacStream =
     typeof req.query.bacStream === "string" ? (req.query.bacStream as BacStream) : undefined;
+  const specialtyCode =
+    typeof req.query.specialtyCode === "string" ? req.query.specialtyCode : undefined;
+  // Default anonymized for B0 safety; pass anonymized=0 to include names.
+  const anonymizedParam = typeof req.query.anonymized === "string" ? req.query.anonymized : "1";
+  const anonymized = anonymizedParam !== "0" && anonymizedParam.toLowerCase() !== "false";
 
   try {
-    const csv = exportEvaluationsAsCsv({ from, to, bacStream });
+    const csv = exportEvaluationsAsCsv({ from, to, bacStream, specialtyCode, anonymized });
+    const filename = anonymized ? "evaluations-anonymized.csv" : "evaluations.csv";
     res.setHeader("Content-Type", "text/csv; charset=utf-8");
-    res.setHeader("Content-Disposition", "attachment; filename=evaluations.csv");
+    res.setHeader("Content-Disposition", `attachment; filename=${filename}`);
     res.send(csv);
   } catch (error) {
     logger.error("export_failed", {
@@ -155,6 +201,8 @@ app.get("/api/v1/export/evaluations", (req, res) => {
       from,
       to,
       bacStream,
+      specialtyCode,
+      anonymized,
     });
     res.status(500).json({ message: "Failed to export evaluations." });
   }
