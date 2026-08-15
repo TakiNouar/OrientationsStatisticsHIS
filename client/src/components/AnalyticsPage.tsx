@@ -45,6 +45,9 @@ const emptyFilters = (): Filters => ({
   specialtyCode: "",
 });
 
+const fieldClass =
+  "mt-1.5 w-full min-w-0 rounded-xl border border-sky-200 bg-sky-50 px-2.5 py-2 text-sm text-slate-900 shadow-sm dark:border-sky-800 dark:bg-slate-900 dark:text-sky-50";
+
 function StudentProfileView({
   profile,
   lang,
@@ -60,27 +63,27 @@ function StudentProfileView({
   const top = profile.matches[0];
 
   return (
-    <div className="space-y-5">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
+    <div className="min-w-0 space-y-5">
+      <div className="flex min-w-0 flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
           <button
             type="button"
             onClick={onClose}
-            className="mb-2 text-xs font-medium text-teal-700 hover:underline dark:text-teal-300"
+            className="mb-2 text-xs font-medium text-sky-700 hover:underline dark:text-sky-300"
           >
             ← {t.backToList}
           </button>
-          <h2 className="text-2xl font-black tracking-tight text-stone-900 dark:text-stone-50">
+          <h2 className="break-words text-2xl font-black tracking-tight text-slate-900 dark:text-sky-50">
             {profile.fullName}
           </h2>
-          <p className="mt-1 text-sm text-stone-500">
+          <p className="mt-1 break-words text-sm text-slate-600 dark:text-sky-200/80">
             {streamLabels[profile.bacStream as BacStream] ?? profile.bacStream}
             {" · "}{t.overallMarkShort}: {profile.overallBacMark.toFixed(2)}/20
             {profile.topRiasec
               ? ` · RIASEC ${profile.topRiasec.map((e) => e.letter).join("")}`
               : ""}
           </p>
-          <p className="mt-0.5 text-xs text-stone-400">
+          <p className="mt-0.5 text-xs text-slate-500 dark:text-sky-300/60">
             {t.evaluatedAt}:{" "}
             {profile.matches[0]?.evaluatedAt?.slice(0, 19).replace("T", " ") ?? profile.createdAt}
           </p>
@@ -88,91 +91,95 @@ function StudentProfileView({
       </div>
 
       {top && (
-        <div className="relative overflow-hidden rounded-2xl border border-teal-300/70 bg-gradient-to-br from-teal-500/20 via-amber-500/15 to-orange-500/15 p-5 shadow-lg shadow-teal-500/15 dark:border-teal-700/50">
-          <div className="pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full bg-amber-400/25 blur-2xl" />
-          <p className="text-xs font-bold uppercase tracking-widest text-teal-700 dark:text-teal-300">
+        <div className="relative overflow-hidden rounded-2xl border border-sky-300/80 bg-gradient-to-br from-sky-400/25 via-cyan-400/15 to-blue-500/20 p-5 shadow-lg shadow-sky-500/20 dark:border-sky-700/50">
+          <div className="pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full bg-sky-400/30 blur-2xl" />
+          <p className="text-xs font-bold uppercase tracking-widest text-sky-800 dark:text-sky-200">
             {t.topRecommendation}
           </p>
-          <div className="mt-1 flex flex-wrap items-center gap-2">
-            <h3 className="text-xl font-black text-stone-900 dark:text-stone-50">{top.specialtyTitle}</h3>
-            <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${LABEL_STYLES[top.matchLabel]}`}>
+          <div className="mt-1 flex min-w-0 flex-wrap items-center gap-2">
+            <h3 className="break-words text-xl font-black text-slate-900 dark:text-sky-50">
+              {top.specialtyTitle}
+            </h3>
+            <span className={`inline-flex shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${LABEL_STYLES[top.matchLabel]}`}>
               {matchLabelText(lang, top.matchLabel)}
             </span>
           </div>
-          <p className="mt-2 text-4xl font-black tabular-nums text-teal-700 dark:text-teal-300">
+          <p className="mt-2 text-4xl font-black tabular-nums text-sky-800 dark:text-sky-200">
             {top.finalScore.toFixed(1)}
-            <span className="text-lg font-semibold text-stone-400">%</span>
+            <span className="text-lg font-semibold text-slate-500">%</span>
           </p>
         </div>
       )}
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <section className="analytics-card p-4">
-          <h3 className="text-sm font-bold text-stone-800 dark:text-stone-100">{t.gradesHeading}</h3>
+      <div className="grid min-w-0 gap-4 sm:grid-cols-2">
+        <section className="analytics-card min-w-0 p-4">
+          <h3 className="text-sm font-bold text-slate-900 dark:text-sky-50">{t.gradesHeading}</h3>
           <ul className="mt-2 space-y-1.5 text-sm">
             {Object.entries(profile.grades).map(([code, value]) => (
-              <li key={code} className="flex justify-between gap-2">
-                <span className="text-stone-600 dark:text-stone-300">
+              <li key={code} className="flex min-w-0 justify-between gap-2">
+                <span className="min-w-0 truncate text-slate-700 dark:text-sky-100">
                   {subjectLabels[code as SubjectCode] ?? code}
                 </span>
-                <span className="font-bold tabular-nums">{Number(value).toFixed(2)}</span>
+                <span className="shrink-0 font-bold tabular-nums text-slate-900 dark:text-white">
+                  {Number(value).toFixed(2)}
+                </span>
               </li>
             ))}
-            {Object.keys(profile.grades).length === 0 && <li className="text-stone-500">—</li>}
+            {Object.keys(profile.grades).length === 0 && <li className="text-slate-500">—</li>}
           </ul>
         </section>
 
-        <section className="analytics-card p-4">
-          <h3 className="text-sm font-bold text-stone-800 dark:text-stone-100">{t.riasecTitle}</h3>
+        <section className="analytics-card min-w-0 p-4">
+          <h3 className="text-sm font-bold text-slate-900 dark:text-sky-50">{t.riasecTitle}</h3>
           {profile.topRiasec && profile.topRiasec.length > 0 ? (
             <ul className="mt-2 space-y-1.5 text-sm">
               {profile.topRiasec.map((entry, i) => (
                 <li key={`${entry.letter}-${i}`} className="flex justify-between gap-2">
-                  <span className="font-semibold text-stone-700 dark:text-stone-200">
+                  <span className="font-semibold text-slate-800 dark:text-sky-100">
                     #{i + 1} {entry.letter}
                   </span>
-                  <span className="tabular-nums text-stone-600">{entry.weight}</span>
+                  <span className="tabular-nums text-slate-700 dark:text-sky-200">{entry.weight}</span>
                 </li>
               ))}
             </ul>
           ) : (
-            <p className="mt-2 text-sm text-stone-500">—</p>
+            <p className="mt-2 text-sm text-slate-500">—</p>
           )}
         </section>
       </div>
 
-      <section>
-        <h3 className="mb-2 text-sm font-bold text-stone-800 dark:text-stone-100">{t.allMatches}</h3>
+      <section className="min-w-0">
+        <h3 className="mb-2 text-sm font-bold text-slate-900 dark:text-sky-50">{t.allMatches}</h3>
         <div className="space-y-2">
           {profile.matches.map((match) => (
             <article
               key={match.specialtyId}
-              className={`rounded-xl border p-3 transition ${
+              className={`min-w-0 overflow-hidden rounded-xl border p-3 transition ${
                 match.rank === 1
-                  ? "border-teal-300/70 bg-teal-50/70 shadow-sm dark:border-teal-800 dark:bg-teal-950/40"
-                  : "border-stone-200/80 dark:border-stone-700"
+                  ? "border-sky-300 bg-sky-100/80 shadow-sm dark:border-sky-700 dark:bg-sky-950/50"
+                  : "border-sky-200/80 bg-sky-50/50 dark:border-slate-700 dark:bg-slate-900/40"
               }`}
             >
-              <div className="flex flex-wrap items-start justify-between gap-2">
-                <div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-xs font-bold text-stone-400">#{match.rank}</span>
-                    <h4 className="text-sm font-bold text-stone-900 dark:text-stone-100">
+              <div className="flex min-w-0 flex-wrap items-start justify-between gap-2">
+                <div className="min-w-0 flex-1">
+                  <div className="flex min-w-0 flex-wrap items-center gap-2">
+                    <span className="text-xs font-bold text-slate-500">#{match.rank}</span>
+                    <h4 className="break-words text-sm font-bold text-slate-900 dark:text-sky-50">
                       {match.specialtyTitle}
                     </h4>
-                    <span className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold ${LABEL_STYLES[match.matchLabel]}`}>
+                    <span className={`inline-flex shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${LABEL_STYLES[match.matchLabel]}`}>
                       {matchLabelText(lang, match.matchLabel)}
                     </span>
                   </div>
-                  <p className="mt-0.5 text-xs text-stone-500">
+                  <p className="mt-0.5 break-words text-xs text-slate-600 dark:text-sky-200/70">
                     {match.specialtyCode} · {match.department} · {match.hollandCode.join("-")}
                   </p>
                 </div>
-                <div className="text-right">
-                  <div className="text-lg font-black tabular-nums text-teal-700 dark:text-teal-300">
+                <div className="shrink-0 text-right">
+                  <div className="text-lg font-black tabular-nums text-sky-800 dark:text-sky-200">
                     {match.finalScore.toFixed(1)}%
                   </div>
-                  <div className="text-[10px] text-stone-500">
+                  <div className="text-[10px] text-slate-500">
                     A {match.academicScore.toFixed(0)} · R {match.psychometricScore.toFixed(0)}
                   </div>
                 </div>
@@ -180,7 +187,7 @@ function StudentProfileView({
             </article>
           ))}
           {profile.matches.length === 0 && (
-            <p className="text-sm text-stone-500">{t.noMatches}</p>
+            <p className="text-sm text-slate-500">{t.noMatches}</p>
           )}
         </div>
       </section>
@@ -282,8 +289,8 @@ export function AnalyticsPage({ config, lang, onBack }: Props) {
 
   if (selectedStudentId) {
     return (
-      <div className="space-y-4">
-        {profileLoading && <p className="text-sm text-stone-500">{t.profileLoading}</p>}
+      <div className="min-w-0 space-y-4">
+        {profileLoading && <p className="text-sm text-slate-600">{t.profileLoading}</p>}
         {profileError && (
           <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200">
             {profileError}
@@ -300,52 +307,52 @@ export function AnalyticsPage({ config, lang, onBack }: Props) {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h2 className="bg-gradient-to-r from-teal-600 via-amber-500 to-orange-500 bg-clip-text text-2xl font-black tracking-tight text-transparent dark:from-teal-300 dark:via-amber-300 dark:to-orange-300">
+    <div className="min-w-0 space-y-6 overflow-x-hidden">
+      <div className="flex min-w-0 flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h2 className="bg-gradient-to-r from-sky-700 via-blue-600 to-cyan-600 bg-clip-text text-2xl font-black tracking-tight text-transparent dark:from-sky-300 dark:via-blue-300 dark:to-cyan-300">
             {t.analyticsTitle}
           </h2>
-          <p className="mt-1 text-sm text-stone-500">{t.analyticsSubtitle}</p>
-          <p className="mt-1 text-xs text-stone-400">{t.analyticsClickHint}</p>
+          <p className="mt-1 break-words text-sm text-slate-600 dark:text-sky-200/80">{t.analyticsSubtitle}</p>
+          <p className="mt-1 break-words text-xs text-slate-500 dark:text-sky-300/60">{t.analyticsClickHint}</p>
         </div>
         <button
           type="button"
           onClick={onBack}
-          className="rounded-xl border border-stone-200 bg-white/80 px-3 py-1.5 text-sm font-semibold text-stone-700 shadow-sm backdrop-blur hover:bg-white dark:border-stone-700 dark:bg-stone-900/80 dark:text-stone-200"
+          className="shrink-0 rounded-xl border border-sky-200 bg-sky-50 px-3 py-1.5 text-sm font-semibold text-slate-800 shadow-sm hover:bg-sky-100 dark:border-sky-800 dark:bg-slate-900 dark:text-sky-100"
         >
           {t.backToWizard}
         </button>
       </div>
 
-      <div className="analytics-card analytics-mesh p-4">
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <label className="block text-xs font-bold uppercase tracking-wide text-stone-500">
+      <div className="analytics-card analytics-mesh min-w-0 p-4">
+        <div className="grid min-w-0 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <label className="block min-w-0 text-xs font-bold uppercase tracking-wide text-slate-700 dark:text-sky-200">
             {t.filterFrom}
             <input
               type="date"
               value={filters.from}
               onChange={(e) => setFilters((p) => ({ ...p, from: e.target.value }))}
-              className="mt-1.5 w-full rounded-xl border border-stone-200 bg-white/90 px-2.5 py-2 text-sm shadow-sm dark:border-stone-700 dark:bg-stone-950/60"
+              className={fieldClass}
             />
           </label>
-          <label className="block text-xs font-bold uppercase tracking-wide text-stone-500">
+          <label className="block min-w-0 text-xs font-bold uppercase tracking-wide text-slate-700 dark:text-sky-200">
             {t.filterTo}
             <input
               type="date"
               value={filters.to}
               onChange={(e) => setFilters((p) => ({ ...p, to: e.target.value }))}
-              className="mt-1.5 w-full rounded-xl border border-stone-200 bg-white/90 px-2.5 py-2 text-sm shadow-sm dark:border-stone-700 dark:bg-stone-950/60"
+              className={fieldClass}
             />
           </label>
-          <label className="block text-xs font-bold uppercase tracking-wide text-stone-500">
+          <label className="block min-w-0 text-xs font-bold uppercase tracking-wide text-slate-700 dark:text-sky-200">
             {t.filterStream}
             <select
               value={filters.bacStream}
               onChange={(e) =>
                 setFilters((p) => ({ ...p, bacStream: e.target.value as BacStream | "" }))
               }
-              className="mt-1.5 w-full rounded-xl border border-stone-200 bg-white/90 px-2.5 py-2 text-sm shadow-sm dark:border-stone-700 dark:bg-stone-950/60"
+              className={fieldClass}
             >
               <option value="">{t.filterAll}</option>
               {config.bacStreams.map((s) => (
@@ -355,12 +362,12 @@ export function AnalyticsPage({ config, lang, onBack }: Props) {
               ))}
             </select>
           </label>
-          <label className="block text-xs font-bold uppercase tracking-wide text-stone-500">
+          <label className="block min-w-0 text-xs font-bold uppercase tracking-wide text-slate-700 dark:text-sky-200">
             {t.filterSpecialty}
             <select
               value={filters.specialtyCode}
               onChange={(e) => setFilters((p) => ({ ...p, specialtyCode: e.target.value }))}
-              className="mt-1.5 w-full rounded-xl border border-stone-200 bg-white/90 px-2.5 py-2 text-sm shadow-sm dark:border-stone-700 dark:bg-stone-950/60"
+              className={fieldClass}
             >
               <option value="">{t.filterAll}</option>
               {specialties.map((s) => (
@@ -375,20 +382,20 @@ export function AnalyticsPage({ config, lang, onBack }: Props) {
           <button
             type="button"
             onClick={applyFilters}
-            className="rounded-xl bg-gradient-to-r from-teal-600 to-amber-500 px-4 py-2 text-sm font-bold text-white shadow-lg shadow-teal-500/30 hover:brightness-110"
+            className="rounded-xl bg-gradient-to-r from-sky-600 to-blue-600 px-4 py-2 text-sm font-bold text-white shadow-lg shadow-sky-500/30 hover:brightness-110"
           >
             {t.applyFilters}
           </button>
           <button
             type="button"
             onClick={resetFilters}
-            className="rounded-xl border border-stone-200 bg-white/80 px-4 py-2 text-sm font-semibold text-stone-700 dark:border-stone-600 dark:bg-stone-900 dark:text-stone-200"
+            className="rounded-xl border border-sky-200 bg-sky-50 px-4 py-2 text-sm font-semibold text-slate-800 dark:border-sky-700 dark:bg-slate-900 dark:text-sky-100"
           >
             {t.resetFilters}
           </button>
           <a
             href={exportUrl}
-            className="rounded-xl border border-stone-200 bg-white/80 px-4 py-2 text-sm font-semibold text-stone-700 dark:border-stone-600 dark:bg-stone-900 dark:text-stone-200"
+            className="rounded-xl border border-sky-200 bg-sky-50 px-4 py-2 text-sm font-semibold text-slate-800 dark:border-sky-700 dark:bg-slate-900 dark:text-sky-100"
           >
             {t.exportCsv}
           </a>
@@ -396,7 +403,7 @@ export function AnalyticsPage({ config, lang, onBack }: Props) {
       </div>
 
       {error && (
-        <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200">
+        <div className="break-words rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200">
           {error}
           <button type="button" className="ml-3 underline" onClick={() => void load(applied)}>
             {t.retry}
@@ -404,7 +411,7 @@ export function AnalyticsPage({ config, lang, onBack }: Props) {
         </div>
       )}
 
-      {loading && !dashboard && <p className="text-sm text-stone-500">{t.analyticsLoading}</p>}
+      {loading && !dashboard && <p className="text-sm text-slate-600">{t.analyticsLoading}</p>}
 
       {dashboard && (
         <AnalyticsDashboardPanel
@@ -415,29 +422,29 @@ export function AnalyticsPage({ config, lang, onBack }: Props) {
       )}
 
       {recent && (
-        <section className="analytics-card overflow-hidden p-0">
-          <div className="border-b border-stone-100 px-5 py-4 dark:border-stone-800">
-            <h3 className="text-sm font-black tracking-tight text-stone-900 dark:text-stone-50">
+        <section className="analytics-card min-w-0 overflow-hidden p-0">
+          <div className="border-b border-sky-200/80 px-4 py-4 sm:px-5 dark:border-sky-900">
+            <h3 className="text-sm font-black tracking-tight text-slate-900 dark:text-sky-50">
               {t.recentSessions}
             </h3>
-            <p className="text-[11px] text-stone-400">{t.analyticsClickHint}</p>
+            <p className="break-words text-[11px] text-slate-500 dark:text-sky-300/60">{t.analyticsClickHint}</p>
           </div>
           <div className="overflow-x-auto">
             <table className="min-w-full text-left text-xs">
-              <thead className="bg-amber-50/60 text-[10px] uppercase tracking-wider text-stone-400 dark:bg-stone-950/50">
+              <thead className="bg-sky-100/80 text-[10px] uppercase tracking-wider text-slate-600 dark:bg-slate-950/60 dark:text-sky-300/70">
                 <tr>
-                  <th className="px-4 py-3 font-bold">{t.colName}</th>
-                  <th className="px-3 py-3 font-bold">{t.colDate}</th>
-                  <th className="px-3 py-3 font-bold">{t.colStream}</th>
-                  <th className="px-3 py-3 font-bold">{t.colTopSpecialty}</th>
-                  <th className="px-3 py-3 font-bold">{t.colScore}</th>
-                  <th className="px-4 py-3 font-bold">{t.colLabel}</th>
+                  <th className="px-3 py-3 font-bold sm:px-4">{t.colName}</th>
+                  <th className="px-2 py-3 font-bold sm:px-3">{t.colDate}</th>
+                  <th className="px-2 py-3 font-bold sm:px-3">{t.colStream}</th>
+                  <th className="px-2 py-3 font-bold sm:px-3">{t.colTopSpecialty}</th>
+                  <th className="px-2 py-3 font-bold sm:px-3">{t.colScore}</th>
+                  <th className="px-3 py-3 font-bold sm:px-4">{t.colLabel}</th>
                 </tr>
               </thead>
               <tbody>
                 {recent.rows.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-4 py-8 text-center text-stone-500">
+                    <td colSpan={6} className="px-4 py-8 text-center text-slate-500">
                       {t.noSessions}
                     </td>
                   </tr>
@@ -445,7 +452,7 @@ export function AnalyticsPage({ config, lang, onBack }: Props) {
                   recent.rows.map((row) => (
                     <tr
                       key={row.studentId}
-                      className="cursor-pointer border-t border-stone-100/80 transition hover:bg-gradient-to-r hover:from-teal-50/90 hover:to-amber-50/50 dark:border-stone-800 dark:hover:from-teal-950/40 dark:hover:to-amber-950/25"
+                      className="cursor-pointer border-t border-sky-100/90 transition hover:bg-sky-100/70 dark:border-slate-800 dark:hover:bg-sky-950/40"
                       onClick={() => setSelectedStudentId(row.studentId)}
                       onKeyDown={(e) => {
                         if (e.key === "Enter" || e.key === " ") {
@@ -456,24 +463,24 @@ export function AnalyticsPage({ config, lang, onBack }: Props) {
                       tabIndex={0}
                       role="button"
                     >
-                      <td className="px-4 py-3 font-bold text-teal-700 dark:text-teal-300">
+                      <td className="max-w-[10rem] truncate px-3 py-3 font-bold text-sky-800 dark:text-sky-200 sm:max-w-[14rem] sm:px-4">
                         {row.fullName}
                       </td>
-                      <td className="px-3 py-3 tabular-nums text-stone-500">
+                      <td className="whitespace-nowrap px-2 py-3 tabular-nums text-slate-600 dark:text-sky-200/70 sm:px-3">
                         {row.evaluatedAt?.slice(0, 19).replace("T", " ")}
                       </td>
-                      <td className="px-3 py-3 text-stone-700 dark:text-stone-200">
+                      <td className="max-w-[8rem] truncate px-2 py-3 text-slate-800 dark:text-sky-100 sm:px-3">
                         {streamLabels[row.bacStream as BacStream] ?? row.bacStream}
                       </td>
-                      <td className="px-3 py-3 font-medium text-stone-800 dark:text-stone-100">
+                      <td className="max-w-[10rem] truncate px-2 py-3 font-medium text-slate-900 dark:text-sky-50 sm:max-w-[14rem] sm:px-3">
                         {row.topSpecialtyTitle}
                       </td>
-                      <td className="px-3 py-3 text-sm font-black tabular-nums text-stone-900 dark:text-white">
+                      <td className="whitespace-nowrap px-2 py-3 text-sm font-black tabular-nums text-slate-900 dark:text-white sm:px-3">
                         {row.finalScore.toFixed(1)}%
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-3 py-3 sm:px-4">
                         <span
-                          className={`inline-flex rounded-full px-2.5 py-0.5 text-[10px] font-bold ${
+                          className={`inline-flex max-w-[9rem] truncate rounded-full px-2.5 py-0.5 text-[10px] font-bold ${
                             LABEL_STYLES[row.matchLabel]
                           }`}
                         >
