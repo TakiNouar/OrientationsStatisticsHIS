@@ -10,6 +10,8 @@ import type {
   TopRiasecEntry,
   TopRiasecProfile,
 } from "../types";
+import type { Lang } from "../i18n/strings";
+import { SUBJECT_LABELS_I18N, strings } from "../i18n/strings";
 
 export type WizardStep = 1 | 2 | 3;
 
@@ -31,12 +33,16 @@ const emptyForm = (): WizardFormState => ({
   topRiasec: [null, null, null],
 });
 
-export function useRecommendationWizard(config: ConfigResponse | null) {
+export function useRecommendationWizard(config: ConfigResponse | null, lang: Lang) {
   const [step, setStep] = useState<WizardStep>(1);
   const [form, setForm] = useState<WizardFormState>(emptyForm);
   const [result, setResult] = useState<CalculationResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Partial<Record<string, string>>>({});
   const [loading, setLoading] = useState(false);
+
+  const t = strings[lang];
+  const subjectLabels = SUBJECT_LABELS_I18N[lang];
 
   const requiredSubjects = useMemo(() => {
     if (!config || !form.bacStream) return [] as SubjectCode[];
@@ -45,13 +51,21 @@ export function useRecommendationWizard(config: ConfigResponse | null) {
 
   const setFullName = (fullName: string) => setForm((prev) => ({ ...prev, fullName }));
 
-  const setBacStream = (bacStream: BacStream) =>
-    setForm((prev) => ({
-      ...prev,
-      bacStream,
-      technicalOption: bacStream === "TECHNICAL_MATHEMATICS" ? prev.technicalOption : "",
-      grades: {},
-    }));
+  const setBacStream = (bacStream: BacStream) => {
+    setForm((prev) => {
+      const hasGrades = Object.values(prev.grades).some((g) => g !== undefined && g !== "");
+      if (hasGrades && prev.bacStream && prev.bacStream !== bacStream) {
+        const ok = window.confirm(t.streamChangeConfirm);
+        if (!ok) return prev;
+      }
+      return {
+        ...prev,
+        bacStream,
+        technicalOption: bacStream === "TECHNICAL_MATHEMATICS" ? prev.technicalOption : "",
+        grades: {},
+      };
+    });
+  };
 
   const setTechnicalOption = (technicalOption: TechnicalMathOption | "") =>
     setForm((prev) => ({ ...prev, technicalOption }));
@@ -72,75 +86,102 @@ export function useRecommendationWizard(config: ConfigResponse | null) {
       return { ...prev, topRiasec: next };
     });
 
-  const validateStep1 = useCallback((): string | null => {
-    if (form.fullName.trim().length < 2) return "Please enter the student full name.";
-    if (!form.bacStream) return "Please select a BAC stream.";
+  const validateStep1 = useCallback((): Partial<Record<string, string>> => {
+    const errors: Partial<Record<string, string>> = {};
+    if (form.fullName.trim().length < 2) errors.fullName = t.errName;
+    if (!form.bacStream) errors.bacStream = t.errStream;
     if (form.bacStream === "TECHNICAL_MATHEMATICS" && !form.technicalOption) {
-      return "Please select a Technical Mathematics génie option.";
+      errors.technicalOption = t.errGenie;
     }
-    const mark = Number(form.overallBacMark);
-    if (Number.isNaN(mark) || mark < 0 || mark > 20) {
-      return "Overall BAC mark must be between 0 and 20.";
+    const overall = Number(form.overallBacMark);
+    if (form.overallBacMark === "" || Number.isNaN(overall) || overall < 0 || overall > 20) {
+      errors.overallBacMark = t.errOverall;
     }
     for (const subject of requiredSubjects) {
       const raw = form.grades[subject];
-      const value = Number(raw);
-      if (raw === undefined || raw === "" || Number.isNaN(value) || value < 0 || value > 20) {
-        return `Please enter a valid grade (0–20) for ${subject}.`;
+      if (raw === undefined || raw === "") {
+        errors[`grade_${subject}`] = t.errMissingGrade.replace(
+          "{subject}",
+          subjectLabels[subject],
+        );
+        continue;
+      }
+      const n = Number(raw);
+      if (Number.isNaN(n) || n < 0 || n > 20) {
+        errors[`grade_${subject}`] = t.errGrade.replace("{subject}", subjectLabels[subject]);
       }
     }
-    return null;
-  }, [form, requiredSubjects]);
+    return errors;
+  }, [form, requiredSubjects, t, subjectLabels]);
 
-  const validateStep2 = useCallback((): string | null => {
+  const validateStep2 = useCallback((): Partial<Record<string, string>> => {
+    const errors: Partial<Record<string, string>> = {};
     const entries = form.topRiasec;
-    if (entries.some((e) => e === null)) {
-      return "Please select exactly three RIASEC letters.";
+    if (entries.some((e) => !e)) {
+      errors.riasec = t.errRiasecAll;
+      entries.forEach((e, i) => {
+        if (!e) errors[`riasec_letter_${i}`] = t.errRiasecAll;
+      });
+      return errors;
     }
     const letters = entries.map((e) => e!.letter);
     if (new Set(letters).size !== 3) {
-      return "The three RIASEC letters must be distinct.";
+      errors.riasec = t.errRiasecDistinct;
     }
-    for (const entry of entries) {
-      if (!entry || entry.weight < 1 || entry.weight > 100) {
-        return "Each RIASEC weight must be between 1 and 100.";
+    for (let i = 0; i < 3; i += 1) {
+      const entry = entries[i]!;
+      if (entry.weight < 1 || entry.weight > 100) {
+        errors[`riasec_weight_${i}`] = t.errRiasecWeight;
       }
     }
-    return null;
-  }, [form.topRiasec]);
+    return errors;
+  }, [form.topRiasec, t]);
 
   const goNext = () => {
     setError(null);
     if (step === 1) {
-      const err = validateStep1();
-      if (err) {
-        setError(err);
+      const errs = validateStep1();
+      setFieldErrors(errs);
+      if (Object.keys(errs).length > 0) {
+        setError(t.fixErrors);
         return;
       }
+      setFieldErrors({});
       setStep(2);
       return;
     }
     if (step === 2) {
-      const err = validateStep2();
-      if (err) {
-        setError(err);
+      const errs = validateStep2();
+      setFieldErrors(errs);
+      if (Object.keys(errs).length > 0) {
+        setError(t.fixErrors);
         return;
       }
+      setFieldErrors({});
       void submit();
     }
   };
 
   const goBack = () => {
     setError(null);
+    setFieldErrors({});
     if (step === 2) setStep(1);
     if (step === 3) setStep(2);
   };
 
+  const goToStep = (target: 1 | 2 | 3) => {
+    if (target >= step) return;
+    setError(null);
+    setFieldErrors({});
+    setStep(target);
+  };
+
   const submit = async () => {
     if (!form.bacStream) return;
-    const err = validateStep2();
-    if (err) {
-      setError(err);
+    const errs = validateStep2();
+    if (Object.keys(errs).length > 0) {
+      setFieldErrors(errs);
+      setError(t.fixErrors);
       return;
     }
 
@@ -180,6 +221,7 @@ export function useRecommendationWizard(config: ConfigResponse | null) {
     setForm(emptyForm());
     setResult(null);
     setError(null);
+    setFieldErrors({});
     setStep(1);
   };
 
@@ -196,6 +238,7 @@ export function useRecommendationWizard(config: ConfigResponse | null) {
     form,
     result,
     error,
+    fieldErrors,
     loading,
     requiredSubjects,
     availableLetters,
@@ -207,6 +250,7 @@ export function useRecommendationWizard(config: ConfigResponse | null) {
     setTopRiasecSlot,
     goNext,
     goBack,
+    goToStep,
     reset,
   };
 }

@@ -1,14 +1,15 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import type { CalculationResult, MatchLabel, TopRiasecProfile } from "../types";
-import { LABEL_STYLES, STREAM_LABELS } from "../types";
+import { LABEL_STYLES } from "../types";
 import type { Lang } from "../i18n/strings";
-import { strings } from "../i18n/strings";
+import { STREAM_LABELS_I18N, matchLabelText, strings } from "../i18n/strings";
 
 type Props = {
   result: CalculationResult;
   topRiasec: TopRiasecProfile;
   onReset: () => void;
   lang: Lang;
+  genieLabels?: Record<string, string>;
 };
 
 function ScoreBar({
@@ -32,7 +33,7 @@ function ScoreBar({
         ] as const
       ).map(([label, value, color]) => (
         <div key={label} className="flex items-center gap-2 text-xs">
-          <span className="w-20 shrink-0 text-slate-500">{label}</span>
+          <span className="w-24 shrink-0 text-slate-500">{label}</span>
           <div className="h-2 flex-1 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
             <div className={`h-full rounded-full ${color}`} style={{ width: `${Math.min(value, 100)}%` }} />
           </div>
@@ -58,11 +59,26 @@ function fmt(value: number | undefined | null, digits = 1, fallback = "—"): st
   return value.toFixed(digits);
 }
 
-export function Step3Results({ result, topRiasec, onReset, lang }: Props) {
+export function Step3Results({ result, topRiasec, onReset, lang, genieLabels }: Props) {
   const t = strings[lang];
+  const streamLabels = STREAM_LABELS_I18N[lang];
   const topCode = topRiasec.map((e) => e.letter).join("");
   const top = result.matches[0];
   const [showDetails, setShowDetails] = useState(false);
+  const [showAll, setShowAll] = useState(false);
+
+  const visible = useMemo(() => {
+    if (showAll || result.matches.length <= 3) return result.matches;
+    return result.matches.slice(0, 3);
+  }, [result.matches, showAll]);
+
+  const genieLabel =
+    result.technicalOption && genieLabels?.[result.technicalOption]
+      ? genieLabels[result.technicalOption]
+      : result.technicalOption;
+
+  const apiBase = import.meta.env.VITE_API_BASE ?? "http://localhost:3001";
+  const exportUrl = `${apiBase}/api/v1/export/evaluations?format=csv`;
 
   return (
     <div className="space-y-6">
@@ -70,8 +86,8 @@ export function Step3Results({ result, topRiasec, onReset, lang }: Props) {
         <div>
           <h2 className="text-xl font-semibold text-slate-900 dark:text-slate-100">{t.results}</h2>
           <p className="mt-1 text-sm text-slate-500">
-            {result.studentName} · {STREAM_LABELS[result.bacStream]}
-            {result.technicalOption ? ` · ${result.technicalOption}` : ""}
+            {result.studentName} · {streamLabels[result.bacStream]}
+            {genieLabel ? ` · ${genieLabel}` : ""}
             {" · "}RIASEC {topCode}
           </p>
           <p className="mt-1 text-xs text-slate-400">
@@ -88,10 +104,16 @@ export function Step3Results({ result, topRiasec, onReset, lang }: Props) {
           >
             {t.newEvaluation}
           </button>
+          <a
+            href={exportUrl}
+            className="text-xs text-slate-500 underline-offset-2 hover:underline"
+          >
+            {t.exportCsv}
+          </a>
           <button
             type="button"
             onClick={() => setShowDetails((v) => !v)}
-            className="text-xs text-indigo-600 underline-offset-2 hover:underline dark:text-indigo-300"
+            className="text-xs text-slate-400 underline-offset-2 hover:underline"
           >
             {showDetails ? t.hideDetails : t.showDetails}
           </button>
@@ -99,25 +121,30 @@ export function Step3Results({ result, topRiasec, onReset, lang }: Props) {
       </div>
 
       {top && (
-        <div className="rounded-xl border border-indigo-200 bg-indigo-50/80 p-4 dark:border-indigo-900 dark:bg-indigo-950/40">
+        <div className="rounded-xl border-2 border-indigo-300 bg-indigo-50/90 p-5 shadow-sm dark:border-indigo-800 dark:bg-indigo-950/50">
           <p className="text-xs font-semibold uppercase tracking-wide text-indigo-600 dark:text-indigo-300">
             {t.topRecommendation}
           </p>
           <div className="mt-1 flex flex-wrap items-center gap-2">
-            <h3 className="text-lg font-bold text-slate-900 dark:text-slate-50">{top.specialtyTitle}</h3>
-            <LabelBadge label={top.matchLabel} text={top.matchLabelText} />
+            <h3 className="text-xl font-bold text-slate-900 dark:text-slate-50">{top.specialtyTitle}</h3>
+            <LabelBadge label={top.matchLabel} text={matchLabelText(lang, top.matchLabel)} />
           </div>
-          <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
-            {fmt(top.finalScore, 1)}% {t.finalFit} · #{top.rank}
+          <p className="mt-2 text-3xl font-bold text-indigo-600 dark:text-indigo-300">
+            {fmt(top.finalScore, 1)}%
+            <span className="ml-2 text-sm font-medium text-slate-500">{t.finalFit}</span>
           </p>
         </div>
       )}
 
       <div className="space-y-4">
-        {result.matches.map((match) => (
+        {visible.map((match) => (
           <article
             key={match.specialtyId}
-            className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+            className={`rounded-xl border bg-white p-4 shadow-sm dark:bg-slate-900 ${
+              match.rank === 1
+                ? "border-indigo-200 dark:border-indigo-900"
+                : "border-slate-200 dark:border-slate-800"
+            }`}
           >
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="min-w-0 flex-1">
@@ -126,11 +153,14 @@ export function Step3Results({ result, topRiasec, onReset, lang }: Props) {
                   <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">
                     {match.specialtyTitle}
                   </h3>
-                  <LabelBadge label={match.matchLabel} text={match.matchLabelText} />
+                  <LabelBadge
+                    label={match.matchLabel}
+                    text={matchLabelText(lang, match.matchLabel)}
+                  />
                 </div>
                 <p className="mt-1 text-xs text-slate-500">
                   {match.specialtyCode} · {match.department} · {match.hollandCode.join("-")}
-                  {match.isTechnical ? " · tech" : ""}
+                  {match.isTechnical ? ` · ${t.technicalSpecialty}` : ""}
                 </p>
               </div>
               <div className="text-right">
@@ -203,20 +233,25 @@ export function Step3Results({ result, topRiasec, onReset, lang }: Props) {
                   <li>opposite ×{fmt(match.details.affinityBreakdown?.opposite, 2)}</li>
                   <li>english ×{fmt(match.details.affinityBreakdown?.english, 2)}</li>
                 </ul>
-                <p className="mt-2 text-slate-600 dark:text-slate-400">
-                  streamBase {fmt(match.details.technicalStreamBase, 0)} · marksFit{" "}
-                  {fmt(match.details.technicalMarksComponent, 0)} · rawA{" "}
-                  {fmt(match.details.rawAcademicPercentage, 1)}
-                </p>
               </div>
             )}
           </article>
         ))}
       </div>
 
-      <p className="text-center text-xs text-slate-400">
-        {result.evaluationId} · {new Date(result.timestamp).toLocaleString()}
-      </p>
+      {result.matches.length > 3 && (
+        <div className="text-center">
+          <button
+            type="button"
+            onClick={() => setShowAll((v) => !v)}
+            className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800"
+          >
+            {showAll ? t.showLess : t.showMore}
+          </button>
+        </div>
+      )}
+
+      <p className="text-center text-xs text-slate-400">{t.disclaimer}</p>
     </div>
   );
 }

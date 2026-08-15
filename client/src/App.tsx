@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { StepIndicator } from "./components/StepIndicator";
 import { Step1AcademicForm } from "./components/Step1AcademicForm";
 import { Step2RiasecForm } from "./components/Step2RiasecForm";
@@ -16,30 +16,28 @@ function App() {
   const [lang, setLang] = useState<Lang>("fr");
   const t = strings[lang];
 
-  const wizard = useRecommendationWizard(config);
+  const wizard = useRecommendationWizard(config, lang);
+
+  const loadConfig = useCallback(async () => {
+    setConfigLoading(true);
+    setConfigError(null);
+    try {
+      const data = await fetchConfig();
+      setConfig(data);
+    } catch (e) {
+      setConfigError(e instanceof Error ? e.message : t.configError);
+    } finally {
+      setConfigLoading(false);
+    }
+  }, [t.configError]);
 
   useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const data = await fetchConfig();
-        if (!cancelled) setConfig(data);
-      } catch (e) {
-        if (!cancelled) {
-          setConfigError(e instanceof Error ? e.message : t.configError);
-        }
-      } finally {
-        if (!cancelled) setConfigLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [t.configError]);
+    void loadConfig();
+  }, [loadConfig]);
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
-      <header className="border-b border-slate-200 bg-white/80 backdrop-blur dark:border-slate-800 dark:bg-slate-900/80">
+      <header className="border-b border-slate-200 bg-white/90 backdrop-blur dark:border-slate-800 dark:bg-slate-900/90">
         <div className="mx-auto flex max-w-3xl items-center justify-between gap-3 px-4 py-4">
           <div>
             <h1 className="text-lg font-bold tracking-tight">{t.appTitle}</h1>
@@ -60,23 +58,63 @@ function App() {
       </header>
 
       <main className="mx-auto max-w-3xl px-4 py-8">
+        <p className="mb-4 text-center text-xs text-slate-500">{t.disclaimer}</p>
+
         <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-          {configLoading && <p className="text-sm text-slate-500">{t.loadingConfig}</p>}
+          {configLoading && (
+            <div className="animate-pulse space-y-3" aria-busy="true">
+              <div className="h-4 w-1/3 rounded bg-slate-200 dark:bg-slate-700" />
+              <div className="h-10 rounded bg-slate-200 dark:bg-slate-700" />
+              <div className="h-10 rounded bg-slate-200 dark:bg-slate-700" />
+              <p className="text-sm text-slate-500">{t.loadingConfig}</p>
+            </div>
+          )}
+
           {configError && (
-            <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200">
-              {configError}
-            </p>
+            <div className="space-y-3">
+              <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200">
+                {configError}
+              </p>
+              <button
+                type="button"
+                onClick={() => void loadConfig()}
+                className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500"
+              >
+                {t.retry}
+              </button>
+            </div>
           )}
 
           {config && !configError && (
             <>
-              <StepIndicator step={wizard.step} />
+              <StepIndicator step={wizard.step} lang={lang} onGoToStep={wizard.goToStep} />
+
+              {wizard.error && (
+                <div
+                  role="alert"
+                  className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-200"
+                >
+                  <p className="font-medium">{wizard.error}</p>
+                  {Object.keys(wizard.fieldErrors).length > 0 && (
+                    <ul className="mt-1 list-inside list-disc text-xs">
+                      {Object.values(wizard.fieldErrors)
+                        .filter(Boolean)
+                        .filter((v, i, a) => a.indexOf(v) === i)
+                        .map((msg) => (
+                          <li key={msg}>{msg}</li>
+                        ))}
+                    </ul>
+                  )}
+                </div>
+              )}
 
               {wizard.step === 1 && (
                 <Step1AcademicForm
                   config={config}
                   form={wizard.form}
-                  requiredSubjects={wizard.requiredSubjects}
+                  lang={lang}
+                  fieldErrors={wizard.fieldErrors}
+                  disabled={wizard.loading}
                   onFullName={wizard.setFullName}
                   onBacStream={wizard.setBacStream}
                   onTechnicalOption={wizard.setTechnicalOption}
@@ -90,6 +128,9 @@ function App() {
                   config={config}
                   form={wizard.form}
                   availableLetters={wizard.availableLetters}
+                  lang={lang}
+                  fieldErrors={wizard.fieldErrors}
+                  disabled={wizard.loading}
                   onSlotChange={wizard.setTopRiasecSlot}
                 />
               )}
@@ -100,13 +141,8 @@ function App() {
                   topRiasec={wizard.form.topRiasec as TopRiasecProfile}
                   onReset={wizard.reset}
                   lang={lang}
+                  genieLabels={config.technicalMathOptionLabels}
                 />
-              )}
-
-              {wizard.error && (
-                <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
-                  {wizard.error}
-                </div>
               )}
 
               {wizard.step !== 3 && (
