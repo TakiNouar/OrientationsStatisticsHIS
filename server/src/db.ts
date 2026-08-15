@@ -353,7 +353,31 @@ type ExportRow = {
   rank_position: number;
 };
 
-export const exportEvaluationsAsCsv = (): string => {
+export type ExportFilters = {
+  from?: string;
+  to?: string;
+  bacStream?: string;
+};
+
+export const exportEvaluationsAsCsv = (filters: ExportFilters = {}): string => {
+  const clauses: string[] = [];
+  const params: Record<string, string> = {};
+
+  if (filters.from) {
+    clauses.push("me.evaluated_at >= @from");
+    params.from = filters.from;
+  }
+  if (filters.to) {
+    clauses.push("me.evaluated_at <= @to");
+    params.to = filters.to;
+  }
+  if (filters.bacStream) {
+    clauses.push("s.bac_stream = @bacStream");
+    params.bacStream = filters.bacStream;
+  }
+
+  const where = clauses.length > 0 ? `WHERE ${clauses.join(" AND ")}` : "";
+
   const rows = db
     .prepare(
       `
@@ -373,10 +397,11 @@ export const exportEvaluationsAsCsv = (): string => {
       FROM match_evaluations me
       JOIN students s ON s.id = me.student_id
       JOIN his_specialties hs ON hs.id = me.specialty_id
+      ${where}
       ORDER BY me.evaluated_at DESC, me.rank_position ASC
     `,
     )
-    .all() as ExportRow[];
+    .all(params) as ExportRow[];
 
   const header = [
     "evaluation_id",
