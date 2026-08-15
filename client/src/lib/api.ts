@@ -4,12 +4,9 @@ import type {
   CalculationResult,
   ConfigResponse,
   RecommendationInput,
+  StudentProfileDetail,
 } from "../types";
 
-/**
- * Dev stability: default to same-origin `/api` so Vite proxy handles the backend
- * (no CORS). Set VITE_API_BASE only when calling the API directly (e.g. LAN IP).
- */
 const API_BASE = (import.meta.env.VITE_API_BASE as string | undefined)?.replace(/\/$/, "") ?? "";
 const REQUEST_TIMEOUT_MS = 10_000;
 
@@ -147,12 +144,24 @@ export async function fetchAnalyticsRecent(
   return response.json() as Promise<AnalyticsRecentResponse>;
 }
 
+export async function fetchStudentProfile(studentId: string): Promise<StudentProfileDetail> {
+  const response = await fetchWithTimeout(
+    apiUrl(`/api/v1/analytics/students/${encodeURIComponent(studentId)}`),
+  );
+  if (response.status === 404) {
+    throw new Error("Student not found.");
+  }
+  if (!response.ok) {
+    throw new Error(`Failed to load student profile (${response.status})`);
+  }
+  return response.json() as Promise<StudentProfileDetail>;
+}
+
 export function exportEvaluationsUrl(params?: {
   from?: string;
   to?: string;
   bacStream?: string;
   specialtyCode?: string;
-  /** Default true for B0. Pass false to include student names. */
   anonymized?: boolean;
 }): string {
   const q = new URLSearchParams({ format: "csv" });
@@ -160,6 +169,6 @@ export function exportEvaluationsUrl(params?: {
   if (params?.to) q.set("to", params.to);
   if (params?.bacStream) q.set("bacStream", params.bacStream);
   if (params?.specialtyCode) q.set("specialtyCode", params.specialtyCode);
-  q.set("anonymized", params?.anonymized === false ? "0" : "1");
+  q.set("anonymized", params?.anonymized === true ? "1" : "0");
   return apiUrl(`/api/v1/export/evaluations?${q.toString()}`);
 }

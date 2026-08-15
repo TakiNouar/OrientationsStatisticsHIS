@@ -151,7 +151,6 @@ export interface ConfigResponse {
   }>;
 }
 
-/** B0 analytics */
 export interface AnalyticsCountRow {
   key: string;
   label: string;
@@ -171,8 +170,9 @@ export interface AnalyticsSummary {
   };
 }
 
-export interface AnonymizedEvaluationRow {
-  sessionRef: string;
+export interface SessionListRow {
+  studentId: string;
+  fullName: string;
   evaluatedAt: string;
   bacStream: string;
   overallBacMark: number;
@@ -186,9 +186,45 @@ export interface AnonymizedEvaluationRow {
 }
 
 export interface AnalyticsRecentResponse {
-  rows: AnonymizedEvaluationRow[];
+  rows: SessionListRow[];
   filters: AnalyticsSummary["filters"];
   limit: number;
+}
+
+export interface StudentMatchRow {
+  specialtyId: string;
+  specialtyCode: string;
+  specialtyTitle: string;
+  department: string;
+  description: string;
+  isTechnical: boolean;
+  hollandCode: [RiasecLetter, RiasecLetter, RiasecLetter];
+  academicScore: number;
+  psychometricScore: number;
+  finalScore: number;
+  rank: number;
+  matchLabel: MatchLabel;
+  matchLabelText: string;
+  evaluatedAt: string;
+}
+
+export interface StudentProfileDetail {
+  studentId: string;
+  fullName: string;
+  bacStream: string;
+  overallBacMark: number;
+  createdAt: string;
+  grades: Record<string, number>;
+  topRiasec: Array<{ letter: RiasecLetter; weight: number }> | null;
+  riasecVector: {
+    realistic: number;
+    investigative: number;
+    artistic: number;
+    social: number;
+    enterprising: number;
+    conventional: number;
+  } | null;
+  matches: StudentMatchRow[];
 }
 
 export const LABEL_STYLES: Record<MatchLabel, string> = {
