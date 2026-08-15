@@ -1,11 +1,14 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   exportEvaluationsUrl,
+  fetchAnalyticsDashboard,
   fetchAnalyticsRecent,
   fetchAnalyticsSummary,
   fetchStudentProfile,
 } from "../lib/api";
+import { AnalyticsDashboardPanel } from "./AnalyticsDashboard";
 import type {
+  AnalyticsDashboard,
   AnalyticsRecentResponse,
   AnalyticsSummary,
   BacStream,
@@ -118,7 +121,8 @@ function StudentProfileView({
               : ""}
           </p>
           <p className="mt-0.5 text-xs text-slate-400">
-            {t.evaluatedAt}: {profile.matches[0]?.evaluatedAt?.slice(0, 19).replace("T", " ") ?? profile.createdAt}
+            {t.evaluatedAt}:{" "}
+            {profile.matches[0]?.evaluatedAt?.slice(0, 19).replace("T", " ") ?? profile.createdAt}
           </p>
         </div>
       </div>
@@ -152,9 +156,7 @@ function StudentProfileView({
                 <span className="font-semibold tabular-nums">{Number(value).toFixed(2)}</span>
               </li>
             ))}
-            {Object.keys(profile.grades).length === 0 && (
-              <li className="text-slate-500">—</li>
-            )}
+            {Object.keys(profile.grades).length === 0 && <li className="text-slate-500">—</li>}
           </ul>
         </section>
 
@@ -230,6 +232,7 @@ export function AnalyticsPage({ config, lang, onBack }: Props) {
   const [filters, setFilters] = useState<Filters>(emptyFilters);
   const [applied, setApplied] = useState<Filters>(emptyFilters);
   const [summary, setSummary] = useState<AnalyticsSummary | null>(null);
+  const [dashboard, setDashboard] = useState<AnalyticsDashboard | null>(null);
   const [recent, setRecent] = useState<AnalyticsRecentResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -250,11 +253,13 @@ export function AnalyticsPage({ config, lang, onBack }: Props) {
         limit: 50,
       };
       try {
-        const [s, r] = await Promise.all([
+        const [s, d, r] = await Promise.all([
           fetchAnalyticsSummary(params),
+          fetchAnalyticsDashboard(params),
           fetchAnalyticsRecent(params),
         ]);
         setSummary(s);
+        setDashboard(d);
         setRecent(r);
       } catch (e) {
         setError(e instanceof Error ? e.message : t.analyticsError);
@@ -320,21 +325,13 @@ export function AnalyticsPage({ config, lang, onBack }: Props) {
         {profileError && (
           <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200">
             {profileError}
-            <button
-              type="button"
-              className="ml-3 underline"
-              onClick={() => setSelectedStudentId(null)}
-            >
+            <button type="button" className="ml-3 underline" onClick={() => setSelectedStudentId(null)}>
               {t.backToList}
             </button>
           </div>
         )}
         {profile && !profileLoading && (
-          <StudentProfileView
-            profile={profile}
-            lang={lang}
-            onClose={() => setSelectedStudentId(null)}
-          />
+          <StudentProfileView profile={profile} lang={lang} onClose={() => setSelectedStudentId(null)} />
         )}
       </div>
     );
@@ -344,9 +341,7 @@ export function AnalyticsPage({ config, lang, onBack }: Props) {
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-xl font-semibold text-slate-900 dark:text-slate-100">
-            {t.analyticsTitle}
-          </h2>
+          <h2 className="text-xl font-semibold text-slate-900 dark:text-slate-100">{t.analyticsTitle}</h2>
           <p className="mt-1 text-sm text-slate-500">{t.analyticsSubtitle}</p>
           <p className="mt-1 text-xs text-slate-500">{t.analyticsClickHint}</p>
         </div>
@@ -384,10 +379,7 @@ export function AnalyticsPage({ config, lang, onBack }: Props) {
             <select
               value={filters.bacStream}
               onChange={(e) =>
-                setFilters((p) => ({
-                  ...p,
-                  bacStream: e.target.value as BacStream | "",
-                }))
+                setFilters((p) => ({ ...p, bacStream: e.target.value as BacStream | "" }))
               }
               className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm dark:border-slate-600 dark:bg-slate-900"
             >
@@ -448,9 +440,7 @@ export function AnalyticsPage({ config, lang, onBack }: Props) {
         </div>
       )}
 
-      {loading && !summary && (
-        <p className="text-sm text-slate-500">{t.analyticsLoading}</p>
-      )}
+      {loading && !summary && <p className="text-sm text-slate-500">{t.analyticsLoading}</p>}
 
       {summary && (
         <>
@@ -479,11 +469,11 @@ export function AnalyticsPage({ config, lang, onBack }: Props) {
         </>
       )}
 
+      {dashboard && <AnalyticsDashboardPanel dashboard={dashboard} lang={lang} />}
+
       {recent && (
         <section className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
-          <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-100">
-            {t.recentSessions}
-          </h3>
+          <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-100">{t.recentSessions}</h3>
           <div className="mt-3 overflow-x-auto">
             <table className="min-w-full text-left text-xs">
               <thead className="border-b border-slate-200 text-slate-500 dark:border-slate-700">
@@ -527,12 +517,8 @@ export function AnalyticsPage({ config, lang, onBack }: Props) {
                       <td className="px-2 py-2 text-slate-700 dark:text-slate-200">
                         {streamLabels[row.bacStream as BacStream] ?? row.bacStream}
                       </td>
-                      <td className="px-2 py-2 text-slate-800 dark:text-slate-100">
-                        {row.topSpecialtyTitle}
-                      </td>
-                      <td className="px-2 py-2 font-semibold tabular-nums">
-                        {row.finalScore.toFixed(1)}%
-                      </td>
+                      <td className="px-2 py-2 text-slate-800 dark:text-slate-100">{row.topSpecialtyTitle}</td>
+                      <td className="px-2 py-2 font-semibold tabular-nums">{row.finalScore.toFixed(1)}%</td>
                       <td className="px-2 py-2">
                         <span
                           className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold ${
