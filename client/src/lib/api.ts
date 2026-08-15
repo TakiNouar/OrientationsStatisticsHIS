@@ -1,4 +1,5 @@
 import type {
+  AnalyticsDashboard,
   AnalyticsRecentResponse,
   AnalyticsSummary,
   CalculationResult,
@@ -80,9 +81,7 @@ export async function calculateRecommendations(
         message?: string;
         issues?: Array<{ path?: (string | number)[]; message?: string }>;
       };
-      if (body.message) {
-        message = body.message;
-      }
+      if (body.message) message = body.message;
       if (body.issues && body.issues.length > 0) {
         const details = body.issues
           .map((issue) => {
@@ -93,7 +92,7 @@ export async function calculateRecommendations(
         message = `${message} — ${details}`;
       }
     } catch {
-      // ignore parse errors
+      // ignore
     }
     throw new Error(message);
   }
@@ -126,10 +125,18 @@ export async function fetchAnalyticsSummary(
   const response = await fetchWithTimeout(
     apiUrl(`/api/v1/analytics/summary${analyticsQueryString(params)}`),
   );
-  if (!response.ok) {
-    throw new Error(`Failed to load analytics summary (${response.status})`);
-  }
+  if (!response.ok) throw new Error(`Failed to load analytics summary (${response.status})`);
   return response.json() as Promise<AnalyticsSummary>;
+}
+
+export async function fetchAnalyticsDashboard(
+  params?: AnalyticsQuery,
+): Promise<AnalyticsDashboard> {
+  const response = await fetchWithTimeout(
+    apiUrl(`/api/v1/analytics/dashboard${analyticsQueryString(params)}`),
+  );
+  if (!response.ok) throw new Error(`Failed to load analytics dashboard (${response.status})`);
+  return response.json() as Promise<AnalyticsDashboard>;
 }
 
 export async function fetchAnalyticsRecent(
@@ -138,9 +145,7 @@ export async function fetchAnalyticsRecent(
   const response = await fetchWithTimeout(
     apiUrl(`/api/v1/analytics/recent${analyticsQueryString(params)}`),
   );
-  if (!response.ok) {
-    throw new Error(`Failed to load recent evaluations (${response.status})`);
-  }
+  if (!response.ok) throw new Error(`Failed to load recent evaluations (${response.status})`);
   return response.json() as Promise<AnalyticsRecentResponse>;
 }
 
@@ -148,12 +153,8 @@ export async function fetchStudentProfile(studentId: string): Promise<StudentPro
   const response = await fetchWithTimeout(
     apiUrl(`/api/v1/analytics/students/${encodeURIComponent(studentId)}`),
   );
-  if (response.status === 404) {
-    throw new Error("Student not found.");
-  }
-  if (!response.ok) {
-    throw new Error(`Failed to load student profile (${response.status})`);
-  }
+  if (response.status === 404) throw new Error("Student not found.");
+  if (!response.ok) throw new Error(`Failed to load student profile (${response.status})`);
   return response.json() as Promise<StudentProfileDetail>;
 }
 
