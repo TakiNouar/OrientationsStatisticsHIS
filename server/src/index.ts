@@ -1,8 +1,17 @@
+import "dotenv/config";
 import cors from "cors";
 import express from "express";
+import rateLimit from "express-rate-limit";
+import helmet from "helmet";
 import { ZodError } from "zod";
-import { getActiveSpecialties, exportEvaluationsAsCsv, initDatabase, persistEvaluation } from "./db.js";
+import {
+  getActiveSpecialties,
+  exportEvaluationsAsCsv,
+  initDatabase,
+  persistEvaluation,
+} from "./db.js";
 import { calculateRecommendations } from "./engine.js";
+import { logger } from "./logger.js";
 import { CalculateRecommendationSchema } from "./schema.js";
 import {
   STREAM_SUBJECT_MAP,
@@ -18,15 +27,41 @@ import {
   RIASEC_LABELS,
   type StudentProfile,
   type TopRiasecProfile,
+  type BacStream,
 } from "./types.js";
 
 initDatabase();
 
 const app = express();
 const port = Number(process.env.PORT ?? 3001);
+const host = process.env.HOST ?? "127.0.0.1";
 
-app.use(cors());
-app.use(express.json());
+const allowedOrigins = (process.env.ALLOWED_ORIGINS ?? "http://localhost:5173,http://127.0.0.1:5173")
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean);
+
+app.use(helmet());
+app.use(
+  cors({
+    origin(origin, callback) {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+        return;
+      }
+      callback(new Error(`CORS blocked for origin: ${origin}`));
+    },
+  }),
+);
+app.use(express.json({ limit: "100kb" }));
+
+const calculateLimiter = rateLimit({
+  windowMs: 60_000,
+  max: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: "Too many calculation requests. Try again shortly." },
+});
 
 app.get("/api/v1/health", (_req, res) => {
   res.json({
@@ -65,20 +100,36 @@ app.get("/api/v1/config", (_req, res) => {
 });
 
 app.get("/api/v1/export/evaluations", (req, res) => {
-  if (req.query.format !== "csv") {
+  const format = req.query.format;
+  if (format !== "csv") {
     res.status(400).json({
-      message: "Only format=csv is currently supported.",
+      message: "Unsupported format. Supported: format=csv",
     });
     return;
   }
 
-  const csv = exportEvaluationsAsCsv();
-  res.setHeader("Content-Type", "text/csv; charset=utf-8");
-  res.setHeader("Content-Disposition", "attachment; filename=evaluations.csv");
-  res.send(csv);
+  const from = typeof req.query.from === "string" ? req.query.from : undefined;
+  const to = typeof req.query.to === "string" ? req.query.to : undefined;
+  const bacStream =
+    typeof req.query.bacStream === "string" ? (req.query.bacStream as BacStream) : undefined;
+
+  try {
+    const csv = exportEvaluationsAsCsv({ from, to, bacStream });
+    res.setHeader("Content-Type", "text/csv; charset=utf-8");
+    res.setHeader("Content-Disposition", "attachment; filename=evaluations.csv");
+    res.send(csv);
+  } catch (error) {
+    logger.error("export_failed", {
+      err: error instanceof Error ? error.message : String(error),
+      from,
+      to,
+      bacStream,
+    });
+    res.status(500).json({ message: "Failed to export evaluations." });
+  }
 });
 
-app.post("/api/v1/recommendations/calculate", (req, res) => {
+app.post("/api/v1/recommendations/calculate", calculateLimiter, (req, res) => {
   try {
     const input = CalculateRecommendationSchema.parse(req.body);
     const studentProfile: StudentProfile = {
@@ -96,7 +147,15 @@ app.post("/api/v1/recommendations/calculate", (req, res) => {
     const result = calculateRecommendations(studentProfile, specialties);
 
     queueMicrotask(() => {
-      persistEvaluation(studentProfile, result);
+      try {
+        persistEvaluation(studentProfile, result);
+      } catch (persistError) {
+        logger.error("persist_evaluation_failed", {
+          studentName: studentProfile.fullName,
+          evaluationId: result.evaluationId,
+          err: persistError instanceof Error ? persistError.message : String(persistError),
+        });
+      }
     });
 
     res.json(result);
@@ -109,7 +168,9 @@ app.post("/api/v1/recommendations/calculate", (req, res) => {
       return;
     }
 
-    console.error("Failed to calculate recommendations", error);
+    logger.error("calculate_failed", {
+      err: error instanceof Error ? error.message : String(error),
+    });
     res.status(500).json({
       message: "Failed to calculate recommendations.",
     });
@@ -122,6 +183,6 @@ app.use((_req, res) => {
   });
 });
 
-app.listen(port, () => {
-  console.log(`HIS-SRE backend running on http://localhost:${port}`);
+app.listen(port, host, () => {
+  logger.info("server_started", { host, port, allowedOrigins });
 });
