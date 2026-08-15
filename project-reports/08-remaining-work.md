@@ -5,6 +5,7 @@
 - [ ] Counsellor feedback loop to tune seed subject weights / génie bias
 - [ ] Full FR copy on Step1/Step2 field labels (header/results done)
 - [ ] Serve `client/dist` from Express static for single-port deploy
+- [ ] Merge `feature/b0-analytics` → `main` after pilot review
 
 ## Done this hardening pass
 
@@ -17,10 +18,15 @@
 - [x] AFFINITY missing policy documented + fixed
 - [x] `.gitignore` + remove prompt PDF
 
+## Phase B progress
+
+- [x] **B0** anonymized counts + filters + better export + simple table (branch `feature/b0-analytics`)
+- [ ] **B1** charts / staff dashboard
+- [ ] **B2** logins, roles, retention, multi-user hardening
+
 ## Out of scope
 
-- Phase B analytics
 - **Unit/integration tests** (confirmed skip)
-- Docker / Postgres
+- Docker / Postgres (until B2 demand)
 - Arts stream
 - Re-introducing stream μ on academic

@@ -1,6 +1,6 @@
 # Project reports — HIS-SRE
 
-Status documentation for **OrientationsStatisticsHIS** (Phase A: input → ranked results).
+Status documentation for **OrientationsStatisticsHIS** (Phase A: input → ranked results; Phase B0: anonymized analytics).
 
 | File | Topic |
 |------|--------|
@@ -13,5 +13,6 @@ Status documentation for **OrientationsStatisticsHIS** (Phase A: input → ranke
 | [07-frontend-status.md](./07-frontend-status.md) | Wizard UI |
 | [08-remaining-work.md](./08-remaining-work.md) | Backlog |
 | [09-design-decisions.md](./09-design-decisions.md) | Locked decisions |
+| [10-phase-b0-analytics.md](./10-phase-b0-analytics.md) | B0 analytics + rollback SHAs |
 
 Last updated: 2026-08-15

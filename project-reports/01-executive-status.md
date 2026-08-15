@@ -1,6 +1,6 @@
 # 01 — Executive status
 
-**Status:** Phase A operational + hardening polish (2026-08-15).
+**Status:** Phase A operational + **Phase B0 analytics** on branch `feature/b0-analytics` (2026-08-15).
 
 ## Done
 
@@ -11,13 +11,14 @@
 - Missing subject weight → **specialty average mapped multiplier** (not fixed 0.75)
 - Wizard + FR default i18n toggle + scoring debug panel
 - API: helmet, CORS allow-list, rate limit on calculate, dotenv, structured logger, safe persist
-- CSV export filters: `from`, `to`, `bacStream`
+- CSV export filters: `from`, `to`, `bacStream` (+ `specialtyCode`, anonymized default)
 - Client fetch timeout (10s) + config retry
 - Repo hygiene: root `.gitignore`, removed prompt PDF & Vite dead assets
 - `DEPLOYMENT.md` (Windows-first LAN)
+- **B0 analytics:** anonymized summary counts, recent sessions table, filters, anonymized CSV; UI toggle Orientation ↔ Statistiques
 
 ## Explicitly skipped
 
 - Automated test suite (product decision retained: **no tests**)
-- Phase B, Docker, Postgres
+- Phase B1 charts, B2 auth/Postgres
 - Formula / seed weight *values* unchanged except missing-affinity policy
