@@ -1,56 +1,46 @@
+import { useState } from "react";
 import type { CalculationResult, MatchLabel, TopRiasecProfile } from "../types";
 import { LABEL_STYLES, STREAM_LABELS } from "../types";
+import type { Lang } from "../i18n/strings";
+import { strings } from "../i18n/strings";
 
 type Props = {
   result: CalculationResult;
   topRiasec: TopRiasecProfile;
   onReset: () => void;
+  lang: Lang;
 };
 
 function ScoreBar({
   academic,
   psychometric,
   technical,
+  labels,
 }: {
   academic: number;
   psychometric: number;
   technical: number;
+  labels: { academic: string; riasec: string; technical: string };
 }) {
   return (
     <div className="space-y-1.5">
-      <div className="flex items-center gap-2 text-xs">
-        <span className="w-20 shrink-0 text-slate-500">Academic</span>
-        <div className="h-2 flex-1 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
-          <div className="h-full rounded-full bg-blue-500" style={{ width: `${Math.min(academic, 100)}%` }} />
+      {(
+        [
+          [labels.academic, academic, "bg-blue-500"],
+          [labels.riasec, psychometric, "bg-violet-500"],
+          [labels.technical, technical, "bg-cyan-500"],
+        ] as const
+      ).map(([label, value, color]) => (
+        <div key={label} className="flex items-center gap-2 text-xs">
+          <span className="w-20 shrink-0 text-slate-500">{label}</span>
+          <div className="h-2 flex-1 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
+            <div className={`h-full rounded-full ${color}`} style={{ width: `${Math.min(value, 100)}%` }} />
+          </div>
+          <span className="w-12 text-right font-medium text-slate-700 dark:text-slate-300">
+            {value.toFixed(0)}%
+          </span>
         </div>
-        <span className="w-12 text-right font-medium text-slate-700 dark:text-slate-300">
-          {academic.toFixed(0)}%
-        </span>
-      </div>
-      <div className="flex items-center gap-2 text-xs">
-        <span className="w-20 shrink-0 text-slate-500">RIASEC</span>
-        <div className="h-2 flex-1 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
-          <div
-            className="h-full rounded-full bg-violet-500"
-            style={{ width: `${Math.min(psychometric, 100)}%` }}
-          />
-        </div>
-        <span className="w-12 text-right font-medium text-slate-700 dark:text-slate-300">
-          {psychometric.toFixed(0)}%
-        </span>
-      </div>
-      <div className="flex items-center gap-2 text-xs">
-        <span className="w-20 shrink-0 text-slate-500">Technical</span>
-        <div className="h-2 flex-1 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
-          <div
-            className="h-full rounded-full bg-cyan-500"
-            style={{ width: `${Math.min(technical, 100)}%` }}
-          />
-        </div>
-        <span className="w-12 text-right font-medium text-slate-700 dark:text-slate-300">
-          {technical.toFixed(0)}%
-        </span>
-      </div>
+      ))}
     </div>
   );
 }
@@ -68,46 +58,57 @@ function fmt(value: number | undefined | null, digits = 1, fallback = "—"): st
   return value.toFixed(digits);
 }
 
-export function Step3Results({ result, topRiasec, onReset }: Props) {
+export function Step3Results({ result, topRiasec, onReset, lang }: Props) {
+  const t = strings[lang];
   const topCode = topRiasec.map((e) => e.letter).join("");
   const top = result.matches[0];
+  const [showDetails, setShowDetails] = useState(false);
 
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-xl font-semibold text-slate-900 dark:text-slate-100">Results</h2>
+          <h2 className="text-xl font-semibold text-slate-900 dark:text-slate-100">{t.results}</h2>
           <p className="mt-1 text-sm text-slate-500">
             {result.studentName} · {STREAM_LABELS[result.bacStream]}
             {result.technicalOption ? ` · ${result.technicalOption}` : ""}
             {" · "}RIASEC {topCode}
           </p>
           <p className="mt-1 text-xs text-slate-400">
-            Weights: academic {(result.weights.academic * 100).toFixed(0)}% · RIASEC{" "}
-            {(result.weights.riasec * 100).toFixed(0)}% · technical{" "}
+            {t.weightsLine}: {t.academic} {(result.weights.academic * 100).toFixed(0)}% · {t.riasec}{" "}
+            {(result.weights.riasec * 100).toFixed(0)}% · {t.technical}{" "}
             {(result.weights.technical * 100).toFixed(0)}%
           </p>
         </div>
-        <button
-          type="button"
-          onClick={onReset}
-          className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800"
-        >
-          New evaluation
-        </button>
+        <div className="flex flex-col items-end gap-2">
+          <button
+            type="button"
+            onClick={onReset}
+            className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800"
+          >
+            {t.newEvaluation}
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowDetails((v) => !v)}
+            className="text-xs text-indigo-600 underline-offset-2 hover:underline dark:text-indigo-300"
+          >
+            {showDetails ? t.hideDetails : t.showDetails}
+          </button>
+        </div>
       </div>
 
       {top && (
         <div className="rounded-xl border border-indigo-200 bg-indigo-50/80 p-4 dark:border-indigo-900 dark:bg-indigo-950/40">
           <p className="text-xs font-semibold uppercase tracking-wide text-indigo-600 dark:text-indigo-300">
-            Top recommendation
+            {t.topRecommendation}
           </p>
           <div className="mt-1 flex flex-wrap items-center gap-2">
             <h3 className="text-lg font-bold text-slate-900 dark:text-slate-50">{top.specialtyTitle}</h3>
             <LabelBadge label={top.matchLabel} text={top.matchLabelText} />
           </div>
           <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
-            {fmt(top.finalScore, 1)}% final fit · rank #{top.rank}
+            {fmt(top.finalScore, 1)}% {t.finalFit} · #{top.rank}
           </p>
         </div>
       )}
@@ -129,14 +130,14 @@ export function Step3Results({ result, topRiasec, onReset }: Props) {
                 </div>
                 <p className="mt-1 text-xs text-slate-500">
                   {match.specialtyCode} · {match.department} · {match.hollandCode.join("-")}
-                  {match.isTechnical ? " · technical specialty" : ""}
+                  {match.isTechnical ? " · tech" : ""}
                 </p>
               </div>
               <div className="text-right">
                 <div className="text-2xl font-bold text-indigo-600 dark:text-indigo-300">
                   {fmt(match.finalScore, 1)}%
                 </div>
-                <div className="text-[11px] text-slate-500">final fit</div>
+                <div className="text-[11px] text-slate-500">{t.finalFit}</div>
               </div>
             </div>
 
@@ -149,30 +150,31 @@ export function Step3Results({ result, topRiasec, onReset }: Props) {
                 academic={match.academicScore ?? 0}
                 psychometric={match.psychometricScore ?? 0}
                 technical={match.technicalScore ?? 0}
+                labels={{ academic: t.academic, riasec: t.riasec, technical: t.technical }}
               />
             </div>
 
             <dl className="mt-3 grid grid-cols-2 gap-2 text-xs text-slate-500 sm:grid-cols-4">
               <div>
-                <dt>Code match</dt>
+                <dt>{t.codeMatch}</dt>
                 <dd className="font-semibold text-slate-800 dark:text-slate-200">
                   {fmt(match.details?.codeMatchScore, 1)}%
                 </dd>
               </div>
               <div>
-                <dt>CosSim</dt>
+                <dt>{t.cosSim}</dt>
                 <dd className="font-semibold text-slate-800 dark:text-slate-200">
                   {fmt(match.details?.vectorCosineSimilarity, 3)}
                 </dd>
               </div>
               <div>
-                <dt>Marks→tech</dt>
+                <dt>{t.marksTech}</dt>
                 <dd className="font-semibold text-slate-800 dark:text-slate-200">
                   {fmt(match.details?.technicalMarksComponent, 0)}%
                 </dd>
               </div>
               <div>
-                <dt>Tech align</dt>
+                <dt>{t.techAlign}</dt>
                 <dd className="font-semibold text-slate-800 dark:text-slate-200">
                   {fmt(match.technicalScore, 0)}%
                 </dd>
@@ -181,15 +183,39 @@ export function Step3Results({ result, topRiasec, onReset }: Props) {
 
             {match.details?.genieBiasPoints != null && match.details.genieBiasPoints > 0 && (
               <p className="mt-2 text-xs text-cyan-700 dark:text-cyan-300">
-                Génie bias: +{fmt(match.details.genieBiasPoints, 0)} pts
+                {t.genieBias}: +{fmt(match.details.genieBiasPoints, 0)}
               </p>
+            )}
+
+            {showDetails && match.details && (
+              <div className="mt-3 rounded-lg border border-dashed border-slate-200 bg-slate-50 p-3 text-xs dark:border-slate-700 dark:bg-slate-950/50">
+                <p className="font-semibold text-slate-700 dark:text-slate-200">{t.slotBreakdown}</p>
+                <ul className="mt-1 grid grid-cols-2 gap-1 text-slate-600 dark:text-slate-400 sm:grid-cols-4">
+                  <li>main1: {fmt(match.details.slotBreakdown?.main1)}</li>
+                  <li>main2: {fmt(match.details.slotBreakdown?.main2)}</li>
+                  <li>opposite: {fmt(match.details.slotBreakdown?.opposite)}</li>
+                  <li>english: {fmt(match.details.slotBreakdown?.english)}</li>
+                </ul>
+                <p className="mt-2 font-semibold text-slate-700 dark:text-slate-200">{t.affinityBreakdown}</p>
+                <ul className="mt-1 grid grid-cols-2 gap-1 text-slate-600 dark:text-slate-400 sm:grid-cols-4">
+                  <li>main1 ×{fmt(match.details.affinityBreakdown?.main1, 2)}</li>
+                  <li>main2 ×{fmt(match.details.affinityBreakdown?.main2, 2)}</li>
+                  <li>opposite ×{fmt(match.details.affinityBreakdown?.opposite, 2)}</li>
+                  <li>english ×{fmt(match.details.affinityBreakdown?.english, 2)}</li>
+                </ul>
+                <p className="mt-2 text-slate-600 dark:text-slate-400">
+                  streamBase {fmt(match.details.technicalStreamBase, 0)} · marksFit{" "}
+                  {fmt(match.details.technicalMarksComponent, 0)} · rawA{" "}
+                  {fmt(match.details.rawAcademicPercentage, 1)}
+                </p>
+              </div>
             )}
           </article>
         ))}
       </div>
 
       <p className="text-center text-xs text-slate-400">
-        Evaluation ID: {result.evaluationId} · {new Date(result.timestamp).toLocaleString()}
+        {result.evaluationId} · {new Date(result.timestamp).toLocaleString()}
       </p>
     </div>
   );
