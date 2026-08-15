@@ -193,8 +193,6 @@ export const technicalAlignmentScore = (
 
 /**
  * Map specialty seed weight → aggressive multiplier in [AFFINITY_MIN, AFFINITY_MAX].
- * Uses min–max of that specialty's configured weights so relative importance is preserved.
- * Missing subject → AFFINITY_MISSING (mild under-weight, not a hard zero).
  */
 const subjectMultiplier = (
   specialty: HisSpecialtyConfig,
@@ -219,13 +217,14 @@ const subjectMultiplier = (
     return (AFFINITY_MIN + AFFINITY_MAX) / 2;
   }
 
-  const ratio = (subjectW - minW) / (maxW - minW); // 0..1
+  const ratio = (subjectW - minW) / (maxW - minW);
   return AFFINITY_MIN + (AFFINITY_MAX - AFFINITY_MIN) * ratio;
 };
 
 /**
- * Academic score driven only by slot mix × grade% × specialty subject multipliers.
- * Stream modifiers are no longer applied here.
+ * Academic = slot mix × grade% × specialty subject multipliers × stream modifier μ.
+ * Both levers active: subject multipliers differentiate marks per specialty;
+ * stream μ biases by BAC stream fit to that specialty.
  */
 const calculateAcademicScore = (
   studentProfile: StudentProfile,
@@ -233,9 +232,11 @@ const calculateAcademicScore = (
 ): {
   academicScore: number;
   rawAcademicPercentage: number;
+  streamModifier: number;
   slotBreakdown: { main1: number; main2: number; opposite: number; english: number };
   affinityBreakdown: { main1: number; main2: number; opposite: number; english: number };
 } => {
+  const streamModifier = specialty.streamModifiers[studentProfile.bacStream] ?? 0.75;
   const slots = STREAM_GRADE_SLOTS[studentProfile.bacStream];
   const grades = studentProfile.academicPerformance.grades;
 
@@ -265,13 +266,15 @@ const calculateAcademicScore = (
     weighted += contribution;
   }
 
-  // Aggressive multipliers can push above 100; clamp for stable ranking scale.
   const rawAcademicPercentage = toFixedNumber(weighted);
-  const academicScore = toFixedNumber(Math.min(Math.max(rawAcademicPercentage, 0), 100));
+  const academicScore = toFixedNumber(
+    Math.min(Math.max(rawAcademicPercentage * streamModifier, 0), 100),
+  );
 
   return {
     academicScore,
     rawAcademicPercentage,
+    streamModifier,
     slotBreakdown,
     affinityBreakdown,
   };
@@ -335,6 +338,7 @@ export const calculateRecommendations = (
         matchLabelText: MATCH_LABEL_TEXT[matchLabel],
         rank: 0,
         details: {
+          streamModifierApplied: academic.streamModifier,
           rawAcademicPercentage: academic.rawAcademicPercentage,
           vectorCosineSimilarity: toFixedNumber(cosine, 4),
           codeMatchScore: codeScore,
