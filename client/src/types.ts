@@ -86,28 +86,7 @@ export interface SpecialtyMatchBreakdown {
   matchLabelText: string;
   rank: number;
   careerPaths?: CareerPath[];
-  details: {
-    rawAcademicPercentage?: number;
-    vectorCosineSimilarity?: number;
-    codeMatchScore?: number;
-    cosineComponent?: number;
-    codeMatchComponent?: number;
-    genieBiasPoints?: number;
-    slotBreakdown?: {
-      main1: number;
-      main2: number;
-      opposite: number;
-      english: number;
-    };
-    affinityBreakdown?: {
-      main1: number;
-      main2: number;
-      opposite: number;
-      english: number;
-    };
-    technicalStreamBase?: number;
-    technicalMarksComponent?: number;
-  };
+  details: Record<string, unknown>;
 }
 
 export interface CalculationResult {
@@ -117,11 +96,7 @@ export interface CalculationResult {
   bacStream: BacStream;
   technicalOption?: TechnicalMathOption;
   isTechnicalStream: boolean;
-  weights: {
-    academic: number;
-    riasec: number;
-    technical: number;
-  };
+  weights: { academic: number; riasec: number; technical: number };
   matches: SpecialtyMatchBreakdown[];
 }
 
@@ -225,6 +200,34 @@ export interface StudentProfileDetail {
     conventional: number;
   } | null;
   matches: StudentMatchRow[];
+}
+
+/** B1 dashboard payload */
+export interface AnalyticsDashboard {
+  volumeByDay: Array<{ date: string; count: number }>;
+  streamSpecialtyMatrix: Array<{
+    bacStream: string;
+    specialtyCode: string;
+    specialtyTitle: string;
+    count: number;
+  }>;
+  scoreBuckets: Array<{
+    key: string;
+    label: string;
+    min: number;
+    max: number;
+    count: number;
+  }>;
+  byMatchLabel: AnalyticsCountRow[];
+  dataQuality: {
+    neverRankedSpecialtyCodes: Array<{ code: string; title: string }>;
+    highScoreSessions: number;
+    lowScoreSessions: number;
+    averageFinalScore: number | null;
+    averageOverallBac: number | null;
+    sessionsMissingRiasec: number;
+  };
+  filters: AnalyticsSummary["filters"];
 }
 
 export const LABEL_STYLES: Record<MatchLabel, string> = {
