@@ -108,12 +108,20 @@ export const STREAM_GRADE_SLOTS: Record<BacStream, StreamGradeSlots> = {
   },
 };
 
+/**
+ * Retuned slot mix inside academic (sum = 1).
+ * Mains carry more weight; opposite still meaningful for cross-type flips.
+ */
 export const ACADEMIC_SLOT_WEIGHTS = {
-  main1: 0.35,
+  main1: 0.4,
   main2: 0.3,
-  opposite: 0.25,
+  opposite: 0.2,
   english: 0.1,
 } as const;
+
+/** Aggressive specialty subject multipliers mapped from seed weights. */
+export const AFFINITY_MIN = 0.6;
+export const AFFINITY_MAX = 1.8;
 
 export const STREAM_SUBJECT_MAP: Record<BacStream, SubjectCode[]> = {
   MATHEMATICS: ["MATH", "PHYSICS", "ARABIC", "ENGLISH"],
@@ -195,7 +203,6 @@ export interface SpecialtyMatchBreakdown {
   matchLabelText: string;
   rank: number;
   details: {
-    streamModifierApplied: number;
     rawAcademicPercentage: number;
     vectorCosineSimilarity: number;
     codeMatchScore: number;
@@ -203,6 +210,12 @@ export interface SpecialtyMatchBreakdown {
     codeMatchComponent: number;
     genieBiasPoints: number;
     slotBreakdown: {
+      main1: number;
+      main2: number;
+      opposite: number;
+      english: number;
+    };
+    affinityBreakdown: {
       main1: number;
       main2: number;
       opposite: number;

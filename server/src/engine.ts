@@ -13,6 +13,8 @@ import type {
 } from "./types.js";
 import {
   ACADEMIC_SLOT_WEIGHTS,
+  AFFINITY_MAX,
+  AFFINITY_MIN,
   isTechnicalBacStream,
   labelFromFinalScore,
   MATCH_LABEL_TEXT,
@@ -20,29 +22,22 @@ import {
   topRiasecToVector,
 } from "./types.js";
 
-/** Phase A weights: academic / RIASEC / technical alignment */
-const ACADEMIC_WEIGHT = 0.4;
-const RIASEC_WEIGHT = 0.4;
+/** Phase A weights */
+const ACADEMIC_WEIGHT = 0.5;
+const RIASEC_WEIGHT = 0.3;
 const TECHNICAL_WEIGHT = 0.2;
 
-/** Hybrid RIASEC: emphasize Holland code match over pure cosine */
+/** Hybrid RIASEC */
 const COSINE_BLEND = 0.3;
 const CODE_MATCH_BLEND = 0.7;
 
-/** Affinity boost range for specialty-aligned subjects (never below 1 = no debuff). */
-const AFFINITY_MIN = 1.0;
-const AFFINITY_MAX = 1.35;
-
-/**
- * technicalFit = STREAM_BLEND * streamBase + MARKS_BLEND * marksFit
- * Marks are first-class, not a minor tweak.
- */
+/** technicalFit = stream + marks */
 const STREAM_BLEND = 0.45;
 const MARKS_BLEND = 0.55;
 
-/**
- * Génie option → specialty code bias points (added to final score, clamped).
- */
+/** Default affinity when specialty has no weight entry for a subject. */
+const AFFINITY_MISSING = 0.75;
+
 const GENIE_BIAS: Record<TechnicalMathOption, Partial<Record<string, number>>> = {
   GENIE_ELECTRIQUE: {
     "HIS-ELEC": 8,
@@ -150,9 +145,6 @@ const averageGradePct = (
   return values.reduce((a, b) => a + b, 0) / values.length;
 };
 
-/**
- * Stream-only base (0–100). Softened so marks can still move ranks.
- */
 const streamBaseFit = (bacStream: BacStream, specialtyIsTechnical: boolean): number => {
   const studentTechnical = isTechnicalBacStream(bacStream);
   if (studentTechnical && specialtyIsTechnical) return 100;
@@ -161,14 +153,6 @@ const streamBaseFit = (bacStream: BacStream, specialtyIsTechnical: boolean): num
   return 40;
 };
 
-/**
- * Marks-driven fit (0–100).
- * - Technical specialty ← strength of main (technical) modules + mild English
- * - Non-technical specialty ← strength of opposite module + mild English
- *
- * So a technical-stream student with excellent Arabic can still score well on
- * non-tech specialties inside technicalFit itself, not only via academic.
- */
 const marksFit = (
   studentProfile: StudentProfile,
   specialtyIsTechnical: boolean,
@@ -181,32 +165,24 @@ const marksFit = (
   const englishPct = averageGradePct(grades, [slots.english]);
   const overallPct = (studentProfile.academicPerformance.overallBacMark / 20) * 100;
 
-  // Fallbacks if a slot is missing (should not happen after validation).
   const mains = mainsPct ?? overallPct;
   const opposite = oppositePct ?? overallPct;
   const english = englishPct ?? overallPct;
 
   if (specialtyIsTechnical) {
-    // Mains dominate for technical programmes; English helps slightly.
     return toFixedNumber(0.75 * mains + 0.15 * opposite + 0.1 * english);
   }
 
-  // Non-technical programmes: opposite is the primary mark signal.
   return toFixedNumber(0.7 * opposite + 0.2 * mains + 0.1 * english);
 };
 
-/**
- * technicalFit = 0.45 * streamBase + 0.55 * marksFit
- */
 export const technicalAlignmentScore = (
   studentProfile: StudentProfile,
   specialtyIsTechnical: boolean,
 ): { technicalScore: number; streamBase: number; marksComponent: number } => {
   const streamBase = streamBaseFit(studentProfile.bacStream, specialtyIsTechnical);
   const marksComponent = marksFit(studentProfile, specialtyIsTechnical);
-  const technicalScore = toFixedNumber(
-    STREAM_BLEND * streamBase + MARKS_BLEND * marksComponent,
-  );
+  const technicalScore = toFixedNumber(STREAM_BLEND * streamBase + MARKS_BLEND * marksComponent);
 
   return {
     technicalScore: Math.min(100, Math.max(0, technicalScore)),
@@ -216,36 +192,50 @@ export const technicalAlignmentScore = (
 };
 
 /**
- * Specialty affinity for a subject: boost only (never < 1).
+ * Map specialty seed weight → aggressive multiplier in [AFFINITY_MIN, AFFINITY_MAX].
+ * Uses min–max of that specialty's configured weights so relative importance is preserved.
+ * Missing subject → AFFINITY_MISSING (mild under-weight, not a hard zero).
  */
-const subjectAffinity = (
+const subjectMultiplier = (
   specialty: HisSpecialtyConfig,
   subject: SubjectCode,
 ): number => {
   const weights = specialty.subjectWeights.weights;
-  const values = Object.values(weights).filter((v): v is number => typeof v === "number");
-  if (values.length === 0) return AFFINITY_MIN;
+  const values = Object.values(weights).filter((v): v is number => typeof v === "number" && v > 0);
 
-  const maxW = Math.max(...values);
-  const subjectW = weights[subject];
-  if (typeof subjectW !== "number" || maxW <= 0) {
-    return AFFINITY_MIN;
+  if (values.length === 0) {
+    return 1.0;
   }
 
-  const ratio = subjectW / maxW;
+  const subjectW = weights[subject];
+  if (typeof subjectW !== "number" || subjectW <= 0) {
+    return AFFINITY_MISSING;
+  }
+
+  const minW = Math.min(...values);
+  const maxW = Math.max(...values);
+
+  if (maxW <= minW) {
+    return (AFFINITY_MIN + AFFINITY_MAX) / 2;
+  }
+
+  const ratio = (subjectW - minW) / (maxW - minW); // 0..1
   return AFFINITY_MIN + (AFFINITY_MAX - AFFINITY_MIN) * ratio;
 };
 
+/**
+ * Academic score driven only by slot mix × grade% × specialty subject multipliers.
+ * Stream modifiers are no longer applied here.
+ */
 const calculateAcademicScore = (
   studentProfile: StudentProfile,
   specialty: HisSpecialtyConfig,
 ): {
   academicScore: number;
   rawAcademicPercentage: number;
-  streamModifier: number;
   slotBreakdown: { main1: number; main2: number; opposite: number; english: number };
+  affinityBreakdown: { main1: number; main2: number; opposite: number; english: number };
 } => {
-  const streamModifier = specialty.streamModifiers[studentProfile.bacStream] ?? 0.75;
   const slots = STREAM_GRADE_SLOTS[studentProfile.bacStream];
   const grades = studentProfile.academicPerformance.grades;
 
@@ -257,6 +247,7 @@ const calculateAcademicScore = (
   ];
 
   const slotBreakdown = { main1: 0, main2: 0, opposite: 0, english: 0 };
+  const affinityBreakdown = { main1: 0, main2: 0, opposite: 0, english: 0 };
   let weighted = 0;
 
   for (const slot of slotDefs) {
@@ -264,21 +255,25 @@ const calculateAcademicScore = (
     if (typeof grade !== "number") {
       continue;
     }
+
     const pct = (grade / 20) * 100;
-    const affinity = subjectAffinity(specialty, slot.subject);
-    const contribution = slot.weight * pct * affinity;
+    const mult = subjectMultiplier(specialty, slot.subject);
+    const contribution = slot.weight * pct * mult;
+
     slotBreakdown[slot.key] = toFixedNumber(contribution);
+    affinityBreakdown[slot.key] = toFixedNumber(mult, 3);
     weighted += contribution;
   }
 
-  const rawAcademicPercentage = toFixedNumber(Math.min(weighted, 140));
-  const academicScore = toFixedNumber(Math.min(rawAcademicPercentage * streamModifier, 100));
+  // Aggressive multipliers can push above 100; clamp for stable ranking scale.
+  const rawAcademicPercentage = toFixedNumber(weighted);
+  const academicScore = toFixedNumber(Math.min(Math.max(rawAcademicPercentage, 0), 100));
 
   return {
     academicScore,
     rawAcademicPercentage,
-    streamModifier,
     slotBreakdown,
+    affinityBreakdown,
   };
 };
 
@@ -313,7 +308,6 @@ export const calculateRecommendations = (
       );
 
       const tech = technicalAlignmentScore(studentProfile, specialty.isTechnical);
-
       const bias = genieBiasPoints(studentProfile, specialty.code);
 
       const blended = toFixedNumber(
@@ -341,7 +335,6 @@ export const calculateRecommendations = (
         matchLabelText: MATCH_LABEL_TEXT[matchLabel],
         rank: 0,
         details: {
-          streamModifierApplied: academic.streamModifier,
           rawAcademicPercentage: academic.rawAcademicPercentage,
           vectorCosineSimilarity: toFixedNumber(cosine, 4),
           codeMatchScore: codeScore,
@@ -349,6 +342,7 @@ export const calculateRecommendations = (
           codeMatchComponent: toFixedNumber(CODE_MATCH_BLEND * codeScore),
           genieBiasPoints: bias,
           slotBreakdown: academic.slotBreakdown,
+          affinityBreakdown: academic.affinityBreakdown,
           technicalStreamBase: tech.streamBase,
           technicalMarksComponent: tech.marksComponent,
         },

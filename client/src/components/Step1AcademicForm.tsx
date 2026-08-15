@@ -34,6 +34,12 @@ export function Step1AcademicForm({
       : null;
 
   const slotOrder: (keyof StreamGradeSlots)[] = ["main1", "main2", "opposite", "english"];
+  const slotWeights = config.academicSlotWeights ?? {
+    main1: 0.4,
+    main2: 0.3,
+    opposite: 0.2,
+    english: 0.1,
+  };
 
   return (
     <div className="space-y-6 text-left">
@@ -135,8 +141,10 @@ export function Step1AcademicForm({
             })}
           </div>
           <p className="mt-2 text-xs text-slate-500">
-            Slot weights: Main1 35% · Main2 30% · Opposite 25% · English 10%. Opposite is never
-            penalized; strong opposite marks can lift opposite-type specialties.
+            Slot mix: Main1 {Math.round(slotWeights.main1 * 100)}% · Main2{" "}
+            {Math.round(slotWeights.main2 * 100)}% · Opposite {Math.round(slotWeights.opposite * 100)}% ·
+            English {Math.round(slotWeights.english * 100)}%. Each mark is scaled by a specialty-specific
+            multiplier (seed weights, aggressive range).
           </p>
         </div>
       )}
