@@ -66,6 +66,16 @@ export const strings = {
     showLess: "Réduire la liste",
     exportCsv: "Exporter l’historique (CSV)",
     technicalSpecialty: "Spécialité technique",
+    tabScores: "Scores",
+    tabCareers: "Parcours professionnels",
+    careersIntro:
+      "Exemples de débouchés liés aux spécialités classées. Indicatifs — dépendent du marché local et des poursuites d’études.",
+    careerLevelEntry: "Débutant",
+    careerLevelMid: "Intermédiaire",
+    careerLevelSenior: "Avancé / poursuite",
+    careerExamples: "Exemples de postes",
+    careerSector: "Secteur",
+    noCareers: "Aucun parcours enregistré pour cette spécialité.",
     errName: "Saisissez le nom complet de l’élève (2 caractères minimum).",
     errStream: "Sélectionnez une filière du BAC.",
     errGenie: "Sélectionnez l’option génie pour Mathématiques techniques.",
@@ -149,6 +159,16 @@ export const strings = {
     showLess: "Show less",
     exportCsv: "Export history (CSV)",
     technicalSpecialty: "Technical specialty",
+    tabScores: "Scores",
+    tabCareers: "Career paths",
+    careersIntro:
+      "Example pathways linked to ranked specialties. Indicative — depend on the local labour market and further study.",
+    careerLevelEntry: "Entry",
+    careerLevelMid: "Mid",
+    careerLevelSenior: "Advanced / further study",
+    careerExamples: "Example roles",
+    careerSector: "Sector",
+    noCareers: "No career paths stored for this specialty.",
     errName: "Enter the student full name (at least 2 characters).",
     errStream: "Select a BAC stream.",
     errGenie: "Select a génie option for Technical Mathematics.",
@@ -244,14 +264,12 @@ export const SUBJECT_LABELS_I18N: Record<
 
 export function matchLabelText(
   lang: Lang,
-  code: keyof typeof strings.fr extends never
-    ? never
-    :
-        | "STRONG_MATCH"
-        | "STRONG_MATCH_CONVERSATION"
-        | "POSSIBLE_FIT"
-        | "PROFILE_DEVELOPING"
-        | "WEAK_MATCH",
+  code:
+    | "STRONG_MATCH"
+    | "STRONG_MATCH_CONVERSATION"
+    | "POSSIBLE_FIT"
+    | "PROFILE_DEVELOPING"
+    | "WEAK_MATCH",
 ): string {
   const key = `match${code}` as StringKey;
   return strings[lang][key] ?? code;

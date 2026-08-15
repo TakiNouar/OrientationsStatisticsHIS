@@ -6,6 +6,7 @@ import helmet from "helmet";
 import { ZodError } from "zod";
 import {
   getActiveSpecialties,
+  getCareerPathsBySpecialty,
   exportEvaluationsAsCsv,
   initDatabase,
   persistEvaluation,
@@ -50,7 +51,6 @@ const isLocalDevOrigin = (origin: string): boolean =>
 
 app.use(
   helmet({
-    // API-only server; relax CORP so browser clients can read JSON responses.
     crossOriginResourcePolicy: { policy: "cross-origin" },
   }),
 );
@@ -58,7 +58,6 @@ app.use(
 app.use(
   cors({
     origin(origin, callback) {
-      // Non-browser or same-origin proxy requests have no Origin header.
       if (!origin) {
         callback(null, true);
         return;
@@ -67,7 +66,6 @@ app.use(
         callback(null, true);
         return;
       }
-      // In development, allow any localhost / 127.0.0.1 port (Vite may pick 5174+).
       if (isDev && isLocalDevOrigin(origin)) {
         callback(null, true);
         return;
@@ -110,6 +108,7 @@ app.get("/api/v1/config", (_req, res) => {
       riasecLetters: RIASEC_LETTERS,
       riasecLabels: RIASEC_LABELS,
       formulaWeights: { academic: 0.5, riasec: 0.3, technical: 0.2 },
+      careerPathsBySpecialty: getCareerPathsBySpecialty(),
       specialties: getActiveSpecialties().map((specialty) => ({
         id: specialty.id,
         code: specialty.code,
@@ -184,6 +183,15 @@ app.post("/api/v1/recommendations/calculate", calculateLimiter, (req, res) => {
     }
 
     const result = calculateRecommendations(studentProfile, specialties);
+    const careerMap = getCareerPathsBySpecialty();
+
+    const enriched = {
+      ...result,
+      matches: result.matches.map((match) => ({
+        ...match,
+        careerPaths: careerMap[match.specialtyCode] ?? [],
+      })),
+    };
 
     queueMicrotask(() => {
       try {
@@ -197,7 +205,7 @@ app.post("/api/v1/recommendations/calculate", calculateLimiter, (req, res) => {
       }
     });
 
-    res.json(result);
+    res.json(enriched);
   } catch (error) {
     if (error instanceof ZodError) {
       res.status(400).json({

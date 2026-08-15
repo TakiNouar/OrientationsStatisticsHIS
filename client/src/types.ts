@@ -56,6 +56,20 @@ export interface RecommendationInput {
   topRiasec: TopRiasecProfile;
 }
 
+export interface CareerPath {
+  id: string;
+  specialtyCode: string;
+  titleFr: string;
+  titleEn: string;
+  sectorFr: string;
+  sectorEn: string;
+  level: string;
+  descriptionFr: string;
+  descriptionEn: string;
+  examplesFr: string[];
+  examplesEn: string[];
+}
+
 export interface SpecialtyMatchBreakdown {
   specialtyId: string;
   specialtyCode: string;
@@ -71,6 +85,7 @@ export interface SpecialtyMatchBreakdown {
   matchLabel: MatchLabel;
   matchLabelText: string;
   rank: number;
+  careerPaths?: CareerPath[];
   details: {
     rawAcademicPercentage?: number;
     vectorCosineSimilarity?: number;
@@ -126,45 +141,8 @@ export interface ConfigResponse {
   riasecLetters: RiasecLetter[];
   riasecLabels: Record<RiasecLetter, string>;
   formulaWeights: { academic: number; riasec: number; technical: number };
+  careerPathsBySpecialty?: Record<string, CareerPath[]>;
 }
-
-export const RIASEC_LABELS: Record<RiasecLetter, string> = {
-  R: "Realistic",
-  I: "Investigative",
-  A: "Artistic",
-  S: "Social",
-  E: "Enterprising",
-  C: "Conventional",
-};
-
-export const STREAM_LABELS: Record<BacStream, string> = {
-  MATHEMATICS: "Mathematics",
-  EXPERIMENTAL_SCIENCES: "Experimental Sciences",
-  TECHNICAL_MATHEMATICS: "Technical Mathematics",
-  MANAGEMENT_ECONOMY: "Management & Economy",
-  FOREIGN_LANGUAGES: "Foreign Languages",
-  LITERATURE_PHILOSOPHY: "Literature & Philosophy",
-};
-
-export const SUBJECT_LABELS: Record<SubjectCode, string> = {
-  MATH: "Mathematics",
-  PHYSICS: "Physics",
-  NATURAL_SCIENCES: "Natural Sciences",
-  PHILOSOPHY: "Philosophy",
-  ARABIC: "Arabic",
-  FRENCH: "French",
-  ENGLISH: "English",
-  ACCOUNTING_FINANCE: "Accounting & Finance",
-  ECONOMICS: "Economics",
-  HISTORY_GEOGRAPHY: "History & Geography",
-};
-
-export const SLOT_LABELS: Record<keyof StreamGradeSlots, string> = {
-  main1: "Main subject 1",
-  main2: "Main subject 2",
-  opposite: "Opposite stream",
-  english: "English",
-};
 
 export const LABEL_STYLES: Record<MatchLabel, string> = {
   STRONG_MATCH: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200",
