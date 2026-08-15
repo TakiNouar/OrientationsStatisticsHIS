@@ -4,12 +4,14 @@ import {
   RIASEC_LETTERS,
   STREAM_SUBJECT_MAP,
   SUBJECT_CODES,
+  TECHNICAL_MATH_OPTIONS,
   type BacStream,
 } from "./types.js";
 
 export const BacStreamSchema = z.enum(BAC_STREAMS);
 export const SubjectCodeSchema = z.enum(SUBJECT_CODES);
 export const RiasecLetterSchema = z.enum(RIASEC_LETTERS);
+export const TechnicalMathOptionSchema = z.enum(TECHNICAL_MATH_OPTIONS);
 
 const gradeSchema = z.coerce.number().min(0).max(20);
 
@@ -22,14 +24,14 @@ export const CalculateRecommendationSchema = z
   .object({
     fullName: z.string().trim().min(2).max(250),
     bacStream: BacStreamSchema,
+    technicalOption: TechnicalMathOptionSchema.optional(),
     overallBacMark: z.coerce.number().min(0).max(20),
-    // Partial map of subject → grade (only required stream subjects must be present).
-    // Zod 4 z.record(enum, ...) can require every enum key; use string keys + refine instead.
     grades: z.record(z.string(), gradeSchema),
     topRiasec: z.tuple([TopRiasecEntrySchema, TopRiasecEntrySchema, TopRiasecEntrySchema]),
   })
   .superRefine((value, ctx) => {
-    const requiredSubjects = STREAM_SUBJECT_MAP[value.bacStream as BacStream];
+    const stream = value.bacStream as BacStream;
+    const requiredSubjects = STREAM_SUBJECT_MAP[stream];
     const presentSubjects = new Set(Object.keys(value.grades));
     const allowedSubjects = new Set<string>(SUBJECT_CODES);
 
@@ -51,6 +53,22 @@ export const CalculateRecommendationSchema = z
           message: `Missing required subject grade for ${subject}.`,
         });
       }
+    }
+
+    if (stream === "TECHNICAL_MATHEMATICS" && !value.technicalOption) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["technicalOption"],
+        message: "Technical Mathematics requires a génie option.",
+      });
+    }
+
+    if (stream !== "TECHNICAL_MATHEMATICS" && value.technicalOption) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["technicalOption"],
+        message: "technicalOption is only allowed for Technical Mathematics.",
+      });
     }
 
     const letters = value.topRiasec.map((entry) => entry.letter);

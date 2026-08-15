@@ -18,6 +18,12 @@ export type SubjectCode =
   | "ECONOMICS"
   | "HISTORY_GEOGRAPHY";
 
+export type TechnicalMathOption =
+  | "GENIE_ELECTRIQUE"
+  | "GENIE_MECANIQUE"
+  | "GENIE_CIVIL"
+  | "GENIE_PROCEDES";
+
 export type RiasecLetter = "R" | "I" | "A" | "S" | "E" | "C";
 
 export type MatchLabel =
@@ -34,9 +40,17 @@ export interface TopRiasecEntry {
 
 export type TopRiasecProfile = [TopRiasecEntry, TopRiasecEntry, TopRiasecEntry];
 
+export interface StreamGradeSlots {
+  main1: SubjectCode;
+  main2: SubjectCode;
+  opposite: SubjectCode;
+  english: SubjectCode;
+}
+
 export interface RecommendationInput {
   fullName: string;
   bacStream: BacStream;
+  technicalOption?: TechnicalMathOption;
   overallBacMark: number;
   grades: Partial<Record<SubjectCode, number>>;
   topRiasec: TopRiasecProfile;
@@ -64,6 +78,13 @@ export interface SpecialtyMatchBreakdown {
     codeMatchScore: number;
     cosineComponent: number;
     codeMatchComponent: number;
+    genieBiasPoints?: number;
+    slotBreakdown?: {
+      main1: number;
+      main2: number;
+      opposite: number;
+      english: number;
+    };
   };
 }
 
@@ -72,6 +93,7 @@ export interface CalculationResult {
   timestamp: string;
   studentName: string;
   bacStream: BacStream;
+  technicalOption?: TechnicalMathOption;
   isTechnicalStream: boolean;
   weights: {
     academic: number;
@@ -84,10 +106,19 @@ export interface CalculationResult {
 export interface ConfigResponse {
   bacStreams: BacStream[];
   subjectCodes: SubjectCode[];
-  streamSubjectMap: Record<BacStream, SubjectCode[]>;
+  streamSubjects: Record<BacStream, SubjectCode[]>;
+  streamGradeSlots: Record<BacStream, StreamGradeSlots>;
+  academicSlotWeights: {
+    main1: number;
+    main2: number;
+    opposite: number;
+    english: number;
+  };
+  technicalMathOptions: TechnicalMathOption[];
+  technicalMathOptionLabels: Record<TechnicalMathOption, string>;
   riasecLetters: RiasecLetter[];
   riasecLabels: Record<RiasecLetter, string>;
-  specialtiesCount: number;
+  formulaWeights: { academic: number; riasec: number; technical: number };
 }
 
 export const RIASEC_LABELS: Record<RiasecLetter, string> = {
@@ -119,6 +150,13 @@ export const SUBJECT_LABELS: Record<SubjectCode, string> = {
   ACCOUNTING_FINANCE: "Accounting & Finance",
   ECONOMICS: "Economics",
   HISTORY_GEOGRAPHY: "History & Geography",
+};
+
+export const SLOT_LABELS: Record<keyof StreamGradeSlots, string> = {
+  main1: "Main subject 1",
+  main2: "Main subject 2",
+  opposite: "Opposite stream",
+  english: "English",
 };
 
 export const LABEL_STYLES: Record<MatchLabel, string> = {

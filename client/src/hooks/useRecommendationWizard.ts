@@ -6,6 +6,7 @@ import type {
   ConfigResponse,
   RiasecLetter,
   SubjectCode,
+  TechnicalMathOption,
   TopRiasecEntry,
   TopRiasecProfile,
 } from "../types";
@@ -15,6 +16,7 @@ export type WizardStep = 1 | 2 | 3;
 export type WizardFormState = {
   fullName: string;
   bacStream: BacStream | "";
+  technicalOption: TechnicalMathOption | "";
   overallBacMark: string;
   grades: Partial<Record<SubjectCode, string>>;
   topRiasec: [TopRiasecEntry | null, TopRiasecEntry | null, TopRiasecEntry | null];
@@ -23,6 +25,7 @@ export type WizardFormState = {
 const emptyForm = (): WizardFormState => ({
   fullName: "",
   bacStream: "",
+  technicalOption: "",
   overallBacMark: "",
   grades: {},
   topRiasec: [null, null, null],
@@ -46,8 +49,12 @@ export function useRecommendationWizard(config: ConfigResponse | null) {
     setForm((prev) => ({
       ...prev,
       bacStream,
+      technicalOption: bacStream === "TECHNICAL_MATHEMATICS" ? prev.technicalOption : "",
       grades: {},
     }));
+
+  const setTechnicalOption = (technicalOption: TechnicalMathOption | "") =>
+    setForm((prev) => ({ ...prev, technicalOption }));
 
   const setOverallBacMark = (overallBacMark: string) =>
     setForm((prev) => ({ ...prev, overallBacMark }));
@@ -68,6 +75,9 @@ export function useRecommendationWizard(config: ConfigResponse | null) {
   const validateStep1 = useCallback((): string | null => {
     if (form.fullName.trim().length < 2) return "Please enter the student full name.";
     if (!form.bacStream) return "Please select a BAC stream.";
+    if (form.bacStream === "TECHNICAL_MATHEMATICS" && !form.technicalOption) {
+      return "Please select a Technical Mathematics génie option.";
+    }
     const mark = Number(form.overallBacMark);
     if (Number.isNaN(mark) || mark < 0 || mark > 20) {
       return "Overall BAC mark must be between 0 and 20.";
@@ -149,6 +159,10 @@ export function useRecommendationWizard(config: ConfigResponse | null) {
       const data = await calculateRecommendations({
         fullName: form.fullName.trim(),
         bacStream: form.bacStream,
+        technicalOption:
+          form.bacStream === "TECHNICAL_MATHEMATICS" && form.technicalOption
+            ? form.technicalOption
+            : undefined,
         overallBacMark: Number(form.overallBacMark),
         grades,
         topRiasec,
@@ -173,9 +187,9 @@ export function useRecommendationWizard(config: ConfigResponse | null) {
     .filter((e): e is TopRiasecEntry => e !== null)
     .map((e) => e.letter);
 
-  const availableLetters = (config?.riasecLetters ?? (["R", "I", "A", "S", "E", "C"] as RiasecLetter[])).filter(
-    (letter) => !selectedLetters.includes(letter),
-  );
+  const availableLetters = (
+    config?.riasecLetters ?? (["R", "I", "A", "S", "E", "C"] as RiasecLetter[])
+  ).filter((letter) => !selectedLetters.includes(letter));
 
   return {
     step,
@@ -187,6 +201,7 @@ export function useRecommendationWizard(config: ConfigResponse | null) {
     availableLetters,
     setFullName,
     setBacStream,
+    setTechnicalOption,
     setOverallBacMark,
     setGrade,
     setTopRiasecSlot,

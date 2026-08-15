@@ -80,6 +80,7 @@ function App() {
                   requiredSubjects={wizard.requiredSubjects}
                   onFullName={wizard.setFullName}
                   onBacStream={wizard.setBacStream}
+                  onTechnicalOption={wizard.setTechnicalOption}
                   onOverallBacMark={wizard.setOverallBacMark}
                   onGrade={wizard.setGrade}
                 />

@@ -6,8 +6,12 @@ import { calculateRecommendations } from "./engine.js";
 import { CalculateRecommendationSchema } from "./schema.js";
 import {
   STREAM_SUBJECT_MAP,
+  STREAM_GRADE_SLOTS,
   SUBJECT_CODES,
   BAC_STREAMS,
+  TECHNICAL_MATH_OPTIONS,
+  TECHNICAL_MATH_OPTION_LABELS,
+  ACADEMIC_SLOT_WEIGHTS,
   RIASEC_LETTERS,
   RIASEC_LABELS,
   type StudentProfile,
@@ -35,14 +39,21 @@ app.get("/api/v1/config", (_req, res) => {
     bacStreams: BAC_STREAMS,
     subjectCodes: SUBJECT_CODES,
     streamSubjects: STREAM_SUBJECT_MAP,
+    streamGradeSlots: STREAM_GRADE_SLOTS,
+    academicSlotWeights: ACADEMIC_SLOT_WEIGHTS,
+    technicalMathOptions: TECHNICAL_MATH_OPTIONS,
+    technicalMathOptionLabels: TECHNICAL_MATH_OPTION_LABELS,
     riasecLetters: RIASEC_LETTERS,
     riasecLabels: RIASEC_LABELS,
+    formulaWeights: { academic: 0.4, riasec: 0.4, technical: 0.2 },
     specialties: getActiveSpecialties().map((specialty) => ({
       id: specialty.id,
       code: specialty.code,
       title: specialty.title,
       department: specialty.department,
       description: specialty.description,
+      isTechnical: specialty.isTechnical,
+      hollandCode: specialty.hollandCode,
       streamModifiers: specialty.streamModifiers,
       subjectWeights: specialty.subjectWeights.weights,
       riasecBenchmark: specialty.riasecBenchmark.vector,
@@ -70,9 +81,10 @@ app.post("/api/v1/recommendations/calculate", (req, res) => {
     const studentProfile: StudentProfile = {
       fullName: input.fullName,
       bacStream: input.bacStream,
+      technicalOption: input.technicalOption,
       academicPerformance: {
         overallBacMark: input.overallBacMark,
-        grades: input.grades,
+        grades: input.grades as StudentProfile["academicPerformance"]["grades"],
       },
       topRiasec: input.topRiasec as TopRiasecProfile,
     };
@@ -80,7 +92,6 @@ app.post("/api/v1/recommendations/calculate", (req, res) => {
     const specialties = getActiveSpecialties();
     const result = calculateRecommendations(studentProfile, specialties);
 
-    // Persistence happens after computation to keep request latency low.
     queueMicrotask(() => {
       persistEvaluation(studentProfile, result);
     });

@@ -20,10 +20,18 @@ export const SUBJECT_CODES = [
   "HISTORY_GEOGRAPHY",
 ] as const;
 
+export const TECHNICAL_MATH_OPTIONS = [
+  "GENIE_ELECTRIQUE",
+  "GENIE_MECANIQUE",
+  "GENIE_CIVIL",
+  "GENIE_PROCEDES",
+] as const;
+
 export const RIASEC_LETTERS = ["R", "I", "A", "S", "E", "C"] as const;
 
 export type BacStream = (typeof BAC_STREAMS)[number];
 export type SubjectCode = (typeof SUBJECT_CODES)[number];
+export type TechnicalMathOption = (typeof TECHNICAL_MATH_OPTIONS)[number];
 export type RiasecLetter = (typeof RIASEC_LETTERS)[number];
 
 export const TECHNICAL_BAC_STREAMS: readonly BacStream[] = [
@@ -47,12 +55,83 @@ export const MATCH_LABEL_TEXT: Record<MatchLabel, string> = {
   WEAK_MATCH: "Weak match — explore other options",
 };
 
+export const TECHNICAL_MATH_OPTION_LABELS: Record<TechnicalMathOption, string> = {
+  GENIE_ELECTRIQUE: "Génie électrique",
+  GENIE_MECANIQUE: "Génie mécanique",
+  GENIE_CIVIL: "Génie civil",
+  GENIE_PROCEDES: "Génie des procédés",
+};
+
+/** Fixed grade slots per stream: 2 mains + opposite + English. */
+export type StreamGradeSlots = {
+  main1: SubjectCode;
+  main2: SubjectCode;
+  opposite: SubjectCode;
+  english: SubjectCode;
+};
+
+export const STREAM_GRADE_SLOTS: Record<BacStream, StreamGradeSlots> = {
+  MATHEMATICS: {
+    main1: "MATH",
+    main2: "PHYSICS",
+    opposite: "ARABIC",
+    english: "ENGLISH",
+  },
+  EXPERIMENTAL_SCIENCES: {
+    main1: "MATH",
+    main2: "PHYSICS",
+    opposite: "ARABIC",
+    english: "ENGLISH",
+  },
+  TECHNICAL_MATHEMATICS: {
+    main1: "MATH",
+    main2: "PHYSICS",
+    opposite: "ARABIC",
+    english: "ENGLISH",
+  },
+  MANAGEMENT_ECONOMY: {
+    main1: "ACCOUNTING_FINANCE",
+    main2: "ECONOMICS",
+    opposite: "MATH",
+    english: "ENGLISH",
+  },
+  FOREIGN_LANGUAGES: {
+    main1: "ARABIC",
+    main2: "FRENCH",
+    opposite: "MATH",
+    english: "ENGLISH",
+  },
+  LITERATURE_PHILOSOPHY: {
+    main1: "ARABIC",
+    main2: "PHILOSOPHY",
+    opposite: "MATH",
+    english: "ENGLISH",
+  },
+};
+
+/** Slot contribution weights inside the academic score (sum = 1). */
+export const ACADEMIC_SLOT_WEIGHTS = {
+  main1: 0.35,
+  main2: 0.3,
+  opposite: 0.25,
+  english: 0.1,
+} as const;
+
+/** Required subject list derived from fixed slots (for validation / UI). */
+export const STREAM_SUBJECT_MAP: Record<BacStream, SubjectCode[]> = {
+  MATHEMATICS: ["MATH", "PHYSICS", "ARABIC", "ENGLISH"],
+  EXPERIMENTAL_SCIENCES: ["MATH", "PHYSICS", "ARABIC", "ENGLISH"],
+  TECHNICAL_MATHEMATICS: ["MATH", "PHYSICS", "ARABIC", "ENGLISH"],
+  MANAGEMENT_ECONOMY: ["ACCOUNTING_FINANCE", "ECONOMICS", "MATH", "ENGLISH"],
+  FOREIGN_LANGUAGES: ["ARABIC", "FRENCH", "MATH", "ENGLISH"],
+  LITERATURE_PHILOSOPHY: ["ARABIC", "PHILOSOPHY", "MATH", "ENGLISH"],
+};
+
 export interface BacGrades {
   grades: Partial<Record<SubjectCode, number>>;
   overallBacMark: number;
 }
 
-/** Full 6D vector used for specialty benchmarks and internal math. */
 export interface RiasecVector {
   realistic: number;
   investigative: number;
@@ -62,7 +141,6 @@ export interface RiasecVector {
   conventional: number;
 }
 
-/** Student input: exactly three distinct RIASEC letters with weights (1–100). */
 export interface TopRiasecEntry {
   letter: RiasecLetter;
   weight: number;
@@ -74,6 +152,8 @@ export interface StudentProfile {
   studentId?: string;
   fullName: string;
   bacStream: BacStream;
+  /** Required when bacStream is TECHNICAL_MATHEMATICS. */
+  technicalOption?: TechnicalMathOption;
   academicPerformance: BacGrades;
   topRiasec: TopRiasecProfile;
   evaluatedAt?: Date;
@@ -125,6 +205,13 @@ export interface SpecialtyMatchBreakdown {
     codeMatchScore: number;
     cosineComponent: number;
     codeMatchComponent: number;
+    genieBiasPoints: number;
+    slotBreakdown: {
+      main1: number;
+      main2: number;
+      opposite: number;
+      english: number;
+    };
   };
 }
 
@@ -133,6 +220,7 @@ export interface CalculationResult {
   timestamp: string;
   studentName: string;
   bacStream: BacStream;
+  technicalOption?: TechnicalMathOption;
   isTechnicalStream: boolean;
   weights: {
     academic: number;
@@ -161,15 +249,6 @@ export type SeedSpecialty = {
   };
 };
 
-export const STREAM_SUBJECT_MAP: Record<BacStream, SubjectCode[]> = {
-  MATHEMATICS: ["MATH", "PHYSICS", "ENGLISH", "FRENCH"],
-  EXPERIMENTAL_SCIENCES: ["NATURAL_SCIENCES", "PHYSICS", "MATH", "ENGLISH"],
-  TECHNICAL_MATHEMATICS: ["MATH", "PHYSICS", "ACCOUNTING_FINANCE", "ENGLISH"],
-  MANAGEMENT_ECONOMY: ["ACCOUNTING_FINANCE", "ECONOMICS", "MATH", "ENGLISH"],
-  FOREIGN_LANGUAGES: ["ENGLISH", "FRENCH", "ARABIC", "HISTORY_GEOGRAPHY"],
-  LITERATURE_PHILOSOPHY: ["ARABIC", "PHILOSOPHY", "HISTORY_GEOGRAPHY", "ENGLISH"],
-};
-
 export const RIASEC_LETTER_TO_KEY: Record<RiasecLetter, keyof RiasecVector> = {
   R: "realistic",
   I: "investigative",
@@ -188,7 +267,6 @@ export const RIASEC_LABELS: Record<RiasecLetter, string> = {
   C: "Conventional",
 };
 
-/** Expand top-3 profile into a sparse 6D vector (unselected dimensions = 0). */
 export const topRiasecToVector = (top: TopRiasecProfile): RiasecVector => {
   const vector: RiasecVector = {
     realistic: 0,

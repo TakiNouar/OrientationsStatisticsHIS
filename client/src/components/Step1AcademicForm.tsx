@@ -1,5 +1,11 @@
-import type { BacStream, ConfigResponse, SubjectCode } from "../types";
-import { STREAM_LABELS, SUBJECT_LABELS } from "../types";
+import type {
+  BacStream,
+  ConfigResponse,
+  StreamGradeSlots,
+  SubjectCode,
+  TechnicalMathOption,
+} from "../types";
+import { SLOT_LABELS, STREAM_LABELS, SUBJECT_LABELS } from "../types";
 import type { WizardFormState } from "../hooks/useRecommendationWizard";
 
 type Props = {
@@ -8,6 +14,7 @@ type Props = {
   requiredSubjects: SubjectCode[];
   onFullName: (v: string) => void;
   onBacStream: (v: BacStream) => void;
+  onTechnicalOption: (v: TechnicalMathOption | "") => void;
   onOverallBacMark: (v: string) => void;
   onGrade: (subject: SubjectCode, value: string) => void;
 };
@@ -15,12 +22,19 @@ type Props = {
 export function Step1AcademicForm({
   config,
   form,
-  requiredSubjects,
   onFullName,
   onBacStream,
+  onTechnicalOption,
   onOverallBacMark,
   onGrade,
 }: Props) {
+  const slots: StreamGradeSlots | null =
+    form.bacStream && config.streamGradeSlots
+      ? config.streamGradeSlots[form.bacStream]
+      : null;
+
+  const slotOrder: (keyof StreamGradeSlots)[] = ["main1", "main2", "opposite", "english"];
+
   return (
     <div className="space-y-6 text-left">
       <div>
@@ -28,7 +42,7 @@ export function Step1AcademicForm({
           Academic profile
         </h2>
         <p className="mt-1 text-sm text-slate-500">
-          Enter BAC stream, overall mark, and required subject grades (0–20).
+          Fixed subjects per stream: 2 main modules, 1 opposite-stream module, and English.
         </p>
       </div>
 
@@ -59,6 +73,26 @@ export function Step1AcademicForm({
         </select>
       </label>
 
+      {form.bacStream === "TECHNICAL_MATHEMATICS" && (
+        <label className="block">
+          <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
+            Technical Mathematics option (génie)
+          </span>
+          <select
+            className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
+            value={form.technicalOption}
+            onChange={(e) => onTechnicalOption(e.target.value as TechnicalMathOption | "")}
+          >
+            <option value="">Select génie…</option>
+            {config.technicalMathOptions.map((opt) => (
+              <option key={opt} value={opt}>
+                {config.technicalMathOptionLabels[opt]}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
+
       <label className="block">
         <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
           Overall BAC mark (0–20)
@@ -74,29 +108,36 @@ export function Step1AcademicForm({
         />
       </label>
 
-      {form.bacStream && (
+      {slots && form.bacStream && (
         <div>
-          <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-200 mb-3">
-            Required subjects for {STREAM_LABELS[form.bacStream]}
+          <h3 className="mb-3 text-sm font-semibold text-slate-800 dark:text-slate-200">
+            Grades for {STREAM_LABELS[form.bacStream]}
           </h3>
           <div className="grid gap-3 sm:grid-cols-2">
-            {requiredSubjects.map((subject) => (
-              <label key={subject} className="block">
-                <span className="text-sm text-slate-600 dark:text-slate-400">
-                  {SUBJECT_LABELS[subject]}
-                </span>
-                <input
-                  type="number"
-                  min={0}
-                  max={20}
-                  step={0.01}
-                  className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
-                  value={form.grades[subject] ?? ""}
-                  onChange={(e) => onGrade(subject, e.target.value)}
-                />
-              </label>
-            ))}
+            {slotOrder.map((slotKey) => {
+              const subject = slots[slotKey];
+              return (
+                <label key={slotKey} className="block">
+                  <span className="text-sm text-slate-600 dark:text-slate-400">
+                    {SLOT_LABELS[slotKey]} — {SUBJECT_LABELS[subject]}
+                  </span>
+                  <input
+                    type="number"
+                    min={0}
+                    max={20}
+                    step={0.01}
+                    className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
+                    value={form.grades[subject] ?? ""}
+                    onChange={(e) => onGrade(subject, e.target.value)}
+                  />
+                </label>
+              );
+            })}
           </div>
+          <p className="mt-2 text-xs text-slate-500">
+            Slot weights: Main1 35% · Main2 30% · Opposite 25% · English 10%. Opposite is never
+            penalized; strong opposite marks can lift opposite-type specialties.
+          </p>
         </div>
       )}
     </div>
