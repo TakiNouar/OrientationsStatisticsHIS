@@ -142,6 +142,53 @@ export interface ConfigResponse {
   riasecLabels: Record<RiasecLetter, string>;
   formulaWeights: { academic: number; riasec: number; technical: number };
   careerPathsBySpecialty?: Record<string, CareerPath[]>;
+  specialties?: Array<{
+    id: string;
+    code: string;
+    title: string;
+    department: string;
+    isTechnical: boolean;
+  }>;
+}
+
+/** B0 analytics */
+export interface AnalyticsCountRow {
+  key: string;
+  label: string;
+  count: number;
+}
+
+export interface AnalyticsSummary {
+  totalSessions: number;
+  byStream: AnalyticsCountRow[];
+  byTopSpecialty: AnalyticsCountRow[];
+  byMatchLabel: AnalyticsCountRow[];
+  filters: {
+    from?: string;
+    to?: string;
+    bacStream?: string;
+    specialtyCode?: string;
+  };
+}
+
+export interface AnonymizedEvaluationRow {
+  sessionRef: string;
+  evaluatedAt: string;
+  bacStream: string;
+  overallBacMark: number;
+  topSpecialtyCode: string;
+  topSpecialtyTitle: string;
+  department: string;
+  finalScore: number;
+  matchLabel: MatchLabel;
+  academicScore: number;
+  riasecScore: number;
+}
+
+export interface AnalyticsRecentResponse {
+  rows: AnonymizedEvaluationRow[];
+  filters: AnalyticsSummary["filters"];
+  limit: number;
 }
 
 export const LABEL_STYLES: Record<MatchLabel, string> = {

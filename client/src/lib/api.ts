@@ -1,4 +1,10 @@
-import type { CalculationResult, ConfigResponse, RecommendationInput } from "../types";
+import type {
+  AnalyticsRecentResponse,
+  AnalyticsSummary,
+  CalculationResult,
+  ConfigResponse,
+  RecommendationInput,
+} from "../types";
 
 /**
  * Dev stability: default to same-origin `/api` so Vite proxy handles the backend
@@ -98,14 +104,62 @@ export async function calculateRecommendations(
   return response.json() as Promise<CalculationResult>;
 }
 
+export type AnalyticsQuery = {
+  from?: string;
+  to?: string;
+  bacStream?: string;
+  specialtyCode?: string;
+  limit?: number;
+};
+
+function analyticsQueryString(params?: AnalyticsQuery): string {
+  const q = new URLSearchParams();
+  if (params?.from) q.set("from", params.from);
+  if (params?.to) q.set("to", params.to);
+  if (params?.bacStream) q.set("bacStream", params.bacStream);
+  if (params?.specialtyCode) q.set("specialtyCode", params.specialtyCode);
+  if (params?.limit != null) q.set("limit", String(params.limit));
+  const s = q.toString();
+  return s ? `?${s}` : "";
+}
+
+export async function fetchAnalyticsSummary(
+  params?: AnalyticsQuery,
+): Promise<AnalyticsSummary> {
+  const response = await fetchWithTimeout(
+    apiUrl(`/api/v1/analytics/summary${analyticsQueryString(params)}`),
+  );
+  if (!response.ok) {
+    throw new Error(`Failed to load analytics summary (${response.status})`);
+  }
+  return response.json() as Promise<AnalyticsSummary>;
+}
+
+export async function fetchAnalyticsRecent(
+  params?: AnalyticsQuery,
+): Promise<AnalyticsRecentResponse> {
+  const response = await fetchWithTimeout(
+    apiUrl(`/api/v1/analytics/recent${analyticsQueryString(params)}`),
+  );
+  if (!response.ok) {
+    throw new Error(`Failed to load recent evaluations (${response.status})`);
+  }
+  return response.json() as Promise<AnalyticsRecentResponse>;
+}
+
 export function exportEvaluationsUrl(params?: {
   from?: string;
   to?: string;
   bacStream?: string;
+  specialtyCode?: string;
+  /** Default true for B0. Pass false to include student names. */
+  anonymized?: boolean;
 }): string {
   const q = new URLSearchParams({ format: "csv" });
   if (params?.from) q.set("from", params.from);
   if (params?.to) q.set("to", params.to);
   if (params?.bacStream) q.set("bacStream", params.bacStream);
+  if (params?.specialtyCode) q.set("specialtyCode", params.specialtyCode);
+  q.set("anonymized", params?.anonymized === false ? "0" : "1");
   return apiUrl(`/api/v1/export/evaluations?${q.toString()}`);
 }
