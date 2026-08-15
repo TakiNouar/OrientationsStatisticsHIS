@@ -1,58 +1,50 @@
-# 05 — Math Engine (Current Implementation)
-
-**File:** `server/src/engine.ts`
-
-## Weights
-
-- Academic contribution: **70%**
-- Psychometric contribution: **30%**
-
-## Academic score (implemented)
-
-1. Take only subjects that appear in both the specialty weights and the student’s grades.
-2. Compute:
-
-\[
-S_{\text{base}} = \frac{\sum (w_k \cdot g_k)}{20 \cdot \sum w_k} \times 100
-\]
-
-3. Multiply by the stream modifier for the student’s BAC stream:
-
-\[
-S_{\text{academic}} = S_{\text{base}} \times \mu_{s,i}
-\]
-
-Missing grades are simply omitted from the sums (dynamic subset).
-
-## Psychometric score (current — full 6D)
-
-Student and specialty are both 6D vectors:  
-`[R, I, A, S, E, C]`
-
-Cosine similarity:
-
-\[
-\text{CosSim} = \frac{\vec{u} \cdot \vec{v}}{\|\vec{u}\| \cdot \|\vec{v}\|}
-\]
-
-\[
-S_{\text{riasec}} = \text{CosSim} \times 100
-\]
-
-**Zero-vector handling:** if either magnitude is 0, the engine returns a neutral **50%** (hard-coded).  
-This differs slightly from the PDF’s claim that substituting `[1,1,1,1,1,1]` always yields 0.50 (that claim is only true for uniform benchmarks).
+# 05 — Math engine
 
 ## Final score
 
-\[
-S_{\text{final}} = 0.70 \cdot S_{\text{academic}} + 0.30 \cdot S_{\text{riasec}}
-\]
+```
+S = 0.50 * A + 0.30 * R + 0.20 * T + B
+```
 
-Matches are sorted descending by final score and given rank 1…N.
+Clamped to [0, 100]. Sorted descending → rank + label.
 
-## Pending change
+| Label threshold | Text |
+|-----------------|------|
+| ≥ 80 | Strong match |
+| ≥ 65 | Strong match — worth a conversation |
+| ≥ 50 | Possible fit / ambiguous |
+| ≥ 35 | Interested, profile still developing |
+| &lt; 35 | Weak match |
 
-The product owner has decided the **student input** will be the **top 3 RIASEC letters**, each with a weight/strength, instead of a full 6D vector.
+## Academic A
 
-The engine will need to be updated so the psychometric part scores “top-3 profile vs specialty benchmark” instead of pure 6D cosine.  
-Exact formula for that comparison is still to be finalized.
+Slot weights: **40% / 30% / 20% / 10%** (main1 / main2 / opposite / english).
+
+Per subject: `contribution = w_slot * (grade/20)*100 * multiplier`.
+
+Multiplier from specialty seed weights, mapped **×0.6 … ×1.8** (missing subject → ×0.75).
+
+**Stream modifiers are not applied** to A.
+
+## RIASEC R
+
+Top-3 → sparse 6D vector.
+
+```
+R = 0.3 * cosineScore + 0.7 * codeMatch
+```
+
+Code match: Holland positions 50/35/15, weight strength, same-rank bonus.
+
+## Technical fit T
+
+```
+T = 0.45 * streamBase + 0.55 * marksFit
+```
+
+- streamBase: soft matrix tech/non-tech stream vs specialty (100 / 35 / 85 / 40)
+- marksFit: technical specialty leans on mains; non-tech on opposite
+
+## Génie bias B
+
+Technical Mathematics only: +2…+8 points on matching HIS codes (Élec / Info / Sécu).
