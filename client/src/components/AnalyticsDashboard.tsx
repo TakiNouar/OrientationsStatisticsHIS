@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, type ReactNode } from "react";
 import type { AnalyticsDashboard, BacStream, MatchLabel } from "../types";
 import type { Lang } from "../i18n/strings";
 import { STREAM_LABELS_I18N, matchLabelText, strings } from "../i18n/strings";
@@ -19,7 +19,7 @@ const LABEL_COLORS: Record<MatchLabel, string> = {
 
 const BUCKET_COLORS = ["#94a3b8", "#fb923c", "#fbbf24", "#2dd4bf", "#34d399"];
 
-function Card({ children, className = "", delay }: { children: React.ReactNode; className?: string; delay?: number }) {
+function Card({ children, className = "", delay }: { children: ReactNode; className?: string; delay?: number }) {
   const delayClass =
     delay === 1
       ? "analytics-rise-delay-1"
@@ -44,7 +44,6 @@ function SectionTitle({ title, subtitle }: { title: string; subtitle?: string })
   );
 }
 
-/** SVG area + line chart for volume by day */
 function AreaVolumeChart({
   title,
   points,
@@ -138,7 +137,6 @@ function AreaVolumeChart({
   );
 }
 
-/** Vertical gradient columns for score buckets */
 function ScoreHistogram({
   title,
   items,
@@ -186,7 +184,6 @@ function ScoreHistogram({
   );
 }
 
-/** Donut chart for match labels */
 function MatchDonut({
   title,
   items,
