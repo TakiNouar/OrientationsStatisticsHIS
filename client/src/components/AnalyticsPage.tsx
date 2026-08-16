@@ -465,22 +465,19 @@ export function AnalyticsPage({ config, lang, onBack }: Props) {
             <p className="break-words text-[11px] text-slate-500 dark:text-sky-300/60">{t.analyticsClickHint}</p>
           </div>
           <div className="overflow-x-auto">
-            <table className="min-w-full text-left text-xs">
+            <table className="min-w-full text-left text-sm">
               <thead className="bg-sky-100/80 text-[10px] uppercase tracking-wider text-slate-600 dark:bg-slate-950/60 dark:text-sky-300/70">
                 <tr>
-                  <th className="px-3 py-3 font-bold sm:px-4">{t.colName}</th>
-                  <th className="px-2 py-3 font-bold sm:px-3">{t.colDate}</th>
-                  <th className="px-2 py-3 font-bold sm:px-3">{t.colStream}</th>
-                  <th className="px-2 py-3 font-bold sm:px-3">{t.colTopSpecialty}</th>
-                  <th className="px-2 py-3 font-bold sm:px-3">{t.colScore}</th>
-                  <th className="px-2 py-3 font-bold sm:px-3">{t.colLabel}</th>
-                  <th className="px-3 py-3 font-bold sm:px-4">{t.colActions}</th>
+                  <th className="px-4 py-3 font-bold">{t.colName}</th>
+                  <th className="px-3 py-3 font-bold">{t.colDate}</th>
+                  <th className="px-3 py-3 font-bold">{t.colTopSpecialty}</th>
+                  <th className="px-4 py-3 font-bold">{t.colActions}</th>
                 </tr>
               </thead>
               <tbody>
                 {recent.rows.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="px-4 py-8 text-center text-slate-500">
+                    <td colSpan={4} className="px-4 py-8 text-center text-slate-500">
                       {t.noSessions}
                     </td>
                   </tr>
@@ -491,48 +488,24 @@ export function AnalyticsPage({ config, lang, onBack }: Props) {
                       className="border-t border-sky-100/90 transition hover:bg-sky-100/70 dark:border-slate-800 dark:hover:bg-sky-950/40"
                     >
                       <td
-                        className="max-w-[10rem] cursor-pointer truncate px-3 py-3 font-bold text-sky-800 dark:text-sky-200 sm:max-w-[14rem] sm:px-4"
+                        className="max-w-[14rem] cursor-pointer truncate px-4 py-3 font-bold text-sky-800 dark:text-sky-200"
                         onClick={() => setSelectedStudentId(row.studentId)}
                       >
                         {row.fullName}
                       </td>
                       <td
-                        className="cursor-pointer whitespace-nowrap px-2 py-3 tabular-nums text-slate-600 dark:text-sky-200/70 sm:px-3"
+                        className="cursor-pointer whitespace-nowrap px-3 py-3 tabular-nums text-slate-600 dark:text-sky-200/70"
                         onClick={() => setSelectedStudentId(row.studentId)}
                       >
                         {row.evaluatedAt?.slice(0, 19).replace("T", " ")}
                       </td>
                       <td
-                        className="max-w-[8rem] cursor-pointer truncate px-2 py-3 text-slate-800 dark:text-sky-100 sm:px-3"
-                        onClick={() => setSelectedStudentId(row.studentId)}
-                      >
-                        {streamLabels[row.bacStream as BacStream] ?? row.bacStream}
-                      </td>
-                      <td
-                        className="max-w-[10rem] cursor-pointer truncate px-2 py-3 font-medium text-slate-900 dark:text-sky-50 sm:max-w-[14rem] sm:px-3"
+                        className="max-w-[16rem] cursor-pointer truncate px-3 py-3 font-medium text-slate-900 dark:text-sky-50"
                         onClick={() => setSelectedStudentId(row.studentId)}
                       >
                         {row.topSpecialtyTitle}
                       </td>
-                      <td
-                        className="cursor-pointer whitespace-nowrap px-2 py-3 text-sm font-black tabular-nums text-slate-900 dark:text-white sm:px-3"
-                        onClick={() => setSelectedStudentId(row.studentId)}
-                      >
-                        {row.finalScore.toFixed(1)}%
-                      </td>
-                      <td
-                        className="cursor-pointer px-2 py-3 sm:px-3"
-                        onClick={() => setSelectedStudentId(row.studentId)}
-                      >
-                        <span
-                          className={`inline-flex max-w-[9rem] truncate rounded-full px-2.5 py-0.5 text-[10px] font-bold ${
-                            LABEL_STYLES[row.matchLabel]
-                          }`}
-                        >
-                          {matchLabelText(lang, row.matchLabel)}
-                        </span>
-                      </td>
-                      <td className="px-3 py-3 sm:px-4">
+                      <td className="px-4 py-3">
                         <button
                           type="button"
                           disabled={deletingId === row.studentId}
