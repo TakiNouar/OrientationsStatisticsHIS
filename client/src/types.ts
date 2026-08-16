@@ -221,6 +221,8 @@ export interface StudentProfileDetail {
   fullName: string;
   bacStream: string;
   overallBacMark: number;
+  preferredSpecialtyCode?: string | null;
+  preferredSpecialtyTitle?: string | null;
   createdAt: string;
   grades: Record<string, number>;
   topRiasec: Array<{ letter: RiasecLetter; weight: number }> | null;
