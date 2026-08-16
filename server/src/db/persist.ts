@@ -1,38 +1,64 @@
 import { db } from "./connection.js";
 import type { CalculationResult, StudentProfile, SubjectCode } from "../types.js";
 import { topRiasecToVector } from "../types.js";
+import type { Statement } from "better-sqlite3";
 
-const insertStudent = db.prepare(`
-  INSERT INTO students (id, full_name, bac_stream, overall_bac_mark)
-  VALUES (?, ?, ?, ?)
-`);
+/**
+ * Prepared statements must NOT run at module load time.
+ * ESM evaluates imports before index.ts reaches initDatabase()/createTables(),
+ * so top-level db.prepare() crashes on a fresh DB with "no such table".
+ */
+let insertStudent: Statement | null = null;
+let insertGrade: Statement | null = null;
+let insertRiasec: Statement | null = null;
+let insertEvaluation: Statement | null = null;
 
-const insertGrade = db.prepare(`
-  INSERT INTO bac_grades (id, student_id, subject_code, grade_value)
-  VALUES (?, ?, ?, ?)
-`);
-
-const insertRiasec = db.prepare(`
-  INSERT INTO riasec_profiles (
-    id, student_id, realistic_score, investigative_score, artistic_score,
-    social_score, enterprising_score, conventional_score, top_riasec_json
-  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-`);
-
-const insertEvaluation = db.prepare(`
-  INSERT INTO match_evaluations (
-    id, student_id, specialty_id, academic_score, riasec_score, final_score, rank_position, evaluated_at
-  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-`);
+const getStatements = () => {
+  if (!insertStudent) {
+    insertStudent = db.prepare(`
+      INSERT INTO students (id, full_name, bac_stream, overall_bac_mark)
+      VALUES (?, ?, ?, ?)
+    `);
+  }
+  if (!insertGrade) {
+    insertGrade = db.prepare(`
+      INSERT INTO bac_grades (id, student_id, subject_code, grade_value)
+      VALUES (?, ?, ?, ?)
+    `);
+  }
+  if (!insertRiasec) {
+    insertRiasec = db.prepare(`
+      INSERT INTO riasec_profiles (
+        id, student_id, realistic_score, investigative_score, artistic_score,
+        social_score, enterprising_score, conventional_score, top_riasec_json
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+  }
+  if (!insertEvaluation) {
+    insertEvaluation = db.prepare(`
+      INSERT INTO match_evaluations (
+        id, student_id, specialty_id, academic_score, riasec_score, final_score, rank_position, evaluated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+  }
+  return {
+    insertStudent,
+    insertGrade,
+    insertRiasec,
+    insertEvaluation,
+  };
+};
 
 /** Persist one orientation session (student + grades + RIASEC + ranked matches). */
 export const persistEvaluation = (
   studentProfile: StudentProfile,
   result: CalculationResult,
 ): void => {
+  const stmts = getStatements();
+
   const save = db.transaction(() => {
     const studentId = studentProfile.studentId ?? crypto.randomUUID();
-    insertStudent.run(
+    stmts.insertStudent.run(
       studentId,
       studentProfile.fullName,
       studentProfile.bacStream,
@@ -44,11 +70,11 @@ export const persistEvaluation = (
       number,
     ][];
     for (const [subjectCode, grade] of gradeEntries) {
-      insertGrade.run(crypto.randomUUID(), studentId, subjectCode, grade);
+      stmts.insertGrade.run(crypto.randomUUID(), studentId, subjectCode, grade);
     }
 
     const expanded = topRiasecToVector(studentProfile.topRiasec);
-    insertRiasec.run(
+    stmts.insertRiasec.run(
       crypto.randomUUID(),
       studentId,
       expanded.realistic,
@@ -61,7 +87,7 @@ export const persistEvaluation = (
     );
 
     for (const match of result.matches) {
-      insertEvaluation.run(
+      stmts.insertEvaluation.run(
         `${result.evaluationId}_${match.specialtyId}`,
         studentId,
         match.specialtyId,

@@ -70,6 +70,30 @@ export interface CareerPath {
   examplesEn: string[];
 }
 
+/** Scoring breakdown fields returned by the engine for each specialty match. */
+export interface MatchDetails {
+  rawAcademicPercentage: number;
+  vectorCosineSimilarity: number;
+  codeMatchScore: number;
+  cosineComponent: number;
+  codeMatchComponent: number;
+  genieBiasPoints: number;
+  slotBreakdown: {
+    main1: number;
+    main2: number;
+    opposite: number;
+    english: number;
+  };
+  affinityBreakdown: {
+    main1: number;
+    main2: number;
+    opposite: number;
+    english: number;
+  };
+  technicalStreamBase: number;
+  technicalMarksComponent: number;
+}
+
 export interface SpecialtyMatchBreakdown {
   specialtyId: string;
   specialtyCode: string;
@@ -86,7 +110,7 @@ export interface SpecialtyMatchBreakdown {
   matchLabelText: string;
   rank: number;
   careerPaths?: CareerPath[];
-  details: Record<string, unknown>;
+  details: MatchDetails;
 }
 
 export interface CalculationResult {
