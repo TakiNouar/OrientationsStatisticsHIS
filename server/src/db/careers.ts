@@ -51,8 +51,9 @@ export const getCareerPathsBySpecialty = (): Record<string, CareerPathRecord[]> 
       examplesFr: JSON.parse(row.examples_fr_json || "[]") as string[],
       examplesEn: JSON.parse(row.examples_en_json || "[]") as string[],
     };
-    if (!map[item.specialtyCode]) map[item.specialtyCode] = [];
-    map[item.specialtyCode].push(item);
+    const list = map[item.specialtyCode] ?? [];
+    list.push(item);
+    map[item.specialtyCode] = list;
   }
   return map;
 };

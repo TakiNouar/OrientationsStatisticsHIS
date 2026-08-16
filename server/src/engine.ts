@@ -76,9 +76,11 @@ const cosineSimilarity = (a: RiasecVector, b: RiasecVector): number => {
   let normB = 0;
 
   for (let i = 0; i < va.length; i += 1) {
-    dot += va[i] * vb[i];
-    normA += va[i] * va[i];
-    normB += vb[i] * vb[i];
+    const aVal = va[i] ?? 0;
+    const bVal = vb[i] ?? 0;
+    dot += aVal * bVal;
+    normA += aVal * aVal;
+    normB += bVal * bVal;
   }
 
   if (normA === 0 || normB === 0) {
@@ -99,13 +101,13 @@ export const codeMatchScore = (
   }
 
   const maxWeight = Math.max(...top.map((entry) => entry.weight), 1);
-  const positionWeights = [50, 35, 15];
+  const positionWeights = [50, 35, 15] as const;
   const maxPossible = positionWeights.reduce((sum, value) => sum + value, 0);
 
   let score = 0;
 
   for (let i = 0; i < 3; i += 1) {
-    const letter = hollandCode[i];
+    const letter = hollandCode[i as 0 | 1 | 2];
     const studentWeight = weightByLetter[letter];
     if (studentWeight === undefined) {
       continue;
@@ -113,7 +115,8 @@ export const codeMatchScore = (
 
     const studentIdx = studentOrder.indexOf(letter);
     const strength = studentWeight / maxWeight;
-    let credit = positionWeights[i] * (0.45 + 0.55 * strength);
+    const posWeight = positionWeights[i as 0 | 1 | 2] ?? 0;
+    let credit = posWeight * (0.45 + 0.55 * strength);
 
     if (studentIdx === i) {
       credit *= 1.2;
@@ -195,17 +198,6 @@ const mapWeightToMultiplier = (subjectW: number, minW: number, maxW: number): nu
   return AFFINITY_MIN + (AFFINITY_MAX - AFFINITY_MIN) * ratio;
 };
 
-/**
- * When a specialty has no weight entry for a graded subject, use the mean of that
- * specialty's *existing* mapped multipliers.
- *
- * Why not a fixed 0.75?
- * - Aggressive range is 0.6–1.8 (midpoint 1.2). A fixed 0.75 is a silent penalty
- *   below midpoint, so incomplete seed rows under-scored students unfairly.
- * - Specialty-average stays relative to how that programme weights subjects overall,
- *   without inventing importance for an unlisted subject.
- * - If the specialty has zero weights, fall back to 1.0 (true neutral on the clamp scale).
- */
 const specialtyAverageMappedMultiplier = (specialty: HisSpecialtyConfig): number => {
   const weights = specialty.subjectWeights.weights;
   const values = Object.values(weights).filter((v): v is number => typeof v === "number" && v > 0);
@@ -218,7 +210,6 @@ const specialtyAverageMappedMultiplier = (specialty: HisSpecialtyConfig): number
   return mapped.reduce((a, b) => a + b, 0) / mapped.length;
 };
 
-/** Named export of the missing-subject policy for clarity in reports/debug. */
 export const AFFINITY_MISSING_POLICY = "specialty_average_mapped_multiplier" as const;
 
 const subjectMultiplier = (
@@ -368,12 +359,11 @@ export const calculateRecommendations = (
       rank: index + 1,
     }));
 
-  return {
+  const result: CalculationResult = {
     evaluationId: crypto.randomUUID(),
     timestamp: new Date().toISOString(),
     studentName: studentProfile.fullName,
     bacStream: studentProfile.bacStream,
-    technicalOption: studentProfile.technicalOption,
     isTechnicalStream: technicalStream,
     weights: {
       academic: ACADEMIC_WEIGHT,
@@ -382,4 +372,11 @@ export const calculateRecommendations = (
     },
     matches,
   };
+
+  // exactOptionalPropertyTypes: only set when defined
+  if (studentProfile.technicalOption !== undefined) {
+    result.technicalOption = studentProfile.technicalOption;
+  }
+
+  return result;
 };
