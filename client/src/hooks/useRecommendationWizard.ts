@@ -106,7 +106,7 @@ export function useRecommendationWizard(config: ConfigResponse | null, lang: Lan
       const raw = form.grades[subject];
       const n = Number(raw);
       if (raw === undefined || raw === "" || Number.isNaN(n) || n < 0 || n > 20) {
-        errors[`grade_${subject}`] = t.errGrade.replace("{subject}", subjectLabels[subject] ?? subject);
+        errors[`grade_${subject}`] = `${subjectLabels[subject] ?? subject}: invalid`;
       }
     }
     return errors;
@@ -118,42 +118,43 @@ export function useRecommendationWizard(config: ConfigResponse | null, lang: Lan
     for (let i = 0; i < 3; i++) {
       const e = entries[i];
       if (!e) {
-        errors[`riasec_${i}`] = t.errRiasecSlot;
+        errors[`riasec_${i}`] = t.errRiasecSlot ?? "Required";
         continue;
       }
       if (!e.letter || e.weight < 1 || e.weight > 100) {
-        errors[`riasec_${i}`] = t.errRiasecWeight;
+        errors[`riasec_${i}`] = t.errRiasecWeight ?? "Invalid weight";
       }
     }
     const letters = entries.filter(Boolean).map((e) => e!.letter);
     if (new Set(letters).size !== letters.length) {
-      errors.riasec_dup = t.errRiasecDup;
+      errors.riasec_dup = t.errRiasecDup ?? "Duplicate letters";
     }
     return errors;
   }, [form.topRiasec, t]);
 
-  const nextFromStep1 = () => {
-    const errs = validateStep1();
-    if (Object.keys(errs).length > 0) {
-      setFieldErrors(errs);
-      setError(t.fixErrors);
+  const goNext = () => {
+    if (step === 1) {
+      const errs = validateStep1();
+      if (Object.keys(errs).length > 0) {
+        setFieldErrors(errs);
+        setError(t.fixErrors);
+        return;
+      }
+      setFieldErrors({});
+      setError(null);
+      setStep(2);
       return;
     }
-    setFieldErrors({});
-    setError(null);
-    setStep(2);
+    if (step === 2) {
+      void submit();
+    }
   };
 
-  const nextFromStep2 = () => {
-    const errs = validateStep2();
-    if (Object.keys(errs).length > 0) {
-      setFieldErrors(errs);
-      setError(t.fixErrors);
-      return;
-    }
-    setFieldErrors({});
+  const goBack = () => {
+    if (step <= 1) return;
     setError(null);
-    void submit();
+    setFieldErrors({});
+    setStep((s) => (s === 3 ? 2 : 1) as WizardStep);
   };
 
   const goToStep = (target: 1 | 2 | 3) => {
@@ -217,6 +218,10 @@ export function useRecommendationWizard(config: ConfigResponse | null, lang: Lan
     .filter((e): e is TopRiasecEntry => e !== null)
     .map((e) => e.letter);
 
+  const availableLetters = (config?.riasecLetters ?? (["R", "I", "A", "S", "E", "C"] as RiasecLetter[])).filter(
+    (l) => !selectedLetters.includes(l),
+  );
+
   return {
     step,
     form,
@@ -226,6 +231,7 @@ export function useRecommendationWizard(config: ConfigResponse | null, lang: Lan
     loading,
     requiredSubjects,
     selectedLetters,
+    availableLetters,
     setFullName,
     setPreferredSpecialtyCode,
     setBacStream,
@@ -233,8 +239,8 @@ export function useRecommendationWizard(config: ConfigResponse | null, lang: Lan
     setOverallBacMark,
     setGrade,
     setTopRiasecSlot,
-    nextFromStep1,
-    nextFromStep2,
+    goNext,
+    goBack,
     goToStep,
     reset,
   };
