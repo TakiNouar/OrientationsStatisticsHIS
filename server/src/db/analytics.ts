@@ -52,6 +52,8 @@ export type StudentProfileDetail = {
   fullName: string;
   bacStream: string;
   overallBacMark: number;
+  preferredSpecialtyCode: string | null;
+  preferredSpecialtyTitle: string | null;
   createdAt: string;
   grades: Record<string, number>;
   topRiasec: Array<{ letter: RiasecLetter; weight: number }> | null;
@@ -221,7 +223,8 @@ export const getRecentEvaluationsAnonymized = getRecentSessions;
 export const getStudentProfile = (studentId: string): StudentProfileDetail | null => {
   const student = db
     .prepare(
-      `SELECT id, full_name, bac_stream, overall_bac_mark, created_at FROM students WHERE id = ?`,
+      `SELECT id, full_name, bac_stream, overall_bac_mark, preferred_specialty_code, created_at
+       FROM students WHERE id = ?`,
     )
     .get(studentId) as
     | {
@@ -229,11 +232,21 @@ export const getStudentProfile = (studentId: string): StudentProfileDetail | nul
         full_name: string;
         bac_stream: string;
         overall_bac_mark: number;
+        preferred_specialty_code: string | null;
         created_at: string;
       }
     | undefined;
 
   if (!student) return null;
+
+  let preferredSpecialtyTitle: string | null = null;
+  const prefCode = student.preferred_specialty_code?.trim() || null;
+  if (prefCode) {
+    const titleRow = db
+      .prepare(`SELECT title FROM his_specialties WHERE code = ? LIMIT 1`)
+      .get(prefCode) as { title: string } | undefined;
+    preferredSpecialtyTitle = titleRow?.title ?? null;
+  }
 
   const gradeRows = db
     .prepare(`SELECT subject_code, grade_value FROM bac_grades WHERE student_id = ?`)
@@ -342,6 +355,8 @@ export const getStudentProfile = (studentId: string): StudentProfileDetail | nul
     fullName: student.full_name,
     bacStream: student.bac_stream,
     overallBacMark: Number(student.overall_bac_mark),
+    preferredSpecialtyCode: prefCode,
+    preferredSpecialtyTitle,
     createdAt: student.created_at,
     grades,
     topRiasec,
