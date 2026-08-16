@@ -14,6 +14,7 @@ import {
   initDatabase,
   persistEvaluation,
 } from "./db.js";
+import { deleteStudent } from "./student-delete.js";
 import { getAnalyticsDashboard } from "./analytics-dashboard.js";
 import { calculateRecommendations } from "./engine.js";
 import { logger } from "./logger.js";
@@ -204,6 +205,29 @@ app.get("/api/v1/analytics/students/:studentId", (req, res) => {
       studentId: req.params.studentId,
     });
     res.status(500).json({ message: "Failed to load student profile." });
+  }
+});
+
+app.delete("/api/v1/analytics/students/:studentId", (req, res) => {
+  try {
+    const studentId = req.params.studentId;
+    if (!studentId || studentId.length < 8) {
+      res.status(400).json({ message: "Invalid student id." });
+      return;
+    }
+    const deleted = deleteStudent(studentId);
+    if (!deleted) {
+      res.status(404).json({ message: "Student not found." });
+      return;
+    }
+    logger.info("student_deleted", { studentId });
+    res.status(204).send();
+  } catch (error) {
+    logger.error("student_delete_failed", {
+      err: error instanceof Error ? error.message : String(error),
+      studentId: req.params.studentId,
+    });
+    res.status(500).json({ message: "Failed to delete student profile." });
   }
 });
 
