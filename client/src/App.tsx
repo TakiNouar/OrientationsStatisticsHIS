@@ -93,9 +93,9 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
-      <header className="border-b border-slate-200 bg-white/80 backdrop-blur dark:border-slate-800 dark:bg-slate-900/80">
-        <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3 px-4 py-3">
+    <div className="min-h-screen bg-gradient-to-b from-sky-50 via-slate-50 to-indigo-50/40 text-slate-900 dark:from-slate-950 dark:via-slate-950 dark:to-slate-900 dark:text-slate-100">
+      <header className="sticky top-0 z-20 border-b border-sky-100/80 bg-white/85 backdrop-blur-md dark:border-slate-800 dark:bg-slate-900/90">
+        <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3 px-4 py-3.5">
           <div>
             <h1 className="text-lg font-bold tracking-tight">{t.appTitle}</h1>
             <p className="text-xs text-slate-500">{t.appSubtitle}</p>
@@ -105,8 +105,8 @@ export default function App() {
               type="button"
               className={`rounded-lg px-3 py-1.5 text-sm ${
                 route === "wizard"
-                  ? "bg-indigo-600 text-white"
-                  : "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                  ? "bg-indigo-600 text-white shadow-sm shadow-indigo-500/25"
+                  : "bg-slate-100/90 text-slate-700 hover:bg-slate-200/80 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
               }`}
               onClick={() => setRoute("wizard")}
             >
@@ -116,8 +116,8 @@ export default function App() {
               type="button"
               className={`rounded-lg px-3 py-1.5 text-sm ${
                 route === "analytics"
-                  ? "bg-indigo-600 text-white"
-                  : "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                  ? "bg-indigo-600 text-white shadow-sm shadow-indigo-500/25"
+                  : "bg-slate-100/90 text-slate-700 hover:bg-slate-200/80 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
               }`}
               onClick={() => setRoute("analytics")}
             >
@@ -147,7 +147,7 @@ export default function App() {
         ) : (
           <div className="space-y-6">
             <p className="text-sm text-slate-500">{t.disclaimer}</p>
-            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+            <div className="rounded-2xl border border-sky-100 bg-white/95 p-5 shadow-lg shadow-sky-500/5 dark:border-slate-800 dark:bg-slate-900/95 dark:shadow-none">
               <StepIndicator step={wizard.step} lang={lang} onGoToStep={wizard.goToStep} />
 
               {wizard.error && (
