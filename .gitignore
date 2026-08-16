@@ -21,6 +21,10 @@ server/data/*.db-shm
 .env.local
 .env.*.local
 
+# Google service account keys
+server/secrets/
+*.service-account.json
+
 # Logs / OS
 npm-debug.log*
 yarn-debug.log*
