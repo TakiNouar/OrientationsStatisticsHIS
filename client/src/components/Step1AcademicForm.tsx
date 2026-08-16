@@ -18,6 +18,7 @@ type Props = {
   onFullName: (v: string) => void;
   onBacStream: (v: BacStream) => void;
   onTechnicalOption: (v: TechnicalMathOption | "") => void;
+  onPreferredSpecialty: (v: string) => void;
   onOverallBacMark: (v: string) => void;
   onGrade: (subject: SubjectCode, value: string) => void;
 };
@@ -36,6 +37,7 @@ export function Step1AcademicForm({
   onFullName,
   onBacStream,
   onTechnicalOption,
+  onPreferredSpecialty,
   onOverallBacMark,
   onGrade,
 }: Props) {
@@ -72,11 +74,31 @@ export function Step1AcademicForm({
           className={`${inputClass} ${fieldErrors.fullName ? errBorder : okBorder}`}
           value={form.fullName}
           onChange={(e) => onFullName(e.target.value)}
-          placeholder={t.fullNamePlaceholder}
         />
         {fieldErrors.fullName && (
           <p className="mt-1 text-xs text-red-600 dark:text-red-400">{fieldErrors.fullName}</p>
         )}
+      </label>
+
+      <label className="block">
+        <span className="text-sm font-medium text-slate-700 dark:text-slate-300">{t.preferredSpecialty}</span>
+        <select
+          aria-invalid={Boolean(fieldErrors.preferredSpecialtyCode)}
+          className={`${inputClass} ${fieldErrors.preferredSpecialtyCode ? errBorder : okBorder}`}
+          value={form.preferredSpecialtyCode}
+          onChange={(e) => onPreferredSpecialty(e.target.value)}
+        >
+          <option value="">{t.selectPreferredSpecialty}</option>
+          {config.specialties.map((s) => (
+            <option key={s.code} value={s.code}>
+              {s.title} ({s.code})
+            </option>
+          ))}
+        </select>
+        {fieldErrors.preferredSpecialtyCode && (
+          <p className="mt-1 text-xs text-red-600 dark:text-red-400">{fieldErrors.preferredSpecialtyCode}</p>
+        )}
+        <p className="mt-1 text-xs text-slate-500">{t.preferredSpecialtyHelp}</p>
       </label>
 
       <label className="block">
