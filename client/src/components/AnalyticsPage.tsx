@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import {
+  deleteStudentProfile,
   exportEvaluationsUrl,
   fetchAnalyticsDashboard,
   fetchAnalyticsRecent,
@@ -52,10 +53,14 @@ function StudentProfileView({
   profile,
   lang,
   onClose,
+  onDelete,
+  deleting,
 }: {
   profile: StudentProfileDetail;
   lang: Lang;
   onClose: () => void;
+  onDelete: () => void;
+  deleting: boolean;
 }) {
   const t = strings[lang];
   const streamLabels = STREAM_LABELS_I18N[lang];
@@ -88,11 +93,18 @@ function StudentProfileView({
             {profile.matches[0]?.evaluatedAt?.slice(0, 19).replace("T", " ") ?? profile.createdAt}
           </p>
         </div>
+        <button
+          type="button"
+          onClick={onDelete}
+          disabled={deleting}
+          className="shrink-0 rounded-xl border border-rose-300 bg-rose-50 px-3 py-1.5 text-xs font-bold text-rose-700 hover:bg-rose-100 disabled:opacity-50 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-200"
+        >
+          {deleting ? t.deleting : t.deleteProfile}
+        </button>
       </div>
 
       {top && (
         <div className="relative overflow-hidden rounded-2xl border border-sky-300/80 bg-gradient-to-br from-sky-400/25 via-cyan-400/15 to-blue-500/20 p-5 shadow-lg shadow-sky-500/20 dark:border-sky-700/50">
-          <div className="pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full bg-sky-400/30 blur-2xl" />
           <p className="text-xs font-bold uppercase tracking-widest text-sky-800 dark:text-sky-200">
             {t.topRecommendation}
           </p>
@@ -154,9 +166,9 @@ function StudentProfileView({
           {profile.matches.map((match) => (
             <article
               key={match.specialtyId}
-              className={`min-w-0 overflow-hidden rounded-xl border p-3 transition ${
+              className={`min-w-0 overflow-hidden rounded-xl border p-3 ${
                 match.rank === 1
-                  ? "border-sky-300 bg-sky-100/80 shadow-sm dark:border-sky-700 dark:bg-sky-950/50"
+                  ? "border-sky-300 bg-sky-100/80 dark:border-sky-700 dark:bg-sky-950/50"
                   : "border-sky-200/80 bg-sky-50/50 dark:border-slate-700 dark:bg-slate-900/40"
               }`}
             >
@@ -179,16 +191,11 @@ function StudentProfileView({
                   <div className="text-lg font-black tabular-nums text-sky-800 dark:text-sky-200">
                     {match.finalScore.toFixed(1)}%
                   </div>
-                  <div className="text-[10px] text-slate-500">
-                    A {match.academicScore.toFixed(0)} · R {match.psychometricScore.toFixed(0)}
-                  </div>
                 </div>
               </div>
             </article>
           ))}
-          {profile.matches.length === 0 && (
-            <p className="text-sm text-slate-500">{t.noMatches}</p>
-          )}
+          {profile.matches.length === 0 && <p className="text-sm text-slate-500">{t.noMatches}</p>}
         </div>
       </section>
     </div>
@@ -209,6 +216,7 @@ export function AnalyticsPage({ config, lang, onBack }: Props) {
   const [profile, setProfile] = useState<StudentProfileDetail | null>(null);
   const [profileLoading, setProfileLoading] = useState(false);
   const [profileError, setProfileError] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const load = useCallback(
     async (f: Filters) => {
@@ -270,6 +278,25 @@ export function AnalyticsPage({ config, lang, onBack }: Props) {
     };
   }, [selectedStudentId, t.profileError]);
 
+  const handleDelete = async (studentId: string, name: string) => {
+    const msg = t.deleteConfirm.replace("{name}", name);
+    if (!window.confirm(msg)) return;
+    setDeletingId(studentId);
+    setError(null);
+    try {
+      await deleteStudentProfile(studentId);
+      if (selectedStudentId === studentId) {
+        setSelectedStudentId(null);
+        setProfile(null);
+      }
+      await load(applied);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t.deleteError);
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
   const applyFilters = () => setApplied({ ...filters });
   const resetFilters = () => {
     const empty = emptyFilters();
@@ -290,7 +317,7 @@ export function AnalyticsPage({ config, lang, onBack }: Props) {
   if (selectedStudentId) {
     return (
       <div className="min-w-0 space-y-4">
-        {profileLoading && <p className="text-sm text-slate-600">{t.profileLoading}</p>}
+        {profileLoading && <p className="text-sm text-slate-600 dark:text-slate-300">{t.profileLoading}</p>}
         {profileError && (
           <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200">
             {profileError}
@@ -300,7 +327,13 @@ export function AnalyticsPage({ config, lang, onBack }: Props) {
           </div>
         )}
         {profile && !profileLoading && (
-          <StudentProfileView profile={profile} lang={lang} onClose={() => setSelectedStudentId(null)} />
+          <StudentProfileView
+            profile={profile}
+            lang={lang}
+            onClose={() => setSelectedStudentId(null)}
+            onDelete={() => void handleDelete(profile.studentId, profile.fullName)}
+            deleting={deletingId === profile.studentId}
+          />
         )}
       </div>
     );
@@ -411,7 +444,9 @@ export function AnalyticsPage({ config, lang, onBack }: Props) {
         </div>
       )}
 
-      {loading && !dashboard && <p className="text-sm text-slate-600">{t.analyticsLoading}</p>}
+      {loading && !dashboard && (
+        <p className="text-sm text-slate-600 dark:text-slate-300">{t.analyticsLoading}</p>
+      )}
 
       {dashboard && (
         <AnalyticsDashboardPanel
@@ -438,13 +473,14 @@ export function AnalyticsPage({ config, lang, onBack }: Props) {
                   <th className="px-2 py-3 font-bold sm:px-3">{t.colStream}</th>
                   <th className="px-2 py-3 font-bold sm:px-3">{t.colTopSpecialty}</th>
                   <th className="px-2 py-3 font-bold sm:px-3">{t.colScore}</th>
-                  <th className="px-3 py-3 font-bold sm:px-4">{t.colLabel}</th>
+                  <th className="px-2 py-3 font-bold sm:px-3">{t.colLabel}</th>
+                  <th className="px-3 py-3 font-bold sm:px-4">{t.colActions}</th>
                 </tr>
               </thead>
               <tbody>
                 {recent.rows.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-4 py-8 text-center text-slate-500">
+                    <td colSpan={7} className="px-4 py-8 text-center text-slate-500">
                       {t.noSessions}
                     </td>
                   </tr>
@@ -452,33 +488,42 @@ export function AnalyticsPage({ config, lang, onBack }: Props) {
                   recent.rows.map((row) => (
                     <tr
                       key={row.studentId}
-                      className="cursor-pointer border-t border-sky-100/90 transition hover:bg-sky-100/70 dark:border-slate-800 dark:hover:bg-sky-950/40"
-                      onClick={() => setSelectedStudentId(row.studentId)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" || e.key === " ") {
-                          e.preventDefault();
-                          setSelectedStudentId(row.studentId);
-                        }
-                      }}
-                      tabIndex={0}
-                      role="button"
+                      className="border-t border-sky-100/90 transition hover:bg-sky-100/70 dark:border-slate-800 dark:hover:bg-sky-950/40"
                     >
-                      <td className="max-w-[10rem] truncate px-3 py-3 font-bold text-sky-800 dark:text-sky-200 sm:max-w-[14rem] sm:px-4">
+                      <td
+                        className="max-w-[10rem] cursor-pointer truncate px-3 py-3 font-bold text-sky-800 dark:text-sky-200 sm:max-w-[14rem] sm:px-4"
+                        onClick={() => setSelectedStudentId(row.studentId)}
+                      >
                         {row.fullName}
                       </td>
-                      <td className="whitespace-nowrap px-2 py-3 tabular-nums text-slate-600 dark:text-sky-200/70 sm:px-3">
+                      <td
+                        className="cursor-pointer whitespace-nowrap px-2 py-3 tabular-nums text-slate-600 dark:text-sky-200/70 sm:px-3"
+                        onClick={() => setSelectedStudentId(row.studentId)}
+                      >
                         {row.evaluatedAt?.slice(0, 19).replace("T", " ")}
                       </td>
-                      <td className="max-w-[8rem] truncate px-2 py-3 text-slate-800 dark:text-sky-100 sm:px-3">
+                      <td
+                        className="max-w-[8rem] cursor-pointer truncate px-2 py-3 text-slate-800 dark:text-sky-100 sm:px-3"
+                        onClick={() => setSelectedStudentId(row.studentId)}
+                      >
                         {streamLabels[row.bacStream as BacStream] ?? row.bacStream}
                       </td>
-                      <td className="max-w-[10rem] truncate px-2 py-3 font-medium text-slate-900 dark:text-sky-50 sm:max-w-[14rem] sm:px-3">
+                      <td
+                        className="max-w-[10rem] cursor-pointer truncate px-2 py-3 font-medium text-slate-900 dark:text-sky-50 sm:max-w-[14rem] sm:px-3"
+                        onClick={() => setSelectedStudentId(row.studentId)}
+                      >
                         {row.topSpecialtyTitle}
                       </td>
-                      <td className="whitespace-nowrap px-2 py-3 text-sm font-black tabular-nums text-slate-900 dark:text-white sm:px-3">
+                      <td
+                        className="cursor-pointer whitespace-nowrap px-2 py-3 text-sm font-black tabular-nums text-slate-900 dark:text-white sm:px-3"
+                        onClick={() => setSelectedStudentId(row.studentId)}
+                      >
                         {row.finalScore.toFixed(1)}%
                       </td>
-                      <td className="px-3 py-3 sm:px-4">
+                      <td
+                        className="cursor-pointer px-2 py-3 sm:px-3"
+                        onClick={() => setSelectedStudentId(row.studentId)}
+                      >
                         <span
                           className={`inline-flex max-w-[9rem] truncate rounded-full px-2.5 py-0.5 text-[10px] font-bold ${
                             LABEL_STYLES[row.matchLabel]
@@ -486,6 +531,19 @@ export function AnalyticsPage({ config, lang, onBack }: Props) {
                         >
                           {matchLabelText(lang, row.matchLabel)}
                         </span>
+                      </td>
+                      <td className="px-3 py-3 sm:px-4">
+                        <button
+                          type="button"
+                          disabled={deletingId === row.studentId}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            void handleDelete(row.studentId, row.fullName);
+                          }}
+                          className="rounded-lg border border-rose-300 bg-rose-50 px-2 py-1 text-[10px] font-bold text-rose-700 hover:bg-rose-100 disabled:opacity-50 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-200"
+                        >
+                          {deletingId === row.studentId ? t.deleting : t.deleteProfile}
+                        </button>
                       </td>
                     </tr>
                   ))
