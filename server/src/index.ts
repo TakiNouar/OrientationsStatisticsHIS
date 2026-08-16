@@ -64,7 +64,6 @@ const allowedOrigins = (
 const isLocalDevOrigin = (origin: string): boolean =>
   /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(origin);
 
-/** Express 5 param values can be string | string[] under some typings. */
 function routeParam(value: string | string[] | undefined): string {
   if (Array.isArray(value)) return value[0] ?? "";
   return value ?? "";
@@ -128,7 +127,7 @@ app.get("/api/v1/config", (_req, res) => {
       technicalMathOptionLabels: TECHNICAL_MATH_OPTION_LABELS,
       riasecLetters: RIASEC_LETTERS,
       riasecLabels: RIASEC_LABELS,
-      formulaWeights: { academic: 0.5, riasec: 0.3, technical: 0.2 },
+      formulaWeights: { academic: 0.5, riasec: 0.25, technical: 0.2, preference: 0.05 },
       careerPathsBySpecialty: getCareerPathsBySpecialty(),
       adminAuthRequired: isAdminAuthConfigured(),
       specialties: getActiveSpecialties().map((specialty) => ({
@@ -220,7 +219,6 @@ app.delete("/api/v1/analytics/students/:studentId", requireAdminToken, (req, res
       return;
     }
 
-    // Capture sheet keys before SQLite cascade removes evaluations.
     const evaluationIds = getEvaluationIdsForStudent(studentId);
     const fullName = getStudentFullName(studentId);
 
@@ -271,9 +269,33 @@ app.get("/api/v1/export/evaluations", (req, res) => {
 app.post("/api/v1/recommendations/calculate", calculateLimiter, (req, res) => {
   try {
     const input = CalculateRecommendationSchema.parse(req.body);
+
+    const specialties = getActiveSpecialties();
+    if (specialties.length === 0) {
+      res.status(503).json({
+        message: "No active specialties loaded. Check server seed data.",
+      });
+      return;
+    }
+
+    const preferredOk = specialties.some((s) => s.code === input.preferredSpecialtyCode);
+    if (!preferredOk) {
+      res.status(400).json({
+        message: "Validation failed.",
+        issues: [
+          {
+            path: ["preferredSpecialtyCode"],
+            message: "preferredSpecialtyCode must be one of the active HIS specialties.",
+          },
+        ],
+      });
+      return;
+    }
+
     const studentProfile: StudentProfile = {
       fullName: input.fullName,
       bacStream: input.bacStream,
+      preferredSpecialtyCode: input.preferredSpecialtyCode,
       academicPerformance: {
         overallBacMark: input.overallBacMark,
         grades: input.grades as StudentProfile["academicPerformance"]["grades"],
@@ -282,14 +304,6 @@ app.post("/api/v1/recommendations/calculate", calculateLimiter, (req, res) => {
     };
     if (input.technicalOption !== undefined) {
       studentProfile.technicalOption = input.technicalOption;
-    }
-
-    const specialties = getActiveSpecialties();
-    if (specialties.length === 0) {
-      res.status(503).json({
-        message: "No active specialties loaded. Check server seed data.",
-      });
-      return;
     }
 
     const result = calculateRecommendations(studentProfile, specialties);
@@ -315,7 +329,6 @@ app.post("/api/v1/recommendations/calculate", calculateLimiter, (req, res) => {
       });
     }
 
-    // Optional live mirror — never blocks the student response.
     if (persisted) {
       void syncEvaluationToSheet(studentProfile, result);
     }
@@ -339,7 +352,6 @@ app.post("/api/v1/recommendations/calculate", calculateLimiter, (req, res) => {
   }
 });
 
-/** Build filter object without explicit undefined keys (exactOptionalPropertyTypes). */
 function parseAnalyticsFilters(req: express.Request): AnalyticsFilters {
   const filters: AnalyticsFilters = {};
   if (typeof req.query.from === "string") filters.from = req.query.from;
