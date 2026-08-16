@@ -1,28 +1,55 @@
 /**
  * Optional live mirror of each evaluation to Google Sheets.
  * No-op when GOOGLE_SHEETS_ID is unset. Never throws to the request path.
+ * Applies a readable table style (header, freeze, widths, zebra) once per process.
  */
 import { google } from "googleapis";
 import type { sheets_v4 } from "googleapis";
 import { logger } from "../logger.js";
 import type { CalculationResult, StudentProfile } from "../types.js";
 
+/** Human-friendly headers (row 1). */
 const HEADER_ROW = [
   "Evaluation ID",
-  "Submitted At",
-  "Student Name",
-  "Bac Stream",
-  "Technical Option",
-  "Overall Bac Mark",
-  "Top Match — Specialty",
-  "Top Match — Department",
-  "Top Match — Score",
-  "Top Match — Label",
-  "All Matches",
+  "Submitted at",
+  "Student name",
+  "BAC stream",
+  "Technical option",
+  "Overall mark",
+  "Top specialty",
+  "Department",
+  "Top score",
+  "Match label",
+  "All matches",
 ] as const;
+
+/** Approximate pixel widths for columns A–K */
+const COLUMN_WIDTHS_PX = [
+  280, // Evaluation ID
+  160, // Submitted at
+  180, // Student name
+  160, // BAC stream
+  140, // Technical option
+  110, // Overall mark
+  220, // Top specialty
+  160, // Department
+  100, // Top score
+  200, // Match label
+  320, // All matches
+];
+
+const HEADER_BG = { red: 0.12, green: 0.25, blue: 0.45 }; // deep navy
+const HEADER_FG = { red: 1, green: 1, blue: 1 };
+const ZEBRA_BG = { red: 0.93, green: 0.95, blue: 0.98 }; // light blue-gray
+const BORDER = {
+  style: "SOLID" as const,
+  width: 1,
+  color: { red: 0.75, green: 0.8, blue: 0.85 },
+};
 
 let sheetsClient: sheets_v4.Sheets | null = null;
 let headerEnsured = false;
+let styleApplied = false;
 let cachedSheetId: number | null = null;
 
 const isConfigured = (): boolean =>
@@ -94,29 +121,239 @@ async function resolveTabSheetId(sheets: sheets_v4.Sheets): Promise<number | nul
   return null;
 }
 
-async function ensureHeaderRow(sheets: sheets_v4.Sheets): Promise<void> {
-  if (headerEnsured) return;
+/** Header row + freeze + column widths + header look + zebra banded range. */
+async function ensureHeaderAndStyle(sheets: sheets_v4.Sheets): Promise<void> {
   const id = spreadsheetId();
   const tab = tabName();
   const range = `${tab}!A1:K1`;
 
-  const existing = await sheets.spreadsheets.values.get({
-    spreadsheetId: id,
-    range,
-  });
-  const first = existing.data.values?.[0];
-  const empty =
-    !first || first.length === 0 || first.every((cell) => String(cell ?? "").trim() === "");
+  if (!headerEnsured) {
+    const existing = await sheets.spreadsheets.values.get({
+      spreadsheetId: id,
+      range,
+    });
+    const first = existing.data.values?.[0];
+    const empty =
+      !first ||
+      first.length === 0 ||
+      first.every((cell) => String(cell ?? "").trim() === "");
 
-  if (empty) {
+    // Always refresh header labels so older sheets get the cleaner titles.
     await sheets.spreadsheets.values.update({
       spreadsheetId: id,
       range: `${tab}!A1`,
       valueInputOption: "USER_ENTERED",
       requestBody: { values: [Array.from(HEADER_ROW)] },
     });
+    if (empty) {
+      // first write only
+    }
+    headerEnsured = true;
   }
-  headerEnsured = true;
+
+  if (styleApplied) return;
+
+  const sheetId = await resolveTabSheetId(sheets);
+  if (sheetId == null) return;
+
+  const requests: sheets_v4.Schema$Request[] = [
+    // Freeze header
+    {
+      updateSheetProperties: {
+        properties: {
+          sheetId,
+          gridProperties: { frozenRowCount: 1 },
+        },
+        fields: "gridProperties.frozenRowCount",
+      },
+    },
+    // Header cell style
+    {
+      repeatCell: {
+        range: {
+          sheetId,
+          startRowIndex: 0,
+          endRowIndex: 1,
+          startColumnIndex: 0,
+          endColumnIndex: 11,
+        },
+        cell: {
+          userEnteredFormat: {
+            backgroundColor: HEADER_BG,
+            textFormat: {
+              foregroundColor: HEADER_FG,
+              bold: true,
+              fontFamily: "Google Sans",
+              fontSize: 11,
+            },
+            horizontalAlignment: "CENTER",
+            verticalAlignment: "MIDDLE",
+            wrapStrategy: "WRAP",
+          },
+        },
+        fields:
+          "userEnteredFormat(backgroundColor,textFormat,horizontalAlignment,verticalAlignment,wrapStrategy)",
+      },
+    },
+    // Header row height
+    {
+      updateDimensionProperties: {
+        range: {
+          sheetId,
+          dimension: "ROWS",
+          startIndex: 0,
+          endIndex: 1,
+        },
+        properties: { pixelSize: 36 },
+        fields: "pixelSize",
+      },
+    },
+    // Body text defaults for a large band (grows as rows are added)
+    {
+      repeatCell: {
+        range: {
+          sheetId,
+          startRowIndex: 1,
+          endRowIndex: 2000,
+          startColumnIndex: 0,
+          endColumnIndex: 11,
+        },
+        cell: {
+          userEnteredFormat: {
+            textFormat: {
+              fontFamily: "Google Sans",
+              fontSize: 10,
+            },
+            verticalAlignment: "MIDDLE",
+            wrapStrategy: "CLIP",
+          },
+        },
+        fields: "userEnteredFormat(textFormat,verticalAlignment,wrapStrategy)",
+      },
+    },
+    // Score column (I) — center + number format
+    {
+      repeatCell: {
+        range: {
+          sheetId,
+          startRowIndex: 1,
+          endRowIndex: 2000,
+          startColumnIndex: 8,
+          endColumnIndex: 9,
+        },
+        cell: {
+          userEnteredFormat: {
+            horizontalAlignment: "CENTER",
+            numberFormat: { type: "NUMBER", pattern: "0.0" },
+          },
+        },
+        fields: "userEnteredFormat(horizontalAlignment,numberFormat)",
+      },
+    },
+    // Overall mark (F) — center
+    {
+      repeatCell: {
+        range: {
+          sheetId,
+          startRowIndex: 1,
+          endRowIndex: 2000,
+          startColumnIndex: 5,
+          endColumnIndex: 6,
+        },
+        cell: {
+          userEnteredFormat: {
+            horizontalAlignment: "CENTER",
+            numberFormat: { type: "NUMBER", pattern: "0.00" },
+          },
+        },
+        fields: "userEnteredFormat(horizontalAlignment,numberFormat)",
+      },
+    },
+    // Thin borders on used-looking range
+    {
+      updateBorders: {
+        range: {
+          sheetId,
+          startRowIndex: 0,
+          endRowIndex: 2000,
+          startColumnIndex: 0,
+          endColumnIndex: 11,
+        },
+        top: BORDER,
+        bottom: BORDER,
+        left: BORDER,
+        right: BORDER,
+        innerHorizontal: BORDER,
+        innerVertical: BORDER,
+      },
+    },
+    // Alternating row colors (banded rows) — rows 2+ even indices
+    {
+      addBanding: {
+        bandedRange: {
+          range: {
+            sheetId,
+            startRowIndex: 0,
+            endRowIndex: 2000,
+            startColumnIndex: 0,
+            endColumnIndex: 11,
+          },
+          rowProperties: {
+            headerColor: HEADER_BG,
+            firstBandColor: { red: 1, green: 1, blue: 1 },
+            secondBandColor: ZEBRA_BG,
+          },
+        },
+      },
+    },
+  ];
+
+  // Column widths
+  for (let i = 0; i < COLUMN_WIDTHS_PX.length; i++) {
+    requests.push({
+      updateDimensionProperties: {
+        range: {
+          sheetId,
+          dimension: "COLUMNS",
+          startIndex: i,
+          endIndex: i + 1,
+        },
+        properties: { pixelSize: COLUMN_WIDTHS_PX[i] },
+        fields: "pixelSize",
+      },
+    });
+  }
+
+  try {
+    await sheets.spreadsheets.batchUpdate({
+      spreadsheetId: id,
+      requestBody: { requests },
+    });
+    styleApplied = true;
+    logger.info("google_sheets_style_ok", { tab });
+  } catch (error) {
+    // Banding may fail if a band already exists — still mark applied for other styles
+    const msg = error instanceof Error ? error.message : String(error);
+    if (/band/i.test(msg)) {
+      // Retry without addBanding
+      const withoutBand = requests.filter((r) => !r.addBanding);
+      try {
+        await sheets.spreadsheets.batchUpdate({
+          spreadsheetId: id,
+          requestBody: { requests: withoutBand },
+        });
+        styleApplied = true;
+        logger.info("google_sheets_style_ok", { tab, banding: "skipped" });
+        return;
+      } catch (e2) {
+        logger.error("google_sheets_style_failed", {
+          err: e2 instanceof Error ? e2.message : String(e2),
+        });
+        return;
+      }
+    }
+    logger.error("google_sheets_style_failed", { err: msg });
+  }
 }
 
 function buildRow(
@@ -125,15 +362,15 @@ function buildRow(
 ): (string | number)[] {
   const top = result.matches[0];
   const allMatches = result.matches
-    .map((m) => `${m.specialtyCode}:${Number(m.finalScore).toFixed(1)}`)
-    .join(", ");
+    .map((m) => `${m.specialtyCode}: ${Number(m.finalScore).toFixed(1)}`)
+    .join(" · ");
 
   return [
     result.evaluationId,
     result.timestamp,
     studentProfile.fullName,
-    studentProfile.bacStream,
-    studentProfile.technicalOption ?? "",
+    studentProfile.bacStream.replaceAll("_", " "),
+    studentProfile.technicalOption?.replaceAll("_", " ") ?? "—",
     studentProfile.academicPerformance.overallBacMark,
     top?.specialtyTitle ?? "",
     top?.department ?? "",
@@ -154,7 +391,7 @@ export async function syncEvaluationToSheet(
     const sheets = await getSheetsClient();
     if (!sheets) return;
 
-    await ensureHeaderRow(sheets);
+    await ensureHeaderAndStyle(sheets);
 
     const tab = tabName();
     await sheets.spreadsheets.values.append({
@@ -183,7 +420,6 @@ export async function syncEvaluationToSheet(
 /**
  * Delete sheet data rows matching evaluation IDs (column A).
  * If no IDs are provided, falls back to exact Student Name (column C).
- * Never throws to callers.
  */
 export async function removeStudentRowsFromSheet(options: {
   evaluationIds: string[];
