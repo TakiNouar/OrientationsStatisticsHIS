@@ -165,7 +165,9 @@ app.get("/api/v1/analytics/recent", (req, res) => {
   try {
     const filters = parseAnalyticsFilters(req);
     const limit = Math.min(Number(req.query.limit) || 50, 200);
-    res.json({ sessions: getRecentSessions(filters, limit), filters });
+    const rows = getRecentSessions(filters, limit);
+    // Contract aligned with client AnalyticsRecentResponse: rows + filters + limit
+    res.json({ rows, filters, limit });
   } catch (error) {
     logger.error("analytics_recent_failed", {
       err: error instanceof Error ? error.message : String(error),
@@ -296,19 +298,20 @@ app.post("/api/v1/recommendations/calculate", calculateLimiter, (req, res) => {
       })),
     };
 
-    queueMicrotask(() => {
-      try {
-        persistEvaluation(studentProfile, result);
-      } catch (persistError) {
-        logger.error("persist_evaluation_failed", {
-          studentName: studentProfile.fullName,
-          evaluationId: result.evaluationId,
-          err: persistError instanceof Error ? persistError.message : String(persistError),
-        });
-      }
-    });
+    // Persist before response so analytics sees the session and failures surface to the client
+    let persisted = true;
+    try {
+      persistEvaluation(studentProfile, result);
+    } catch (persistError) {
+      persisted = false;
+      logger.error("persist_evaluation_failed", {
+        studentName: studentProfile.fullName,
+        evaluationId: result.evaluationId,
+        err: persistError instanceof Error ? persistError.message : String(persistError),
+      });
+    }
 
-    res.json(enriched);
+    res.json({ ...enriched, persisted });
   } catch (error) {
     if (error instanceof ZodError) {
       res.status(400).json({

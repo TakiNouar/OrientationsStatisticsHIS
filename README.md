@@ -1,6 +1,8 @@
 # OrientationsStatisticsHIS
 
-**HIS Statistical Recommendation Engine (HIS-SRE)** — offline LAN decision-support matching BAC + RIASEC profiles to HIS licences (Phase A) + **Phase B0 anonymized analytics**.
+**HIS Statistical Recommendation Engine (HIS-SRE)** — offline LAN decision-support matching BAC + RIASEC profiles to HIS licences.
+
+**Status:** Phase A (scoring) + **Phase B0/B1 analytics** on `main`.
 
 ## Stack
 
@@ -12,21 +14,24 @@
 
 ## Verified Node.js
 
-Use **Node.js 22 LTS** or **24.x**. Dependency pins in both packages resolve against the public npm registry (TypeScript 7, Vite 8, React 19, etc. are real releases — not typos).
+Use **Node.js 22 LTS** or **24.x**.
 
 ## Quick start
 
 ```bash
-# Terminal 1
-cd server && npm install && npm run dev
+# Terminal 1 — API
+cd server
+cp .env.example .env   # set ADMIN_TOKEN for delete on shared LAN
+npm install && npm run dev
 
-# Terminal 2
-cd client && npm install && npm run dev
+# Terminal 2 — UI
+cd client
+npm install && npm run dev
 ```
 
-Open the Vite URL → use header toggle **Orientation** / **Statistiques** for B0 analytics.
+Open the Vite URL → header toggle **Orientation** / **Statistiques**.
 
-See [DEPLOYMENT.md](./DEPLOYMENT.md) for LAN hosting. See `project-reports/` for status (including [B0 analytics](./project-reports/10-phase-b0-analytics.md)).
+See [DEPLOYMENT.md](./DEPLOYMENT.md) and [STABILITY.md](./STABILITY.md). Project notes live in `project-reports/` (including [broken-items scan](./project-reports/13-broken-and-non-working.md)).
 
 ## Formula (locked)
 
@@ -34,9 +39,22 @@ See [DEPLOYMENT.md](./DEPLOYMENT.md) for LAN hosting. See `project-reports/` for
 S = 0.50 * Academic + 0.30 * RIASEC + 0.20 * TechnicalFit + génieBias
 ```
 
-## B0 analytics (branch `feature/b0-analytics`)
+## Analytics (B0 + B1)
 
-- Anonymized counts by stream / top specialty / match label
-- Period + stream + specialty filters
-- Recent sessions table (no student names)
-- CSV export anonymized by default (`anonymized=0` for named export)
+- **Named** student sessions (not anonymized by default)
+- Filters: period, BAC stream, top specialty
+- Charts: volume by day, score buckets, match labels, stream×specialty matrix, data quality
+- Clickable student profiles with full ranking
+- CSV export (optional `anonymized=1`)
+- **Delete profile** requires `ADMIN_TOKEN` (header `X-Admin-Token`); client prompts once per browser session
+- Light / dark / system theme
+
+## Admin token
+
+In `server/.env`:
+
+```env
+ADMIN_TOKEN=your-long-secret
+```
+
+Required for DELETE on shared LAN / production. See `.env.example`.
