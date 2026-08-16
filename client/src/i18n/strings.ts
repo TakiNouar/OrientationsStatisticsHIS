@@ -1,1 +1,306 @@
-PLACEHOLDER_STRINGS
+export type Lang = "fr" | "en";
+
+export const strings = {
+  fr: {
+    appTitle: "HIS-SRE · Orientation",
+    appSubtitle: "Aide à l’orientation — profil BAC + RIASEC vers les licences HIS",
+    disclaimer:
+      "Outil d’aide à la décision. Les scores sont indicatifs et ne remplacent pas le conseil d’orientation.",
+    loadingConfig: "Chargement de la configuration…",
+    configError: "Impossible de charger la configuration.",
+    retry: "Réessayer",
+    navWizard: "Orientation",
+    navAnalytics: "Analytique",
+    themeLight: "Clair",
+    themeDark: "Sombre",
+    themeSystem: "Système",
+    stepAcademic: "Académique",
+    stepRiasec: "RIASEC",
+    stepResults: "Résultats",
+    stepOf: "Étape {n} sur 3",
+    academicTitle: "Profil académique",
+    academicHelp:
+      "Indiquez la filière, la moyenne générale et les quatre notes fixes (2 modules principaux, 1 hors filière, anglais).",
+    fullName: "Nom complet",
+    fullNamePlaceholder: "Nom et prénom de l’élève",
+    bacStream: "Filière du BAC",
+    selectStream: "Choisir une filière…",
+    genieOption: "Option Mathématiques techniques (génie)",
+    selectGenie: "Choisir un génie…",
+    overallMark: "Moyenne générale BAC (0–20)",
+    gradesHeading: "Notes de la filière",
+    slotMain1: "Module principal 1",
+    slotMain2: "Module principal 2",
+    slotOpposite: "Module hors filière",
+    slotEnglish: "Anglais",
+    continue: "Continuer",
+    back: "Retour",
+    calculate: "Calculer les correspondances",
+    calculating: "Calcul en cours…",
+    results: "Résultats",
+    topRecommendation: "Meilleure recommandation",
+    finalFit: "score final",
+    newEvaluation: "Nouvelle évaluation",
+    showDetails: "Détail technique du scoring",
+    hideDetails: "Masquer le détail technique",
+    academic: "Académique",
+    riasec: "RIASEC",
+    technical: "Technique",
+    codeMatch: "Correspondance code",
+    cosSim: "Similarité cosinus",
+    marksTech: "Notes → technique",
+    techAlign: "Alignement technique",
+    genieBias: "Bonus génie",
+    slotBreakdown: "Contribution par créneau",
+    affinityBreakdown: "Multiplicateurs par matière",
+    weightsLine: "Pondération du score",
+    language: "Langue",
+    riasecTitle: "Profil RIASEC (top 3)",
+    riasecHelp:
+      "Choisissez vos trois thèmes Holland les plus forts et un poids (1–100) pour chacun. Un poids plus élevé = préférence plus forte.",
+    riasecScoringHelp:
+      "Score final = 50 % académique + 30 % RIASEC + 20 % adéquation technique (plus bonus génie si applicable). Le RIASEC combine similarité vectorielle (30 %) et correspondance au code Holland (70 %).",
+    letter: "Lettre",
+    weight: "Poids",
+    selectLetter: "Choisir…",
+    rank1: "1er (le plus fort)",
+    rank2: "2e",
+    rank3: "3e",
+    codePreview: "Code RIASEC",
+    showMore: "Afficher les autres spécialités",
+    showLess: "Réduire la liste",
+    exportCsv: "Exporter l’historique (CSV)",
+    technicalSpecialty: "Spécialité technique",
+    tabScores: "Scores",
+    tabCareers: "Parcours professionnels",
+    careersIntro:
+      "Exemples de débouchés liés aux spécialités classées. Indicatifs — dépendent du marché local et des poursuites d’études.",
+    careerLevelEntry: "Débutant",
+    careerLevelMid: "Intermédiaire",
+    careerLevelSenior: "Avancé / poursuite",
+    careerExamples: "Exemples de postes",
+    careerSector: "Secteur",
+    noCareers: "Aucun parcours enregistré pour cette spécialité.",
+    deleteProfile: "Supprimer",
+    deleteConfirm:
+      "Supprimer définitivement le profil de « {name} » ? Notes, RIASEC et résultats seront effacés.",
+    deleteSuccess: "Profil supprimé.",
+    deleteError: "Impossible de supprimer le profil.",
+    adminTokenPrompt:
+      "Jeton administrateur requis pour supprimer un profil (même valeur que ADMIN_TOKEN côté serveur) :",
+    adminTokenInvalid: "Jeton trop court (4 caractères minimum).",
+    adminTokenRejected: "Jeton administrateur refusé. Réessayez.",
+    deleting: "Suppression…",
+    errName: "Saisissez le nom complet de l’élève (2 caractères minimum).",
+    errStream: "Sélectionnez une filière du BAC.",
+    errGenie: "Sélectionnez l’option génie pour Mathématiques techniques.",
+    errOverall: "La moyenne générale doit être un nombre entre 0 et 20.",
+    errGrade: "La note « {subject} » doit être entre 0 et 20.",
+    errMissingGrade: "Note manquante : {subject}.",
+    errRiasecAll: "Sélectionnez les trois lettres RIASEC.",
+    errRiasecDistinct: "Les trois lettres RIASEC doivent être distinctes.",
+    errRiasecWeight: "Chaque poids RIASEC doit être entre 1 et 100.",
+    streamChangeConfirm:
+      "Changer de filière efface les notes saisies. Continuer ?",
+    fixErrors: "Corrigez les points suivants :",
+    matchSTRONG_MATCH: "Forte correspondance",
+    matchSTRONG_MATCH_CONVERSATION: "Forte correspondance — à discuter",
+    matchPOSSIBLE_FIT: "Correspondance possible / ambiguë",
+    matchPROFILE_DEVELOPING: "Intérêt présent, profil en construction",
+    matchWEAK_MATCH: "Faible correspondance — explorer d’autres options",
+  },
+  en: {
+    appTitle: "HIS-SRE · Orientation",
+    appSubtitle: "Decision support — BAC profile + RIASEC to HIS licences",
+    disclaimer:
+      "Decision-support tool only. Scores are indicative and do not replace counselling.",
+    loadingConfig: "Loading configuration…",
+    configError: "Could not load configuration.",
+    retry: "Retry",
+    navWizard: "Orientation",
+    navAnalytics: "Analytics",
+    themeLight: "Light",
+    themeDark: "Dark",
+    themeSystem: "System",
+    stepAcademic: "Academic",
+    stepRiasec: "RIASEC",
+    stepResults: "Results",
+    stepOf: "Step {n} of 3",
+    academicTitle: "Academic profile",
+    academicHelp:
+      "Enter stream, overall mark, and the four fixed grades (2 main modules, 1 opposite-stream module, English).",
+    fullName: "Full name",
+    fullNamePlaceholder: "Student full name",
+    bacStream: "BAC stream",
+    selectStream: "Select stream…",
+    genieOption: "Technical Mathematics option (génie)",
+    selectGenie: "Select génie…",
+    overallMark: "Overall BAC mark (0–20)",
+    gradesHeading: "Stream grades",
+    slotMain1: "Main module 1",
+    slotMain2: "Main module 2",
+    slotOpposite: "Opposite-stream module",
+    slotEnglish: "English",
+    continue: "Continue",
+    back: "Back",
+    calculate: "Calculate matches",
+    calculating: "Calculating…",
+    results: "Results",
+    topRecommendation: "Top recommendation",
+    finalFit: "final fit",
+    newEvaluation: "New evaluation",
+    showDetails: "Technical scoring details",
+    hideDetails: "Hide technical details",
+    academic: "Academic",
+    riasec: "RIASEC",
+    technical: "Technical",
+    codeMatch: "Code match",
+    cosSim: "Cosine similarity",
+    marksTech: "Marks → technical",
+    techAlign: "Technical alignment",
+    genieBias: "Génie bias",
+    slotBreakdown: "Slot contributions",
+    affinityBreakdown: "Subject multipliers",
+    weightsLine: "Score weights",
+    language: "Language",
+    riasecTitle: "RIASEC profile (top 3)",
+    riasecHelp:
+      "Pick your three strongest Holland themes and a weight (1–100) each. Higher weight = stronger preference.",
+    riasecScoringHelp:
+      "Final score = 50% academic + 30% RIASEC + 20% technical fit (plus génie bias if applicable). RIASEC mixes vector similarity (30%) and Holland code match (70%).",
+    letter: "Letter",
+    weight: "Weight",
+    selectLetter: "Select…",
+    rank1: "1st (strongest)",
+    rank2: "2nd",
+    rank3: "3rd",
+    codePreview: "RIASEC code",
+    showMore: "Show remaining specialties",
+    showLess: "Show less",
+    exportCsv: "Export history (CSV)",
+    technicalSpecialty: "Technical specialty",
+    tabScores: "Scores",
+    tabCareers: "Career paths",
+    careersIntro:
+      "Example pathways linked to ranked specialties. Indicative — depend on the local labour market and further study.",
+    careerLevelEntry: "Entry",
+    careerLevelMid: "Mid",
+    careerLevelSenior: "Advanced / further study",
+    careerExamples: "Example roles",
+    careerSector: "Sector",
+    noCareers: "No career paths stored for this specialty.",
+    deleteProfile: "Delete",
+    deleteConfirm:
+      "Permanently delete the profile for « {name} »? Grades, RIASEC, and results will be removed.",
+    deleteSuccess: "Profile deleted.",
+    deleteError: "Could not delete profile.",
+    adminTokenPrompt:
+      "Admin token required to delete a profile (same value as server ADMIN_TOKEN):",
+    adminTokenInvalid: "Token too short (minimum 4 characters).",
+    adminTokenRejected: "Admin token rejected. Try again.",
+    deleting: "Deleting…",
+    errName: "Enter the student full name (at least 2 characters).",
+    errStream: "Select a BAC stream.",
+    errGenie: "Select a génie option for Technical Mathematics.",
+    errOverall: "Overall BAC mark must be a number between 0 and 20.",
+    errGrade: "Grade for « {subject} » must be between 0 and 20.",
+    errMissingGrade: "Missing grade: {subject}.",
+    errRiasecAll: "Select all three RIASEC letters.",
+    errRiasecDistinct: "The three RIASEC letters must be distinct.",
+    errRiasecWeight: "Each RIASEC weight must be between 1 and 100.",
+    streamChangeConfirm: "Changing stream clears entered grades. Continue?",
+    fixErrors: "Please fix the following:",
+    matchSTRONG_MATCH: "Strong match",
+    matchSTRONG_MATCH_CONVERSATION: "Strong match — worth a conversation",
+    matchPOSSIBLE_FIT: "Possible fit / ambiguous",
+    matchPROFILE_DEVELOPING: "Interested, profile still developing",
+    matchWEAK_MATCH: "Weak match — explore other options",
+  },
+} as const;
+
+export type StringKey = keyof (typeof strings)["fr"];
+
+export const STREAM_LABELS_I18N: Record<
+  Lang,
+  Record<
+    | "MATHEMATICS"
+    | "EXPERIMENTAL_SCIENCES"
+    | "TECHNICAL_MATHEMATICS"
+    | "MANAGEMENT_ECONOMY"
+    | "FOREIGN_LANGUAGES"
+    | "LITERATURE_PHILOSOPHY",
+    string
+  >
+> = {
+  fr: {
+    MATHEMATICS: "Mathématiques",
+    EXPERIMENTAL_SCIENCES: "Sciences expérimentales",
+    TECHNICAL_MATHEMATICS: "Mathématiques techniques",
+    MANAGEMENT_ECONOMY: "Gestion et économie",
+    FOREIGN_LANGUAGES: "Langues étrangères",
+    LITERATURE_PHILOSOPHY: "Lettres et philosophie",
+  },
+  en: {
+    MATHEMATICS: "Mathematics",
+    EXPERIMENTAL_SCIENCES: "Experimental Sciences",
+    TECHNICAL_MATHEMATICS: "Technical Mathematics",
+    MANAGEMENT_ECONOMY: "Management & Economy",
+    FOREIGN_LANGUAGES: "Foreign Languages",
+    LITERATURE_PHILOSOPHY: "Literature & Philosophy",
+  },
+};
+
+export const SUBJECT_LABELS_I18N: Record<
+  Lang,
+  Record<
+    | "MATH"
+    | "PHYSICS"
+    | "NATURAL_SCIENCES"
+    | "PHILOSOPHY"
+    | "ARABIC"
+    | "FRENCH"
+    | "ENGLISH"
+    | "ACCOUNTING_FINANCE"
+    | "ECONOMICS"
+    | "HISTORY_GEOGRAPHY",
+    string
+  >
+> = {
+  fr: {
+    MATH: "Mathématiques",
+    PHYSICS: "Physique",
+    NATURAL_SCIENCES: "Sciences naturelles",
+    PHILOSOPHY: "Philosophie",
+    ARABIC: "Arabe",
+    FRENCH: "Français",
+    ENGLISH: "Anglais",
+    ACCOUNTING_FINANCE: "Comptabilité & finance",
+    ECONOMICS: "Économie",
+    HISTORY_GEOGRAPHY: "Histoire-géographie",
+  },
+  en: {
+    MATH: "Mathematics",
+    PHYSICS: "Physics",
+    NATURAL_SCIENCES: "Natural Sciences",
+    PHILOSOPHY: "Philosophy",
+    ARABIC: "Arabic",
+    FRENCH: "French",
+    ENGLISH: "English",
+    ACCOUNTING_FINANCE: "Accounting & Finance",
+    ECONOMICS: "Economics",
+    HISTORY_GEOGRAPHY: "History & Geography",
+  },
+};
+
+export function matchLabelText(
+  lang: Lang,
+  code:
+    | "STRONG_MATCH"
+    | "STRONG_MATCH_CONVERSATION"
+    | "POSSIBLE_FIT"
+    | "PROFILE_DEVELOPING"
+    | "WEAK_MATCH",
+): string {
+  const key = `match${code}` as StringKey;
+  return strings[lang][key] ?? code;
+}
