@@ -158,6 +158,25 @@ export async function fetchStudentProfile(studentId: string): Promise<StudentPro
   return response.json() as Promise<StudentProfileDetail>;
 }
 
+/** Permanently delete student + cascaded grades / RIASEC / evaluations. */
+export async function deleteStudentProfile(studentId: string): Promise<void> {
+  const response = await fetchWithTimeout(
+    apiUrl(`/api/v1/analytics/students/${encodeURIComponent(studentId)}`),
+    { method: "DELETE" },
+  );
+  if (response.status === 404) throw new Error("Student not found.");
+  if (!response.ok) {
+    let message = `Failed to delete profile (${response.status})`;
+    try {
+      const body = (await response.json()) as { message?: string };
+      if (body.message) message = body.message;
+    } catch {
+      // ignore
+    }
+    throw new Error(message);
+  }
+}
+
 export function exportEvaluationsUrl(params?: {
   from?: string;
   to?: string;
