@@ -19,6 +19,7 @@ export type WizardFormState = {
   fullName: string;
   bacStream: BacStream | "";
   technicalOption: TechnicalMathOption | "";
+  preferredSpecialtyCode: string;
   overallBacMark: string;
   grades: Partial<Record<SubjectCode, string>>;
   topRiasec: [TopRiasecEntry | null, TopRiasecEntry | null, TopRiasecEntry | null];
@@ -28,6 +29,7 @@ const emptyForm = (): WizardFormState => ({
   fullName: "",
   bacStream: "",
   technicalOption: "",
+  preferredSpecialtyCode: "",
   overallBacMark: "",
   grades: {},
   topRiasec: [null, null, null],
@@ -50,6 +52,8 @@ export function useRecommendationWizard(config: ConfigResponse | null, lang: Lan
   }, [config, form.bacStream]);
 
   const setFullName = (fullName: string) => setForm((prev) => ({ ...prev, fullName }));
+  const setPreferredSpecialtyCode = (preferredSpecialtyCode: string) =>
+    setForm((prev) => ({ ...prev, preferredSpecialtyCode }));
 
   const setBacStream = (bacStream: BacStream) => {
     setForm((prev) => {
@@ -90,6 +94,7 @@ export function useRecommendationWizard(config: ConfigResponse | null, lang: Lan
     const errors: Partial<Record<string, string>> = {};
     if (form.fullName.trim().length < 2) errors.fullName = t.errName;
     if (!form.bacStream) errors.bacStream = t.errStream;
+    if (!form.preferredSpecialtyCode) errors.preferredSpecialtyCode = t.errPreferredSpecialty;
     if (form.bacStream === "TECHNICAL_MATHEMATICS" && !form.technicalOption) {
       errors.technicalOption = t.errGenie;
     }
@@ -99,74 +104,56 @@ export function useRecommendationWizard(config: ConfigResponse | null, lang: Lan
     }
     for (const subject of requiredSubjects) {
       const raw = form.grades[subject];
-      if (raw === undefined || raw === "") {
-        errors[`grade_${subject}`] = t.errMissingGrade.replace(
-          "{subject}",
-          subjectLabels[subject],
-        );
-        continue;
-      }
       const n = Number(raw);
-      if (Number.isNaN(n) || n < 0 || n > 20) {
-        errors[`grade_${subject}`] = t.errGrade.replace("{subject}", subjectLabels[subject]);
+      if (raw === undefined || raw === "" || Number.isNaN(n) || n < 0 || n > 20) {
+        errors[`grade_${subject}`] = t.errGrade.replace("{subject}", subjectLabels[subject] ?? subject);
       }
     }
     return errors;
-  }, [form, requiredSubjects, t, subjectLabels]);
+  }, [form, requiredSubjects, subjectLabels, t]);
 
   const validateStep2 = useCallback((): Partial<Record<string, string>> => {
     const errors: Partial<Record<string, string>> = {};
     const entries = form.topRiasec;
-    if (entries.some((e) => !e)) {
-      errors.riasec = t.errRiasecAll;
-      entries.forEach((e, i) => {
-        if (!e) errors[`riasec_letter_${i}`] = t.errRiasecAll;
-      });
-      return errors;
-    }
-    const letters = entries.map((e) => e!.letter);
-    if (new Set(letters).size !== 3) {
-      errors.riasec = t.errRiasecDistinct;
-    }
-    for (let i = 0; i < 3; i += 1) {
-      const entry = entries[i]!;
-      if (entry.weight < 1 || entry.weight > 100) {
-        errors[`riasec_weight_${i}`] = t.errRiasecWeight;
+    for (let i = 0; i < 3; i++) {
+      const e = entries[i];
+      if (!e) {
+        errors[`riasec_${i}`] = t.errRiasecSlot;
+        continue;
       }
+      if (!e.letter || e.weight < 1 || e.weight > 100) {
+        errors[`riasec_${i}`] = t.errRiasecWeight;
+      }
+    }
+    const letters = entries.filter(Boolean).map((e) => e!.letter);
+    if (new Set(letters).size !== letters.length) {
+      errors.riasec_dup = t.errRiasecDup;
     }
     return errors;
   }, [form.topRiasec, t]);
 
-  const goNext = () => {
-    setError(null);
-    if (step === 1) {
-      const errs = validateStep1();
+  const nextFromStep1 = () => {
+    const errs = validateStep1();
+    if (Object.keys(errs).length > 0) {
       setFieldErrors(errs);
-      if (Object.keys(errs).length > 0) {
-        setError(t.fixErrors);
-        return;
-      }
-      setFieldErrors({});
-      setStep(2);
+      setError(t.fixErrors);
       return;
     }
-    if (step === 2) {
-      const errs = validateStep2();
-      setFieldErrors(errs);
-      if (Object.keys(errs).length > 0) {
-        setError(t.fixErrors);
-        return;
-      }
-      setFieldErrors({});
-      void submit();
-    }
+    setFieldErrors({});
+    setError(null);
+    setStep(2);
   };
 
-  const goBack = () => {
-    setError(null);
+  const nextFromStep2 = () => {
+    const errs = validateStep2();
+    if (Object.keys(errs).length > 0) {
+      setFieldErrors(errs);
+      setError(t.fixErrors);
+      return;
+    }
     setFieldErrors({});
-    if (step === 2) setStep(1);
-    if (step === 3) setStep(2);
+    setError(null);
+    void submit();
   };
 
   const goToStep = (target: 1 | 2 | 3) => {
@@ -200,6 +187,7 @@ export function useRecommendationWizard(config: ConfigResponse | null, lang: Lan
       const data = await calculateRecommendations({
         fullName: form.fullName.trim(),
         bacStream: form.bacStream,
+        preferredSpecialtyCode: form.preferredSpecialtyCode,
         technicalOption:
           form.bacStream === "TECHNICAL_MATHEMATICS" && form.technicalOption
             ? form.technicalOption
@@ -229,10 +217,6 @@ export function useRecommendationWizard(config: ConfigResponse | null, lang: Lan
     .filter((e): e is TopRiasecEntry => e !== null)
     .map((e) => e.letter);
 
-  const availableLetters = (
-    config?.riasecLetters ?? (["R", "I", "A", "S", "E", "C"] as RiasecLetter[])
-  ).filter((letter) => !selectedLetters.includes(letter));
-
   return {
     step,
     form,
@@ -241,15 +225,16 @@ export function useRecommendationWizard(config: ConfigResponse | null, lang: Lan
     fieldErrors,
     loading,
     requiredSubjects,
-    availableLetters,
+    selectedLetters,
     setFullName,
+    setPreferredSpecialtyCode,
     setBacStream,
     setTechnicalOption,
     setOverallBacMark,
     setGrade,
     setTopRiasecSlot,
-    goNext,
-    goBack,
+    nextFromStep1,
+    nextFromStep2,
     goToStep,
     reset,
   };
