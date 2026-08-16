@@ -143,7 +143,7 @@ export default function App() {
 
       <main className="mx-auto max-w-5xl px-4 py-6">
         {route === "analytics" ? (
-          <AnalyticsPage config={config} lang={lang} />
+          <AnalyticsPage config={config} lang={lang} onBack={() => setRoute("wizard")} />
         ) : (
           <div className="space-y-6">
             <p className="text-sm text-slate-500">{t.disclaimer}</p>
