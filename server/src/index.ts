@@ -15,11 +15,18 @@ import {
   persistEvaluation,
 } from "./db.js";
 import type { AnalyticsFilters, ExportFilters } from "./db.js";
-import { deleteStudent } from "./student-delete.js";
+import {
+  deleteStudent,
+  getEvaluationIdsForStudent,
+  getStudentFullName,
+} from "./student-delete.js";
 import { getAnalyticsDashboard } from "./analytics-dashboard.js";
 import { isAdminAuthConfigured, requireAdminToken } from "./admin-auth.js";
 import { calculateRecommendations } from "./engine.js";
-import { syncEvaluationToSheet } from "./integrations/google-sheets.js";
+import {
+  removeStudentRowsFromSheet,
+  syncEvaluationToSheet,
+} from "./integrations/google-sheets.js";
 import { logger } from "./logger.js";
 import { CalculateRecommendationSchema } from "./schema.js";
 import {
@@ -212,12 +219,20 @@ app.delete("/api/v1/analytics/students/:studentId", requireAdminToken, (req, res
       res.status(400).json({ message: "Invalid student id." });
       return;
     }
+
+    // Capture sheet keys before SQLite cascade removes evaluations.
+    const evaluationIds = getEvaluationIdsForStudent(studentId);
+    const fullName = getStudentFullName(studentId);
+
     const deleted = deleteStudent(studentId);
     if (!deleted) {
       res.status(404).json({ message: "Student not found." });
       return;
     }
     logger.info("student_deleted", { studentId });
+
+    void removeStudentRowsFromSheet({ evaluationIds, fullName });
+
     res.status(204).send();
   } catch (error) {
     logger.error("student_delete_failed", {
