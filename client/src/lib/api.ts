@@ -1,9 +1,13 @@
-import type { CalculationResult, ConfigResponse, RecommendationInput } from "../types";
+import type {
+  AnalyticsDashboard,
+  AnalyticsRecentResponse,
+  AnalyticsSummary,
+  CalculationResult,
+  ConfigResponse,
+  RecommendationInput,
+  StudentProfileDetail,
+} from "../types";
 
-/**
- * Dev stability: default to same-origin `/api` so Vite proxy handles the backend
- * (no CORS). Set VITE_API_BASE only when calling the API directly (e.g. LAN IP).
- */
 const API_BASE = (import.meta.env.VITE_API_BASE as string | undefined)?.replace(/\/$/, "") ?? "";
 const REQUEST_TIMEOUT_MS = 10_000;
 
@@ -77,9 +81,7 @@ export async function calculateRecommendations(
         message?: string;
         issues?: Array<{ path?: (string | number)[]; message?: string }>;
       };
-      if (body.message) {
-        message = body.message;
-      }
+      if (body.message) message = body.message;
       if (body.issues && body.issues.length > 0) {
         const details = body.issues
           .map((issue) => {
@@ -90,7 +92,7 @@ export async function calculateRecommendations(
         message = `${message} — ${details}`;
       }
     } catch {
-      // ignore parse errors
+      // ignore
     }
     throw new Error(message);
   }
@@ -98,14 +100,95 @@ export async function calculateRecommendations(
   return response.json() as Promise<CalculationResult>;
 }
 
+export type AnalyticsQuery = {
+  from?: string;
+  to?: string;
+  bacStream?: string;
+  specialtyCode?: string;
+  limit?: number;
+};
+
+function analyticsQueryString(params?: AnalyticsQuery): string {
+  const q = new URLSearchParams();
+  if (params?.from) q.set("from", params.from);
+  if (params?.to) q.set("to", params.to);
+  if (params?.bacStream) q.set("bacStream", params.bacStream);
+  if (params?.specialtyCode) q.set("specialtyCode", params.specialtyCode);
+  if (params?.limit != null) q.set("limit", String(params.limit));
+  const s = q.toString();
+  return s ? `?${s}` : "";
+}
+
+export async function fetchAnalyticsSummary(
+  params?: AnalyticsQuery,
+): Promise<AnalyticsSummary> {
+  const response = await fetchWithTimeout(
+    apiUrl(`/api/v1/analytics/summary${analyticsQueryString(params)}`),
+  );
+  if (!response.ok) throw new Error(`Failed to load analytics summary (${response.status})`);
+  return response.json() as Promise<AnalyticsSummary>;
+}
+
+export async function fetchAnalyticsDashboard(
+  params?: AnalyticsQuery,
+): Promise<AnalyticsDashboard> {
+  const response = await fetchWithTimeout(
+    apiUrl(`/api/v1/analytics/dashboard${analyticsQueryString(params)}`),
+  );
+  if (!response.ok) throw new Error(`Failed to load analytics dashboard (${response.status})`);
+  return response.json() as Promise<AnalyticsDashboard>;
+}
+
+export async function fetchAnalyticsRecent(
+  params?: AnalyticsQuery,
+): Promise<AnalyticsRecentResponse> {
+  const response = await fetchWithTimeout(
+    apiUrl(`/api/v1/analytics/recent${analyticsQueryString(params)}`),
+  );
+  if (!response.ok) throw new Error(`Failed to load recent evaluations (${response.status})`);
+  return response.json() as Promise<AnalyticsRecentResponse>;
+}
+
+export async function fetchStudentProfile(studentId: string): Promise<StudentProfileDetail> {
+  const response = await fetchWithTimeout(
+    apiUrl(`/api/v1/analytics/students/${encodeURIComponent(studentId)}`),
+  );
+  if (response.status === 404) throw new Error("Student not found.");
+  if (!response.ok) throw new Error(`Failed to load student profile (${response.status})`);
+  return response.json() as Promise<StudentProfileDetail>;
+}
+
+/** Permanently delete student + cascaded grades / RIASEC / evaluations. */
+export async function deleteStudentProfile(studentId: string): Promise<void> {
+  const response = await fetchWithTimeout(
+    apiUrl(`/api/v1/analytics/students/${encodeURIComponent(studentId)}`),
+    { method: "DELETE" },
+  );
+  if (response.status === 404) throw new Error("Student not found.");
+  if (!response.ok) {
+    let message = `Failed to delete profile (${response.status})`;
+    try {
+      const body = (await response.json()) as { message?: string };
+      if (body.message) message = body.message;
+    } catch {
+      // ignore
+    }
+    throw new Error(message);
+  }
+}
+
 export function exportEvaluationsUrl(params?: {
   from?: string;
   to?: string;
   bacStream?: string;
+  specialtyCode?: string;
+  anonymized?: boolean;
 }): string {
   const q = new URLSearchParams({ format: "csv" });
   if (params?.from) q.set("from", params.from);
   if (params?.to) q.set("to", params.to);
   if (params?.bacStream) q.set("bacStream", params.bacStream);
+  if (params?.specialtyCode) q.set("specialtyCode", params.specialtyCode);
+  q.set("anonymized", params?.anonymized === true ? "1" : "0");
   return apiUrl(`/api/v1/export/evaluations?${q.toString()}`);
 }

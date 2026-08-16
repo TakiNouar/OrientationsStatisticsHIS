@@ -1,0 +1,37 @@
+export type ThemeMode = "light" | "dark" | "system";
+
+const STORAGE_KEY = "his-sre-theme";
+
+export function getStoredTheme(): ThemeMode {
+  try {
+    const v = localStorage.getItem(STORAGE_KEY);
+    if (v === "light" || v === "dark" || v === "system") return v;
+  } catch {
+    // ignore
+  }
+  return "system";
+}
+
+export function storeTheme(mode: ThemeMode): void {
+  try {
+    localStorage.setItem(STORAGE_KEY, mode);
+  } catch {
+    // ignore
+  }
+}
+
+export function resolveDark(mode: ThemeMode): boolean {
+  if (mode === "dark") return true;
+  if (mode === "light") return false;
+  return window.matchMedia("(prefers-color-scheme: dark)").matches;
+}
+
+/** Apply `dark` class on <html> for Tailwind class strategy. */
+export function applyThemeClass(mode: ThemeMode): void {
+  const root = document.documentElement;
+  if (resolveDark(mode)) {
+    root.classList.add("dark");
+  } else {
+    root.classList.remove("dark");
+  }
+}

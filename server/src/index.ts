@@ -8,9 +8,14 @@ import {
   getActiveSpecialties,
   getCareerPathsBySpecialty,
   exportEvaluationsAsCsv,
+  getAnalyticsSummary,
+  getRecentSessions,
+  getStudentProfile,
   initDatabase,
   persistEvaluation,
 } from "./db.js";
+import { deleteStudent } from "./student-delete.js";
+import { getAnalyticsDashboard } from "./analytics-dashboard.js";
 import { calculateRecommendations } from "./engine.js";
 import { logger } from "./logger.js";
 import { CalculateRecommendationSchema } from "./schema.js";
@@ -130,6 +135,102 @@ app.get("/api/v1/config", (_req, res) => {
   }
 });
 
+const parseAnalyticsFilters = (req: express.Request) => {
+  const from = typeof req.query.from === "string" ? req.query.from : undefined;
+  const to = typeof req.query.to === "string" ? req.query.to : undefined;
+  const bacStream =
+    typeof req.query.bacStream === "string" ? (req.query.bacStream as BacStream) : undefined;
+  const specialtyCode =
+    typeof req.query.specialtyCode === "string" ? req.query.specialtyCode : undefined;
+  return { from, to, bacStream, specialtyCode };
+};
+
+app.get("/api/v1/analytics/summary", (req, res) => {
+  try {
+    const filters = parseAnalyticsFilters(req);
+    const summary = getAnalyticsSummary(filters);
+    res.json(summary);
+  } catch (error) {
+    logger.error("analytics_summary_failed", {
+      err: error instanceof Error ? error.message : String(error),
+    });
+    res.status(500).json({ message: "Failed to load analytics summary." });
+  }
+});
+
+app.get("/api/v1/analytics/dashboard", (req, res) => {
+  try {
+    const filters = parseAnalyticsFilters(req);
+    const dashboard = getAnalyticsDashboard(filters);
+    res.json(dashboard);
+  } catch (error) {
+    logger.error("analytics_dashboard_failed", {
+      err: error instanceof Error ? error.message : String(error),
+    });
+    res.status(500).json({ message: "Failed to load analytics dashboard." });
+  }
+});
+
+app.get("/api/v1/analytics/recent", (req, res) => {
+  try {
+    const filters = parseAnalyticsFilters(req);
+    const limitRaw = typeof req.query.limit === "string" ? Number(req.query.limit) : 50;
+    const limit = Number.isFinite(limitRaw) ? limitRaw : 50;
+    const rows = getRecentSessions(filters, limit);
+    res.json({ rows, filters, limit });
+  } catch (error) {
+    logger.error("analytics_recent_failed", {
+      err: error instanceof Error ? error.message : String(error),
+    });
+    res.status(500).json({ message: "Failed to load recent evaluations." });
+  }
+});
+
+app.get("/api/v1/analytics/students/:studentId", (req, res) => {
+  try {
+    const studentId = req.params.studentId;
+    if (!studentId || studentId.length < 8) {
+      res.status(400).json({ message: "Invalid student id." });
+      return;
+    }
+    const profile = getStudentProfile(studentId);
+    if (!profile) {
+      res.status(404).json({ message: "Student not found." });
+      return;
+    }
+    res.json(profile);
+  } catch (error) {
+    logger.error("student_profile_failed", {
+      err: error instanceof Error ? error.message : String(error),
+      studentId: req.params.studentId,
+    });
+    res.status(500).json({ message: "Failed to load student profile." });
+  }
+});
+
+app.delete("/api/v1/analytics/students/:studentId", (req, res) => {
+  try {
+    const studentId = req.params.studentId;
+    if (!studentId || studentId.length < 8) {
+      res.status(400).json({ message: "Invalid student id." });
+      return;
+    }
+    const deleted = deleteStudent(studentId);
+    if (!deleted) {
+      res.status(404).json({ message: "Student not found." });
+      return;
+    }
+    logger.info("student_deleted", { studentId });
+    res.status(204).send();
+  } catch (error) {
+    logger.error("student_delete_failed", {
+      err: error instanceof Error ? error.message : String(error),
+      studentId: req.params.studentId,
+    });
+    res.status(500).json({ message: "Failed to delete student profile." });
+  }
+});
+
 app.get("/api/v1/export/evaluations", (req, res) => {
   const format = req.query.format;
   if (format !== "csv") {
@@ -143,11 +244,17 @@ app.get("/api/v1/export/evaluations", (req, res) => {
   const to = typeof req.query.to === "string" ? req.query.to : undefined;
   const bacStream =
     typeof req.query.bacStream === "string" ? (req.query.bacStream as BacStream) : undefined;
+  const specialtyCode =
+    typeof req.query.specialtyCode === "string" ? req.query.specialtyCode : undefined;
+  const anonymizedParam = typeof req.query.anonymized === "string" ? req.query.anonymized : "0";
+  const anonymized =
+    anonymizedParam === "1" || anonymizedParam.toLowerCase() === "true";
 
   try {
-    const csv = exportEvaluationsAsCsv({ from, to, bacStream });
+    const csv = exportEvaluationsAsCsv({ from, to, bacStream, specialtyCode, anonymized });
+    const filename = anonymized ? "evaluations-anonymized.csv" : "evaluations.csv";
     res.setHeader("Content-Type", "text/csv; charset=utf-8");
-    res.setHeader("Content-Disposition", "attachment; filename=evaluations.csv");
+    res.setHeader("Content-Disposition", `attachment; filename=${filename}`);
     res.send(csv);
   } catch (error) {
     logger.error("export_failed", {
@@ -155,6 +262,8 @@ app.get("/api/v1/export/evaluations", (req, res) => {
       from,
       to,
       bacStream,
+      specialtyCode,
+      anonymized,
     });
     res.status(500).json({ message: "Failed to export evaluations." });
   }

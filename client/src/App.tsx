@@ -3,17 +3,28 @@ import { StepIndicator } from "./components/StepIndicator";
 import { Step1AcademicForm } from "./components/Step1AcademicForm";
 import { Step2RiasecForm } from "./components/Step2RiasecForm";
 import { Step3Results } from "./components/Step3Results";
+import { AnalyticsPage } from "./components/AnalyticsPage";
 import { useRecommendationWizard } from "./hooks/useRecommendationWizard";
 import { fetchConfig } from "./lib/api";
+import {
+  applyThemeClass,
+  getStoredTheme,
+  storeTheme,
+  type ThemeMode,
+} from "./lib/theme";
 import type { ConfigResponse, TopRiasecProfile } from "./types";
 import type { Lang } from "./i18n/strings";
 import { strings } from "./i18n/strings";
+
+type AppView = "wizard" | "analytics";
 
 function App() {
   const [config, setConfig] = useState<ConfigResponse | null>(null);
   const [configError, setConfigError] = useState<string | null>(null);
   const [configLoading, setConfigLoading] = useState(true);
   const [lang, setLang] = useState<Lang>("fr");
+  const [view, setView] = useState<AppView>("wizard");
+  const [theme, setTheme] = useState<ThemeMode>(() => getStoredTheme());
   const t = strings[lang];
   const loadedOnce = useRef(false);
 
@@ -38,30 +49,85 @@ function App() {
     void loadConfig();
   }, [loadConfig]);
 
+  useEffect(() => {
+    applyThemeClass(theme);
+    storeTheme(theme);
+    if (theme !== "system") return;
+    const mq = window.matchMedia("(prefers-color-scheme: dark)");
+    const onChange = () => applyThemeClass("system");
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, [theme]);
+
+  const cycleTheme = () => {
+    setTheme((prev) => (prev === "light" ? "dark" : prev === "dark" ? "system" : "light"));
+  };
+
+  const themeLabel =
+    theme === "light" ? t.themeLight : theme === "dark" ? t.themeDark : t.themeSystem;
+
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
+    <div className="min-h-screen bg-slate-50 text-slate-900 transition-colors dark:bg-slate-950 dark:text-slate-100">
       <header className="border-b border-slate-200 bg-white/90 backdrop-blur dark:border-slate-800 dark:bg-slate-900/90">
-        <div className="mx-auto flex max-w-3xl items-center justify-between gap-3 px-4 py-4">
-          <div>
+        <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-4 py-4">
+          <div className="min-w-0">
             <h1 className="text-lg font-bold tracking-tight">{t.appTitle}</h1>
-            <p className="text-xs text-slate-500">{t.appSubtitle}</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">{t.appSubtitle}</p>
           </div>
-          <label className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300">
-            <span>{t.language}</span>
-            <select
-              className="rounded border border-slate-300 bg-white px-2 py-1 dark:border-slate-600 dark:bg-slate-800"
-              value={lang}
-              onChange={(e) => setLang(e.target.value as Lang)}
+          <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 sm:gap-3">
+            {config && !configError && (
+              <div className="flex rounded-lg border border-slate-200 p-0.5 text-xs dark:border-slate-700">
+                <button
+                  type="button"
+                  onClick={() => setView("wizard")}
+                  className={`rounded-md px-2.5 py-1 font-medium ${
+                    view === "wizard"
+                      ? "bg-sky-600 text-white"
+                      : "text-slate-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800"
+                  }`}
+                >
+                  {t.navWizard}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setView("analytics")}
+                  className={`rounded-md px-2.5 py-1 font-medium ${
+                    view === "analytics"
+                      ? "bg-sky-600 text-white"
+                      : "text-slate-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800"
+                  }`}
+                >
+                  {t.navAnalytics}
+                </button>
+              </div>
+            )}
+            <button
+              type="button"
+              onClick={cycleTheme}
+              title={themeLabel}
+              className="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
             >
-              <option value="fr">FR</option>
-              <option value="en">EN</option>
-            </select>
-          </label>
+              {theme === "light" ? "☀" : theme === "dark" ? "☾" : "◐"} {themeLabel}
+            </button>
+            <label className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300">
+              <span>{t.language}</span>
+              <select
+                className="rounded border border-slate-300 bg-white px-2 py-1 dark:border-slate-600 dark:bg-slate-800"
+                value={lang}
+                onChange={(e) => setLang(e.target.value as Lang)}
+              >
+                <option value="fr">FR</option>
+                <option value="en">EN</option>
+              </select>
+            </label>
+          </div>
         </div>
       </header>
 
-      <main className="mx-auto max-w-3xl px-4 py-8">
-        <p className="mb-4 text-center text-xs text-slate-500">{t.disclaimer}</p>
+      <main className={`mx-auto px-4 py-8 ${view === "analytics" ? "max-w-5xl" : "max-w-3xl"}`}>
+        {view === "wizard" && (
+          <p className="mb-4 text-center text-xs text-slate-500 dark:text-slate-400">{t.disclaimer}</p>
+        )}
 
         <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
           {configLoading && (
@@ -81,14 +147,18 @@ function App() {
               <button
                 type="button"
                 onClick={() => void loadConfig()}
-                className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500"
+                className="rounded-lg bg-sky-600 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-500"
               >
                 {t.retry}
               </button>
             </div>
           )}
 
-          {config && !configError && (
+          {config && !configError && view === "analytics" && (
+            <AnalyticsPage config={config} lang={lang} onBack={() => setView("wizard")} />
+          )}
+
+          {config && !configError && view === "wizard" && (
             <>
               <StepIndicator step={wizard.step} lang={lang} onGoToStep={wizard.goToStep} />
 
@@ -162,7 +232,7 @@ function App() {
                     type="button"
                     onClick={wizard.goNext}
                     disabled={wizard.loading}
-                    className="rounded-lg bg-indigo-600 px-5 py-2 text-sm font-semibold text-white shadow hover:bg-indigo-500 disabled:opacity-60"
+                    className="rounded-lg bg-sky-600 px-5 py-2 text-sm font-semibold text-white shadow hover:bg-sky-500 disabled:opacity-60"
                   >
                     {wizard.loading
                       ? t.calculating

@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* Class-based dark mode (works with theme toggle + system) */
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
   font-family: system-ui, "Segoe UI", Roboto, sans-serif;
   line-height: 1.5;
@@ -8,6 +11,7 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  color-scheme: light dark;
 }
 
 body {
@@ -22,4 +26,99 @@ body {
 code {
   font-family: ui-monospace, Consolas, monospace;
   font-size: 0.9em;
+}
+
+@keyframes analytics-rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes analytics-shimmer {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 100% 50%;
+  }
+}
+
+.analytics-rise {
+  animation: analytics-rise 0.45s ease-out both;
+}
+
+.analytics-rise-delay-1 {
+  animation-delay: 0.05s;
+}
+.analytics-rise-delay-2 {
+  animation-delay: 0.1s;
+}
+.analytics-rise-delay-3 {
+  animation-delay: 0.15s;
+}
+.analytics-rise-delay-4 {
+  animation-delay: 0.2s;
+}
+
+/* Light: soft blue surfaces */
+.analytics-mesh {
+  background:
+    radial-gradient(ellipse 80% 55% at 8% 0%, rgba(56, 189, 248, 0.28), transparent 52%),
+    radial-gradient(ellipse 55% 45% at 92% 8%, rgba(99, 102, 241, 0.16), transparent 48%),
+    radial-gradient(ellipse 50% 40% at 55% 100%, rgba(14, 165, 233, 0.14), transparent 50%),
+    linear-gradient(180deg, #e8f4fc 0%, #dbeafe 45%, #e0f2fe 100%);
+}
+
+/* Dark: deep navy + muted blue glow */
+.dark .analytics-mesh {
+  background:
+    radial-gradient(ellipse 80% 55% at 8% 0%, rgba(56, 189, 248, 0.14), transparent 52%),
+    radial-gradient(ellipse 55% 45% at 92% 8%, rgba(99, 102, 241, 0.12), transparent 48%),
+    radial-gradient(ellipse 50% 40% at 55% 100%, rgba(14, 165, 233, 0.1), transparent 50%),
+    linear-gradient(180deg, #0b1220 0%, #0f172a 55%, #111827 100%);
+}
+
+.analytics-card {
+  border-radius: 1.25rem;
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  background: linear-gradient(165deg, #f0f9ff 0%, #e0f2fe 55%, #dbeafe 100%);
+  backdrop-filter: blur(10px);
+  box-shadow:
+    0 1px 2px rgba(14, 116, 144, 0.06),
+    0 12px 32px -14px rgba(14, 165, 233, 0.28);
+  color: #0f172a;
+  overflow: hidden;
+}
+
+.dark .analytics-card {
+  border-color: rgba(56, 189, 248, 0.22);
+  background: linear-gradient(165deg, rgba(15, 23, 42, 0.96) 0%, rgba(12, 25, 41, 0.94) 100%);
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.35),
+    0 14px 36px -16px rgba(14, 165, 233, 0.22);
+  color: #e2e8f0;
+}
+
+.analytics-kpi-glow {
+  background: linear-gradient(
+    135deg,
+    #0284c7 0%,
+    #0ea5e9 40%,
+    #38bdf8 70%,
+    #67e8f9 100%
+  );
+  background-size: 180% 180%;
+  animation: analytics-shimmer 7s ease infinite alternate;
+}
+
+.analytics-truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
 }

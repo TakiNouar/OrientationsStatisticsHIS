@@ -1,23 +1,40 @@
 # 01 — Executive status
 
-**Status:** Phase A operational + hardening polish (2026-08-15).
+**Status:** Phase A operational + **Phase B0/B1 analytics complete** (branch `feature/b0-analytics`, 2026-08-16).
 
 ## Done
 
+### Phase A (core)
+
 - Offline Express API + SQLite (no Docker)
-- 8 HIS licence seeds; fixed BAC grade slots; génie option + bias
-- Engine locked: **50% academic / 30% RIASEC / 20% technical fit** (+ génie bias)
-- Academic multipliers from seed weights (×0.6–×1.8); **no stream μ**
-- Missing subject weight → **specialty average mapped multiplier** (not fixed 0.75)
-- Wizard + FR default i18n toggle + scoring debug panel
-- API: helmet, CORS allow-list, rate limit on calculate, dotenv, structured logger, safe persist
-- CSV export filters: `from`, `to`, `bacStream`
-- Client fetch timeout (10s) + config retry
-- Repo hygiene: root `.gitignore`, removed prompt PDF & Vite dead assets
-- `DEPLOYMENT.md` (Windows-first LAN)
+- Weighted scoring engine: academic + RIASEC + technical fit + génie bias
+- 3-step React wizard (FR/EN)
+- Persist evaluations to SQLite
 
-## Explicitly skipped
+### Phase B0 (minimal analytics)
 
-- Automated test suite (product decision retained: **no tests**)
-- Phase B, Docker, Postgres
-- Formula / seed weight *values* unchanged except missing-affinity policy
+- Header nav: Orientation ↔ Analytics
+- Filters: date range, BAC stream, top specialty
+- Summary aggregates (sessions, stream, specialty, match labels)
+- **Named** recent students list (click → full profile)
+- Profile: grades, RIASEC, ranked specialty results
+- CSV export (named default; `anonymized=1` optional)
+
+### Phase B1 (staff dashboard)
+
+- KPI cards (sessions, avg score, avg BAC, high scores)
+- Charts: volume by day, score histogram, match-label donut
+- Stream × specialty heatmap (rank-1)
+- Data-quality signals (low/high scores, never rank-1, missing RIASEC)
+
+### UX / ops polish (same branch)
+
+- Light / dark / system theme toggle
+- Soft blue adaptive surfaces + readable contrast
+- Delete student profile (list + detail) with confirm; CASCADE in DB
+- Recent table simplified to **name · date · top specialty** (+ delete)
+
+## Next (optional)
+
+- Merge `feature/b0-analytics` → `main` (see [12-phase-b-branch-summary-merge-ready.md](./12-phase-b-branch-summary-merge-ready.md))
+- Phase B2: auth, roles, retention, multi-user hardening

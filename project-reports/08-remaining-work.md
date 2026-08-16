@@ -1,26 +1,26 @@
 # 08 — Remaining work
 
-## Still optional
+## Phase B0 / B1 — done on `feature/b0-analytics`
+
+See [12-phase-b-branch-summary-merge-ready.md](./12-phase-b-branch-summary-merge-ready.md).
+
+## Still optional / later
+
+### Product
 
 - [ ] Counsellor feedback loop to tune seed subject weights / génie bias
-- [ ] Full FR copy on Step1/Step2 field labels (header/results done)
+- [ ] Full FR copy on every Step1/Step2 micro-label (header/results/analytics done)
 - [ ] Serve `client/dist` from Express static for single-port deploy
 
-## Done this hardening pass
+### Phase B2 (institutional)
 
-- [x] Debug scoring details on results
-- [x] FR/EN language toggle (default FR)
-- [x] DEPLOYMENT.md (Windows Task Scheduler)
-- [x] API timeout + config retry
-- [x] Export date/stream filters
-- [x] Security headers, CORS, rate limit, logger, persist error logging
-- [x] AFFINITY missing policy documented + fixed
-- [x] `.gitignore` + remove prompt PDF
+- [ ] Logins and roles (counsellor vs admin)
+- [ ] Auth on destructive routes (DELETE)
+- [ ] Retention policy (auto-purge old sessions)
+- [ ] Capacity / cohort planning views
+- [ ] Multi-user concurrent hardening
 
-## Out of scope
+### Ops
 
-- Phase B analytics
-- **Unit/integration tests** (confirmed skip)
-- Docker / Postgres
-- Arts stream
-- Re-introducing stream μ on academic
+- [ ] Merge branch to `main` after smoke test
+- [ ] Backup guidance for `server/data/his-sre.db`
