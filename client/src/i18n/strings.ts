@@ -144,6 +144,11 @@ export const strings = {
     neverRanked: "Spécialités jamais rang 1",
     missingRiasec: "Sessions sans RIASEC",
     noChartData: "Pas assez de données pour ce graphique.",
+    totalSessions: "Sessions totales",
+    dashboardTitle: "Vue d'ensemble",
+    volumeByDay: "Volume par jour",
+    scoreBuckets: "Répartition des scores",
+    byMatchLabel: "Répartition des correspondances",
   },
   en: {
     appTitle: "HIS-SRE · Orientation",
@@ -287,6 +292,11 @@ export const strings = {
     neverRanked: "Specialties never rank-1",
     missingRiasec: "Sessions missing RIASEC",
     noChartData: "Not enough data for this chart.",
+    totalSessions: "Total sessions",
+    dashboardTitle: "Overview",
+    volumeByDay: "Volume by day",
+    scoreBuckets: "Score distribution",
+    byMatchLabel: "Match label mix",
   },
 } as const;
 
