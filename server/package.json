@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "build": "tsc -p tsconfig.json",
-    "start": "node dist/index.js"
+    "start": "node dist/index.js",
+    "rebuild:native": "npm rebuild better-sqlite3",
+    "postinstall": "node -e \"try { require('better-sqlite3'); console.log('better-sqlite3 OK'); } catch (e) { console.warn('better-sqlite3 native binary missing. Run: npm run rebuild:native'); console.warn(String(e && e.message || e)); }\""
   },
   "keywords": [
     "his-sre",
