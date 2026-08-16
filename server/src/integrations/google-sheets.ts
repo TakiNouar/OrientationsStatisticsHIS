@@ -181,8 +181,8 @@ export async function syncEvaluationToSheet(
 }
 
 /**
- * Delete sheet rows whose Evaluation ID (column A) is in evaluationIds,
- * and/or whose Student Name (column C) matches fullName (fallback).
+ * Delete sheet data rows matching evaluation IDs (column A).
+ * If no IDs are provided, falls back to exact Student Name (column C).
  * Never throws to callers.
  */
 export async function removeStudentRowsFromSheet(options: {
@@ -195,7 +195,6 @@ export async function removeStudentRowsFromSheet(options: {
     options.evaluationIds.map((x) => x.trim()).filter(Boolean),
   );
   const name = (options.fullName ?? "").trim();
-
   if (idSet.size === 0 && !name) return;
 
   try {
@@ -211,39 +210,16 @@ export async function removeStudentRowsFromSheet(options: {
       range: `${tab}!A:C`,
     });
     const values = all.data.values ?? [];
-    if (values.length <= 1) return; // header only or empty
+    if (values.length <= 1) return;
 
-    // 0-based row indices in the grid (row 0 = header)
     const toDelete: number[] = [];
     for (let i = 1; i < values.length; i++) {
       const row = values[i] ?? [];
       const evalId = String(row[0] ?? "").trim();
       const studentName = String(row[2] ?? "").trim();
-      const byId = evalId !== "" && idSet.has(evalId);
-      const byName = name !== "" && studentName === name;
-      if (byId || (idSet.size === 0 && byName) || (byName && byId)) {
-        toDelete.push(i);
-      } else if (byId) {
-        toDelete.push(i);
-      } else if (byName && idSet.size > 0 && byId === false) {
-        // Prefer id match; still delete by name if this row's eval id is unknown but name matches
-        // only when we also want name fallback for orphans
-        if (idSet.size > 0 && !byId && byName) {
-          // skip pure name match when we have ids (avoids deleting other students with same name)
-          continue;
-        }
-      }
-    }
-
-    // Simpler pass: match evaluation id OR (name when no ids)
-    toDelete.length = 0;
-    for (let i = 1; i < values.length; i++) {
-      const row = values[i] ?? [];
-      const evalId = String(row[0] ?? "").trim();
-      const studentName = String(row[2] ?? "").trim();
-      if (idSet.size > 0 && idSet.has(evalId)) {
-        toDelete.push(i);
-      } else if (idSet.size === 0 && name && studentName === name) {
+      if (idSet.size > 0) {
+        if (idSet.has(evalId)) toDelete.push(i);
+      } else if (name && studentName === name) {
         toDelete.push(i);
       }
     }
@@ -256,13 +232,12 @@ export async function removeStudentRowsFromSheet(options: {
       return;
     }
 
-    // Delete from bottom to top so indices stay valid
     toDelete.sort((a, b) => b - a);
     const requests = toDelete.map((rowIndex) => ({
       deleteDimension: {
         range: {
           sheetId,
-          dimension: "ROWS",
+          dimension: "ROWS" as const,
           startIndex: rowIndex,
           endIndex: rowIndex + 1,
         },
