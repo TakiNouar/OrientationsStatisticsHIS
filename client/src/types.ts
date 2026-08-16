@@ -98,6 +98,8 @@ export interface CalculationResult {
   isTechnicalStream: boolean;
   weights: { academic: number; riasec: number; technical: number };
   matches: SpecialtyMatchBreakdown[];
+  /** False when DB persist failed after scoring (session may not appear in analytics). */
+  persisted?: boolean;
 }
 
 export interface ConfigResponse {
@@ -117,6 +119,8 @@ export interface ConfigResponse {
   riasecLabels: Record<RiasecLetter, string>;
   formulaWeights: { academic: number; riasec: number; technical: number };
   careerPathsBySpecialty?: Record<string, CareerPath[]>;
+  /** True when server has ADMIN_TOKEN configured (delete requires X-Admin-Token). */
+  adminAuthRequired?: boolean;
   specialties?: Array<{
     id: string;
     code: string;
@@ -202,7 +206,6 @@ export interface StudentProfileDetail {
   matches: StudentMatchRow[];
 }
 
-/** B1 dashboard payload */
 export interface AnalyticsDashboard {
   volumeByDay: Array<{ date: string; count: number }>;
   streamSpecialtyMatrix: Array<{
