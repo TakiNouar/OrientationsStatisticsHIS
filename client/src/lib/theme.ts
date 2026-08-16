@@ -1,5 +1,8 @@
 export type ThemeMode = "light" | "dark" | "system";
 
+/** Alias used by App.tsx (light | dark only for toggle UI). */
+export type Theme = "light" | "dark";
+
 const STORAGE_KEY = "his-sre-theme";
 
 export function getStoredTheme(): ThemeMode {
@@ -34,4 +37,19 @@ export function applyThemeClass(mode: ThemeMode): void {
   } else {
     root.classList.remove("dark");
   }
+}
+
+/** Load initial theme for App (maps system → current resolved light/dark). */
+export function loadTheme(): Theme {
+  const mode = getStoredTheme();
+  applyThemeClass(mode);
+  return resolveDark(mode) ? "dark" : "light";
+}
+
+/** Toggle between light and dark; persists preference. */
+export function toggleTheme(current: Theme): Theme {
+  const next: Theme = current === "dark" ? "light" : "dark";
+  storeTheme(next);
+  applyThemeClass(next);
+  return next;
 }

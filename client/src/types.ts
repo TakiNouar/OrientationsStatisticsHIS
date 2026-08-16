@@ -158,3 +158,114 @@ export interface ConfigResponse {
     riasecBenchmark: Record<string, number>;
   }>;
 }
+
+export interface AnalyticsCountRow {
+  key: string;
+  label: string;
+  count: number;
+}
+
+export interface AnalyticsSummary {
+  totalSessions: number;
+  byStream: AnalyticsCountRow[];
+  byTopSpecialty: AnalyticsCountRow[];
+  byMatchLabel: AnalyticsCountRow[];
+  filters: {
+    from?: string;
+    to?: string;
+    bacStream?: string;
+    specialtyCode?: string;
+  };
+}
+
+export interface SessionListRow {
+  studentId: string;
+  fullName: string;
+  evaluatedAt: string;
+  bacStream: string;
+  overallBacMark: number;
+  topSpecialtyCode: string;
+  topSpecialtyTitle: string;
+  department: string;
+  finalScore: number;
+  matchLabel: MatchLabel;
+  academicScore: number;
+  riasecScore: number;
+}
+
+export interface AnalyticsRecentResponse {
+  rows: SessionListRow[];
+  filters: AnalyticsSummary["filters"];
+  limit: number;
+}
+
+export interface StudentMatchRow {
+  specialtyId: string;
+  specialtyCode: string;
+  specialtyTitle: string;
+  department: string;
+  description: string;
+  isTechnical: boolean;
+  hollandCode: [RiasecLetter, RiasecLetter, RiasecLetter];
+  academicScore: number;
+  psychometricScore: number;
+  finalScore: number;
+  rank: number;
+  matchLabel: MatchLabel;
+  matchLabelText: string;
+  evaluatedAt: string;
+}
+
+export interface StudentProfileDetail {
+  studentId: string;
+  fullName: string;
+  bacStream: string;
+  overallBacMark: number;
+  createdAt: string;
+  grades: Record<string, number>;
+  topRiasec: Array<{ letter: RiasecLetter; weight: number }> | null;
+  riasecVector: {
+    realistic: number;
+    investigative: number;
+    artistic: number;
+    social: number;
+    enterprising: number;
+    conventional: number;
+  } | null;
+  matches: StudentMatchRow[];
+}
+
+export interface AnalyticsDashboard {
+  volumeByDay: Array<{ date: string; count: number }>;
+  streamSpecialtyMatrix: Array<{
+    bacStream: string;
+    specialtyCode: string;
+    specialtyTitle: string;
+    count: number;
+  }>;
+  scoreBuckets: Array<{
+    key: string;
+    label: string;
+    min: number;
+    max: number;
+    count: number;
+  }>;
+  byMatchLabel: AnalyticsCountRow[];
+  dataQuality: {
+    neverRankedSpecialtyCodes: Array<{ code: string; title: string }>;
+    highScoreSessions: number;
+    lowScoreSessions: number;
+    averageFinalScore: number | null;
+    averageOverallBac: number | null;
+    sessionsMissingRiasec: number;
+  };
+  filters: AnalyticsSummary["filters"];
+}
+
+export const LABEL_STYLES: Record<MatchLabel, string> = {
+  STRONG_MATCH: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200",
+  STRONG_MATCH_CONVERSATION: "bg-teal-100 text-teal-800 dark:bg-teal-900/40 dark:text-teal-200",
+  POSSIBLE_FIT: "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200",
+  PROFILE_DEVELOPING: "bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-200",
+  WEAK_MATCH: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300",
+};
