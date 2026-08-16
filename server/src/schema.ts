@@ -26,6 +26,7 @@ export const CalculateRecommendationSchema = z
     bacStream: BacStreamSchema,
     technicalOption: TechnicalMathOptionSchema.optional(),
     overallBacMark: z.coerce.number().min(0).max(20),
+    preferredSpecialtyCode: z.string().trim().min(1).max(80),
     grades: z.record(z.string(), gradeSchema),
     topRiasec: z.tuple([TopRiasecEntrySchema, TopRiasecEntrySchema, TopRiasecEntrySchema]),
   })
