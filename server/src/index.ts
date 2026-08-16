@@ -14,6 +14,7 @@ import {
   initDatabase,
   persistEvaluation,
 } from "./db.js";
+import type { AnalyticsFilters, ExportFilters } from "./db.js";
 import { deleteStudent } from "./student-delete.js";
 import { getAnalyticsDashboard } from "./analytics-dashboard.js";
 import { isAdminAuthConfigured, requireAdminToken } from "./admin-auth.js";
@@ -54,6 +55,12 @@ const allowedOrigins = (
 
 const isLocalDevOrigin = (origin: string): boolean =>
   /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(origin);
+
+/** Express 5 param values can be string | string[] under some typings. */
+function routeParam(value: string | string[] | undefined): string {
+  if (Array.isArray(value)) return value[0] ?? "";
+  return value ?? "";
+}
 
 app.use(
   helmet({
@@ -166,7 +173,6 @@ app.get("/api/v1/analytics/recent", (req, res) => {
     const filters = parseAnalyticsFilters(req);
     const limit = Math.min(Number(req.query.limit) || 50, 200);
     const rows = getRecentSessions(filters, limit);
-    // Contract aligned with client AnalyticsRecentResponse: rows + filters + limit
     res.json({ rows, filters, limit });
   } catch (error) {
     logger.error("analytics_recent_failed", {
@@ -178,7 +184,7 @@ app.get("/api/v1/analytics/recent", (req, res) => {
 
 app.get("/api/v1/analytics/students/:studentId", (req, res) => {
   try {
-    const studentId = req.params.studentId;
+    const studentId = routeParam(req.params.studentId);
     if (!studentId || studentId.length < 8) {
       res.status(400).json({ message: "Invalid student id." });
       return;
@@ -192,7 +198,7 @@ app.get("/api/v1/analytics/students/:studentId", (req, res) => {
   } catch (error) {
     logger.error("student_profile_failed", {
       err: error instanceof Error ? error.message : String(error),
-      studentId: req.params.studentId,
+      studentId: routeParam(req.params.studentId),
     });
     res.status(500).json({ message: "Failed to load student profile." });
   }
@@ -200,7 +206,7 @@ app.get("/api/v1/analytics/students/:studentId", (req, res) => {
 
 app.delete("/api/v1/analytics/students/:studentId", requireAdminToken, (req, res) => {
   try {
-    const studentId = req.params.studentId;
+    const studentId = routeParam(req.params.studentId);
     if (!studentId || studentId.length < 8) {
       res.status(400).json({ message: "Invalid student id." });
       return;
@@ -215,7 +221,7 @@ app.delete("/api/v1/analytics/students/:studentId", requireAdminToken, (req, res
   } catch (error) {
     logger.error("student_delete_failed", {
       err: error instanceof Error ? error.message : String(error),
-      studentId: req.params.studentId,
+      studentId: routeParam(req.params.studentId),
     });
     res.status(500).json({ message: "Failed to delete student profile." });
   }
@@ -230,36 +236,17 @@ app.get("/api/v1/export/evaluations", (req, res) => {
     return;
   }
 
-  const from = typeof req.query.from === "string" ? req.query.from : undefined;
-  const to = typeof req.query.to === "string" ? req.query.to : undefined;
-  const bacStream =
-    typeof req.query.bacStream === "string" ? (req.query.bacStream as BacStream) : undefined;
-  const specialtyCode =
-    typeof req.query.specialtyCode === "string" ? req.query.specialtyCode : undefined;
-  const anonymized =
-    req.query.anonymized === "1" ||
-    req.query.anonymized === "true" ||
-    req.query.anonymized === "yes";
+  const exportFilters = parseExportFilters(req);
 
   try {
-    const csv = exportEvaluationsAsCsv({
-      from,
-      to,
-      bacStream,
-      specialtyCode,
-      anonymized,
-    });
+    const csv = exportEvaluationsAsCsv(exportFilters);
     res.setHeader("Content-Type", "text/csv; charset=utf-8");
     res.setHeader("Content-Disposition", "attachment; filename=evaluations.csv");
     res.send(csv);
   } catch (error) {
     logger.error("export_failed", {
       err: error instanceof Error ? error.message : String(error),
-      from,
-      to,
-      bacStream,
-      specialtyCode,
-      anonymized,
+      ...exportFilters,
     });
     res.status(500).json({ message: "Failed to export evaluations." });
   }
@@ -271,13 +258,15 @@ app.post("/api/v1/recommendations/calculate", calculateLimiter, (req, res) => {
     const studentProfile: StudentProfile = {
       fullName: input.fullName,
       bacStream: input.bacStream,
-      technicalOption: input.technicalOption,
       academicPerformance: {
         overallBacMark: input.overallBacMark,
         grades: input.grades as StudentProfile["academicPerformance"]["grades"],
       },
       topRiasec: input.topRiasec as TopRiasecProfile,
     };
+    if (input.technicalOption !== undefined) {
+      studentProfile.technicalOption = input.technicalOption;
+    }
 
     const specialties = getActiveSpecialties();
     if (specialties.length === 0) {
@@ -298,7 +287,6 @@ app.post("/api/v1/recommendations/calculate", calculateLimiter, (req, res) => {
       })),
     };
 
-    // Persist before response so analytics sees the session and failures surface to the client
     let persisted = true;
     try {
       persistEvaluation(studentProfile, result);
@@ -330,15 +318,38 @@ app.post("/api/v1/recommendations/calculate", calculateLimiter, (req, res) => {
   }
 });
 
-function parseAnalyticsFilters(req: express.Request) {
-  return {
-    from: typeof req.query.from === "string" ? req.query.from : undefined,
-    to: typeof req.query.to === "string" ? req.query.to : undefined,
-    bacStream:
-      typeof req.query.bacStream === "string" ? (req.query.bacStream as BacStream) : undefined,
-    specialtyCode:
-      typeof req.query.specialtyCode === "string" ? req.query.specialtyCode : undefined,
-  };
+/** Build filter object without explicit undefined keys (exactOptionalPropertyTypes). */
+function parseAnalyticsFilters(req: express.Request): AnalyticsFilters {
+  const filters: AnalyticsFilters = {};
+  if (typeof req.query.from === "string") filters.from = req.query.from;
+  if (typeof req.query.to === "string") filters.to = req.query.to;
+  if (typeof req.query.bacStream === "string") {
+    filters.bacStream = req.query.bacStream as BacStream;
+  }
+  if (typeof req.query.specialtyCode === "string") {
+    filters.specialtyCode = req.query.specialtyCode;
+  }
+  return filters;
+}
+
+function parseExportFilters(req: express.Request): ExportFilters {
+  const filters: ExportFilters = {};
+  if (typeof req.query.from === "string") filters.from = req.query.from;
+  if (typeof req.query.to === "string") filters.to = req.query.to;
+  if (typeof req.query.bacStream === "string") {
+    filters.bacStream = req.query.bacStream as BacStream;
+  }
+  if (typeof req.query.specialtyCode === "string") {
+    filters.specialtyCode = req.query.specialtyCode;
+  }
+  if (
+    req.query.anonymized === "1" ||
+    req.query.anonymized === "true" ||
+    req.query.anonymized === "yes"
+  ) {
+    filters.anonymized = true;
+  }
+  return filters;
 }
 
 app.use((_req, res) => {
