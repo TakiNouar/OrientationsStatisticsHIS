@@ -19,6 +19,7 @@ import { deleteStudent } from "./student-delete.js";
 import { getAnalyticsDashboard } from "./analytics-dashboard.js";
 import { isAdminAuthConfigured, requireAdminToken } from "./admin-auth.js";
 import { calculateRecommendations } from "./engine.js";
+import { syncEvaluationToSheet } from "./integrations/google-sheets.js";
 import { logger } from "./logger.js";
 import { CalculateRecommendationSchema } from "./schema.js";
 import {
@@ -297,6 +298,11 @@ app.post("/api/v1/recommendations/calculate", calculateLimiter, (req, res) => {
         evaluationId: result.evaluationId,
         err: persistError instanceof Error ? persistError.message : String(persistError),
       });
+    }
+
+    // Optional live mirror — never blocks the student response.
+    if (persisted) {
+      void syncEvaluationToSheet(studentProfile, result);
     }
 
     res.json({ ...enriched, persisted });
