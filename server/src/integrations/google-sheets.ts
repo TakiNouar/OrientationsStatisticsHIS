@@ -2,7 +2,8 @@
  * Optional live mirror of each evaluation to Google Sheets.
  * No-op when GOOGLE_SHEETS_ID is unset. Never throws to the request path.
  */
-import { google, type sheets_v4 } from "googleapis";
+import { google } from "googleapis";
+import type { sheets_v4 } from "googleapis";
 import { logger } from "../logger.js";
 import type { CalculationResult, StudentProfile } from "../types.js";
 
@@ -42,12 +43,16 @@ async function getSheetsClient(): Promise<sheets_v4.Sheets | null> {
     const jsonInline = (process.env.GOOGLE_SERVICE_ACCOUNT_JSON ?? "").trim();
     const keyPath = (process.env.GOOGLE_SERVICE_ACCOUNT_KEY_PATH ?? "").trim();
 
-    let auth: InstanceType<typeof google.auth.GoogleAuth>;
+    const authOptions: {
+      scopes: string[];
+      credentials?: Record<string, unknown>;
+      keyFile?: string;
+    } = { scopes };
+
     if (jsonInline) {
-      const credentials = JSON.parse(jsonInline) as Record<string, unknown>;
-      auth = new google.auth.GoogleAuth({ credentials, scopes });
+      authOptions.credentials = JSON.parse(jsonInline) as Record<string, unknown>;
     } else if (keyPath) {
-      auth = new google.auth.GoogleAuth({ keyFile: keyPath, scopes });
+      authOptions.keyFile = keyPath;
     } else {
       logger.warn("google_sheets_auth_missing", {
         message:
@@ -56,11 +61,9 @@ async function getSheetsClient(): Promise<sheets_v4.Sheets | null> {
       return null;
     }
 
-    const authClient = await auth.getClient();
-    sheetsClient = google.sheets({
-      version: "v4",
-      auth: authClient as Parameters<typeof google.sheets>[0]["auth"],
-    });
+    const auth = new google.auth.GoogleAuth(authOptions);
+    // Auth client typing varies across googleapis versions.
+    sheetsClient = google.sheets({ version: "v4", auth: auth as never });
     return sheetsClient;
   } catch (error) {
     logger.error("google_sheets_auth_failed", {
