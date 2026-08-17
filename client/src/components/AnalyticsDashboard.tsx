@@ -10,14 +10,14 @@ type Props = {
 };
 
 const LABEL_COLORS: Record<MatchLabel, string> = {
-  STRONG_MATCH: "#059669",
-  STRONG_MATCH_CONVERSATION: "#0d9488",
-  POSSIBLE_FIT: "#d97706",
-  PROFILE_DEVELOPING: "#ea580c",
-  WEAK_MATCH: "#64748b",
+  STRONG_MATCH: "#A9852F",
+  STRONG_MATCH_CONVERSATION: "#C7A346",
+  POSSIBLE_FIT: "#D9C68C",
+  PROFILE_DEVELOPING: "#8C8168",
+  WEAK_MATCH: "#6E1F2A",
 };
 
-const BUCKET_COLORS = ["#64748b", "#f97316", "#f59e0b", "#0ea5e9", "#10b981"];
+const BUCKET_COLORS = ["#8C8168", "#D9C68C", "#C7A346", "#A9852F", "#6E1F2A"];
 
 function Card({ children, className = "", delay }: { children: ReactNode; className?: string; delay?: number }) {
   const delayClass =

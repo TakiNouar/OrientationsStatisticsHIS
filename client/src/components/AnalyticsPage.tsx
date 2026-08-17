@@ -247,7 +247,7 @@ export function AnalyticsPage({ config, lang, onBack }: Props) {
       <div className="min-w-0 space-y-4">
         {profileLoading && <p className="text-sm text-slate-600 dark:text-slate-300">{t.profileLoading}</p>}
         {profileError && (
-          <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200">
+          <div className="rounded-lg border border-burgundy/40 bg-burgundy/10 px-3 py-2 text-sm text-burgundy dark:border-burgundy/50 dark:bg-burgundy/15 dark:text-burgundy">
             {profileError}
             <button type="button" className="ml-3 underline" onClick={() => setSelectedStudentId(null)}>{t.backToList}</button>
           </div>
@@ -284,7 +284,7 @@ export function AnalyticsPage({ config, lang, onBack }: Props) {
         </div>
       </div>
 
-      {error && (<div className="break-words rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200">{error}<button type="button" className="ml-3 underline" onClick={() => void load(applied)}>{t.retry}</button></div>)}
+      {error && (<div className="break-words rounded-xl border border-burgundy/40 bg-burgundy/10 px-3 py-2 text-sm text-burgundy dark:border-burgundy/50 dark:bg-burgundy/15 dark:text-burgundy">{error}<button type="button" className="ml-3 underline" onClick={() => void load(applied)}>{t.retry}</button></div>)}
       {loading && !dashboard && <p className="text-sm text-slate-600 dark:text-slate-300">{t.analyticsLoading}</p>}
       {dashboard && <AnalyticsDashboardPanel dashboard={dashboard} lang={lang} totalSessions={summary?.totalSessions} />}
 
