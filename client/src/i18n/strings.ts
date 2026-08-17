@@ -1,8 +1,8 @@
 export type Lang = "fr" | "en";
 
 const fr = {
-  appTitle: "HIS-SRE · Orientation",
-  appSubtitle: "Aide à l'orientation — profil BAC + RIASEC vers les licences HIS",
+  appTitle: "Intended",
+  appSubtitle: "Instrument d'orientation — BAC + RIASEC · licences HIS",
   disclaimer:
     "Outil d'aide à la décision. Les scores sont indicatifs et ne remplacent pas le conseil d'orientation.",
   loadingConfig: "Chargement de la configuration…",
@@ -148,8 +148,8 @@ const fr = {
 } as const;
 
 const en: { [K in keyof typeof fr]: string } = {
-  appTitle: "HIS-SRE · Orientation",
-  appSubtitle: "Orientation support — BAC + RIASEC toward HIS licences",
+  appTitle: "Intended",
+  appSubtitle: "Orientation instrument — BAC + RIASEC · HIS licences",
   disclaimer:
     "Decision-support tool. Scores are indicative and do not replace counseling.",
   loadingConfig: "Loading configuration…",
