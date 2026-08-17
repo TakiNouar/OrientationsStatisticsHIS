@@ -73,7 +73,7 @@ export function Step2RiasecForm({
                     aria-invalid={Boolean(letterErr)}
                     className={`mt-1 w-full rounded-lg border bg-white px-3 py-2 text-slate-900 shadow-sm focus:outline-none focus:ring-2 dark:bg-slate-900 dark:text-slate-100 ${
                       letterErr
-                        ? "border-red-400 focus:ring-red-200"
+                        ? "border-burgundy/50 focus:ring-burgundy/20"
                         : "border-slate-300 focus:border-indigo-500 focus:ring-indigo-200 dark:border-slate-600"
                     }`}
                     value={current?.letter ?? ""}
@@ -97,7 +97,7 @@ export function Step2RiasecForm({
                     ))}
                   </select>
                   {letterErr && (
-                    <p className="mt-1 text-xs text-red-600 dark:text-red-400">{letterErr}</p>
+                    <p className="mt-1 text-xs text-burgundy dark:text-burgundy">{letterErr}</p>
                   )}
                 </label>
 
@@ -129,7 +129,7 @@ export function Step2RiasecForm({
                       aria-invalid={Boolean(weightErr)}
                       className={`w-16 rounded-lg border px-2 py-1.5 text-center text-sm dark:bg-slate-900 ${
                         weightErr
-                          ? "border-red-400"
+                          ? "border-burgundy/50"
                           : "border-slate-300 dark:border-slate-600"
                       }`}
                       value={current?.weight ?? ""}
@@ -145,7 +145,7 @@ export function Step2RiasecForm({
                     />
                   </div>
                   {weightErr && (
-                    <p className="mt-1 text-xs text-red-600 dark:text-red-400">{weightErr}</p>
+                    <p className="mt-1 text-xs text-burgundy dark:text-burgundy">{weightErr}</p>
                   )}
                 </div>
               </div>
@@ -155,7 +155,7 @@ export function Step2RiasecForm({
       </div>
 
       {fieldErrors.riasec && (
-        <p className="text-sm text-red-600 dark:text-red-400">{fieldErrors.riasec}</p>
+        <p className="text-sm text-burgundy dark:text-burgundy">{fieldErrors.riasec}</p>
       )}
 
       <div className="rounded-lg bg-slate-100 px-4 py-3 text-sm text-slate-700 dark:bg-slate-800 dark:text-slate-300">

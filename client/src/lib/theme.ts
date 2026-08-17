@@ -53,3 +53,19 @@ export function toggleTheme(current: Theme): Theme {
   applyThemeClass(next);
   return next;
 }
+
+/** Load the raw three-way mode (system/light/dark) for UI that shows all three. */
+export function loadThemeMode(): ThemeMode {
+  const mode = getStoredTheme();
+  applyThemeClass(mode);
+  return mode;
+}
+
+/** Cycle system → light → dark → system; persists and applies each step. */
+export function cycleThemeMode(current: ThemeMode): ThemeMode {
+  const order: ThemeMode[] = ["system", "light", "dark"];
+  const next = order[(order.indexOf(current) + 1) % order.length] ?? "system";
+  storeTheme(next);
+  applyThemeClass(next);
+  return next;
+}

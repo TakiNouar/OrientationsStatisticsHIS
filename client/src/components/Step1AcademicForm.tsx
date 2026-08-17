@@ -26,7 +26,7 @@ type Props = {
 const inputClass =
   "mt-1 w-full rounded-lg border bg-white px-3 py-2 text-slate-900 shadow-sm focus:outline-none focus:ring-2 dark:bg-slate-800 dark:text-slate-100";
 const okBorder = "border-slate-300 focus:border-indigo-500 focus:ring-indigo-200 dark:border-slate-600";
-const errBorder = "border-red-400 focus:border-red-500 focus:ring-red-200 dark:border-red-700";
+const errBorder = "border-burgundy/50 focus:border-burgundy focus:ring-burgundy/20 dark:border-burgundy/60";
 
 export function Step1AcademicForm({
   config,
@@ -76,7 +76,7 @@ export function Step1AcademicForm({
           onChange={(e) => onFullName(e.target.value)}
         />
         {fieldErrors.fullName && (
-          <p className="mt-1 text-xs text-red-600 dark:text-red-400">{fieldErrors.fullName}</p>
+          <p className="mt-1 text-xs text-burgundy dark:text-burgundy">{fieldErrors.fullName}</p>
         )}
       </label>
 
@@ -96,7 +96,7 @@ export function Step1AcademicForm({
           ))}
         </select>
         {fieldErrors.preferredSpecialtyCode && (
-          <p className="mt-1 text-xs text-red-600 dark:text-red-400">{fieldErrors.preferredSpecialtyCode}</p>
+          <p className="mt-1 text-xs text-burgundy dark:text-burgundy">{fieldErrors.preferredSpecialtyCode}</p>
         )}
         <p className="mt-1 text-xs text-slate-500">{t.preferredSpecialtyHelp}</p>
       </label>
@@ -117,7 +117,7 @@ export function Step1AcademicForm({
           ))}
         </select>
         {fieldErrors.bacStream && (
-          <p className="mt-1 text-xs text-red-600 dark:text-red-400">{fieldErrors.bacStream}</p>
+          <p className="mt-1 text-xs text-burgundy dark:text-burgundy">{fieldErrors.bacStream}</p>
         )}
       </label>
 
@@ -138,7 +138,7 @@ export function Step1AcademicForm({
             ))}
           </select>
           {fieldErrors.technicalOption && (
-            <p className="mt-1 text-xs text-red-600 dark:text-red-400">{fieldErrors.technicalOption}</p>
+            <p className="mt-1 text-xs text-burgundy dark:text-burgundy">{fieldErrors.technicalOption}</p>
           )}
         </label>
       )}
@@ -157,7 +157,7 @@ export function Step1AcademicForm({
           onChange={(e) => onOverallBacMark(e.target.value)}
         />
         {fieldErrors.overallBacMark && (
-          <p className="mt-1 text-xs text-red-600 dark:text-red-400">{fieldErrors.overallBacMark}</p>
+          <p className="mt-1 text-xs text-burgundy dark:text-burgundy">{fieldErrors.overallBacMark}</p>
         )}
       </label>
 
@@ -186,7 +186,7 @@ export function Step1AcademicForm({
                     value={form.grades[subject] ?? ""}
                     onChange={(e) => onGrade(subject, e.target.value)}
                   />
-                  {err && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{err}</p>}
+                  {err && <p className="mt-1 text-xs text-burgundy dark:text-burgundy">{err}</p>}
                 </label>
               );
             })}

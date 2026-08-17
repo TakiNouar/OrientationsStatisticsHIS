@@ -6,7 +6,7 @@ import { StepIndicator } from "./components/StepIndicator";
 import { AnalyticsPage } from "./components/AnalyticsPage";
 import { useRecommendationWizard } from "./hooks/useRecommendationWizard";
 import { fetchConfig } from "./lib/api";
-import { loadTheme, toggleTheme, type Theme } from "./lib/theme";
+import { loadThemeMode, cycleThemeMode, applyThemeClass, type ThemeMode } from "./lib/theme";
 import type { ConfigResponse, TopRiasecProfile } from "./types";
 import { strings, type Lang } from "./i18n/strings";
 
@@ -33,7 +33,7 @@ export default function App() {
     const saved = localStorage.getItem("his-sre-lang");
     return saved === "en" || saved === "fr" ? saved : "fr";
   });
-  const [theme, setTheme] = useState<Theme>(() => loadTheme());
+  const [themeMode, setThemeMode] = useState<ThemeMode>(() => loadThemeMode());
   const [config, setConfig] = useState<ConfigResponse | null>(null);
   const [configError, setConfigError] = useState<string | null>(null);
   const [configLoading, setConfigLoading] = useState(true);
@@ -45,6 +45,15 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem("his-sre-lang", lang);
   }, [lang]);
+
+  // Live-follow the OS theme while in "system" mode.
+  useEffect(() => {
+    if (themeMode !== "system") return;
+    const mql = window.matchMedia("(prefers-color-scheme: dark)");
+    const onChange = () => applyThemeClass("system");
+    mql.addEventListener("change", onChange);
+    return () => mql.removeEventListener("change", onChange);
+  }, [themeMode]);
 
   useEffect(() => {
     let cancelled = false;
@@ -67,7 +76,7 @@ export default function App() {
     };
   }, []);
 
-  const onToggleTheme = () => setTheme(toggleTheme(theme));
+  const onCycleTheme = () => setThemeMode(cycleThemeMode(themeMode));
 
   if (configLoading) {
     return (
@@ -128,10 +137,11 @@ export default function App() {
             <button
               type="button"
               className="rounded-md px-2 py-1.5 text-sm text-ink-muted hover:text-brass"
-              onClick={onToggleTheme}
-              aria-label="Toggle theme"
+              onClick={onCycleTheme}
+              aria-label={`Theme: ${themeMode}. Click to change.`}
+              title={themeMode === "system" ? "System" : themeMode === "dark" ? "Dark" : "Light"}
             >
-              {theme === "dark" ? "☀" : "☾"}
+              {themeMode === "system" ? "◐" : themeMode === "dark" ? "☾" : "☀"}
             </button>
           </div>
         </div>

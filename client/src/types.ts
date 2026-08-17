@@ -265,9 +265,9 @@ export interface AnalyticsDashboard {
 }
 
 export const LABEL_STYLES: Record<MatchLabel, string> = {
-  STRONG_MATCH: "bg-burgundy/15 text-burgundy",
-  STRONG_MATCH_CONVERSATION: "bg-brass/15 text-brass",
+  STRONG_MATCH: "bg-brass text-parchment",
+  STRONG_MATCH_CONVERSATION: "bg-brass/15 text-brass border border-brass/40",
   POSSIBLE_FIT: "bg-brass-dim/30 text-ink",
   PROFILE_DEVELOPING: "bg-brass-dim/20 text-ink-muted",
-  WEAK_MATCH: "bg-transparent text-ink-muted border border-brass-dim",
+  WEAK_MATCH: "border border-burgundy/40 text-burgundy",
 };
