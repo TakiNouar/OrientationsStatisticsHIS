@@ -95,7 +95,6 @@ const fr = {
   careerLevelSenior: "Senior",
   matches: "Correspondances",
   exportCsv: "Exporter CSV",
-  // Analytics
   analyticsTitle: "Tableau de bord",
   analyticsSubtitle: "Sessions d'orientation enregistrées",
   analyticsLoading: "Chargement des statistiques…",
@@ -145,6 +144,7 @@ const fr = {
   adminTokenPrompt: "Jeton administrateur requis pour supprimer :",
   adminTokenInvalid: "Jeton trop court (min. 4 caractères).",
   adminTokenRejected: "Jeton refusé par le serveur.",
+  fixErrors: "Corrigez les erreurs indiquées.",
 } as const;
 
 const en: { [K in keyof typeof fr]: string } = {
@@ -291,6 +291,7 @@ const en: { [K in keyof typeof fr]: string } = {
   adminTokenPrompt: "Admin token required to delete:",
   adminTokenInvalid: "Token too short (min. 4 characters).",
   adminTokenRejected: "Token rejected by the server.",
+  fixErrors: "Please fix the indicated errors.",
 };
 
 export const strings = { fr, en } as const;
