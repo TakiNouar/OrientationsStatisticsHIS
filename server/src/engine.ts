@@ -153,7 +153,6 @@ const subjectMultiplier = (specialty: HisSpecialtyConfig, subject: SubjectCode):
 };
 
 const calculateAcademicScore = (studentProfile: StudentProfile, specialty: HisSpecialtyConfig) => {
-  // Specialty retargets which grades sit in main vs opposite (model A/2).
   const slots = resolveAcademicSlots(studentProfile.bacStream, specialty.isTechnical);
   const grades = studentProfile.academicPerformance.grades;
   const slotDefs = [
