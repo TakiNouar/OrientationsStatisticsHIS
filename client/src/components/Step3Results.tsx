@@ -29,20 +29,20 @@ function ScoreBar({
   labels: { academic: string; riasec: string; technical: string; preference: string };
 }) {
   const rows = [
-    [labels.academic, academic, "bg-blue-500"],
-    [labels.riasec, psychometric, "bg-violet-500"],
-    [labels.technical, technical, "bg-cyan-500"],
-    [labels.preference, preference ?? 0, "bg-fuchsia-500"],
+    [labels.academic, academic, "bg-brass"],
+    [labels.riasec, psychometric, "bg-brass/70"],
+    [labels.technical, technical, "bg-brass/50"],
+    [labels.preference, preference ?? 0, "bg-brass/35"],
   ] as const;
   return (
     <div className="space-y-1.5">
       {rows.map(([label, value, color]) => (
         <div key={label} className="flex items-center gap-2 text-xs">
-          <span className="w-24 shrink-0 text-slate-500">{label}</span>
-          <div className="h-2 flex-1 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
-            <div className={`h-full rounded-full ${color}`} style={{ width: `${Math.min(value, 100)}%` }} />
+          <span className="w-24 shrink-0 text-ink-muted">{label}</span>
+          <div className="h-1.5 flex-1 overflow-hidden rounded-sm bg-brass-dim/40">
+            <div className={`h-full rounded-sm ${color}`} style={{ width: `${Math.min(value, 100)}%` }} />
           </div>
-          <span className="w-12 text-right font-medium text-slate-700 dark:text-slate-300">
+          <span className="w-12 text-right font-mono text-ink">
             {value.toFixed(0)}%
           </span>
         </div>
@@ -53,9 +53,30 @@ function ScoreBar({
 
 function LabelBadge({ label, text }: { label: MatchLabel; text: string }) {
   return (
-    <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${LABEL_STYLES[label]}`}>
+    <span className={`inline-flex rounded-sm px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${LABEL_STYLES[label]}`}>
       {text}
     </span>
+  );
+}
+
+/** Circular brass seal — top recommendation signature. */
+function MatchSeal({ code, score }: { code: string; score: number }) {
+  const rim = (code || "HIS").slice(0, 12).toUpperCase();
+  return (
+    <div className="seal-in relative mx-auto flex h-36 w-36 items-center justify-center" aria-hidden>
+      <svg viewBox="0 0 120 120" className="absolute inset-0 h-full w-full text-brass">
+        <circle cx="60" cy="60" r="56" fill="none" stroke="currentColor" strokeWidth="1.5" />
+        <circle cx="60" cy="60" r="50" fill="none" stroke="currentColor" strokeWidth="0.75" />
+        <circle cx="60" cy="60" r="44" fill="none" stroke="currentColor" strokeWidth="0.5" opacity="0.5" />
+      </svg>
+      <div className="relative z-10 flex flex-col items-center px-2 text-center">
+        <span className="font-mono text-[10px] tracking-[0.2em] text-brass">{rim}</span>
+        <span className="mt-1 font-mono text-3xl font-medium tabular-nums text-ink">
+          {score.toFixed(1)}
+        </span>
+        <span className="font-mono text-[10px] text-ink-muted">%</span>
+      </div>
+    </div>
   );
 }
 
@@ -80,23 +101,23 @@ function CareerCard({ path, lang }: { path: CareerPath; lang: Lang }) {
   const examples = lang === "fr" ? path.examplesFr : path.examplesEn;
 
   return (
-    <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-800/50">
+    <div className="border-l-2 border-brass bg-surface py-2 pl-4">
       <div className="flex flex-wrap items-center gap-2">
-        <h4 className="text-sm font-semibold text-slate-900 dark:text-slate-100">{title}</h4>
-        <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-medium uppercase text-slate-600 dark:bg-slate-700 dark:text-slate-300">
+        <h4 className="font-display text-sm font-semibold italic text-ink">{title}</h4>
+        <span className="font-mono text-[10px] uppercase tracking-wide text-brass">
           {levelLabel(lang, path.level)}
         </span>
       </div>
-      <p className="mt-1 text-xs text-slate-500">
+      <p className="mt-1 text-xs text-ink-muted">
         {t.careerSector}: {sector}
       </p>
-      <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">{description}</p>
+      <p className="mt-2 text-sm text-ink-muted">{description}</p>
       {examples.length > 0 && (
         <div className="mt-2">
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-ink-muted">
             {t.careerExamples}
           </p>
-          <ul className="mt-1 list-inside list-disc text-xs text-slate-600 dark:text-slate-400">
+          <ul className="mt-1 list-inside list-disc text-xs text-ink-muted">
             {examples.map((ex) => (
               <li key={ex}>{ex}</li>
             ))}
@@ -129,16 +150,17 @@ export function Step3Results({ result, topRiasec, onReset, lang, genieLabels }: 
   const exportUrl = exportEvaluationsUrl();
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-xl font-semibold text-slate-900 dark:text-slate-100">{t.results}</h2>
-          <p className="mt-1 text-sm text-slate-500">
-            {result.studentName} · {streamLabels[result.bacStream]}
+          <h2 className="font-display text-2xl font-semibold tracking-tight text-ink">{t.results}</h2>
+          <p className="mt-1 font-display text-lg text-ink">{result.studentName}</p>
+          <p className="mt-0.5 text-sm text-ink-muted">
+            {streamLabels[result.bacStream]}
             {genieLabel ? ` · ${genieLabel}` : ""}
-            {" · "}RIASEC {topCode}
+            {" · "}RIASEC <span className="font-mono">{topCode}</span>
           </p>
-          <p className="mt-1 text-xs text-slate-400">
+          <p className="mt-2 font-mono text-[11px] text-ink-muted">
             {t.weightsLine}: {t.academic} {(result.weights.academic * 100).toFixed(0)}% · {t.riasec}{" "}
             {(result.weights.riasec * 100).toFixed(0)}% · {t.technical}{" "}
             {(result.weights.technical * 100).toFixed(0)}%
@@ -148,20 +170,16 @@ export function Step3Results({ result, topRiasec, onReset, lang, genieLabels }: 
           </p>
         </div>
         <div className="flex flex-col items-end gap-2">
-          <button
-            type="button"
-            onClick={onReset}
-            className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800"
-          >
+          <button type="button" onClick={onReset} className="intended-btn-ghost">
             {t.newEvaluation}
           </button>
-          <a href={exportUrl} className="text-xs text-slate-500 underline-offset-2 hover:underline">
+          <a href={exportUrl} className="text-xs text-brass underline-offset-2 hover:underline">
             {t.exportCsv}
           </a>
         </div>
       </div>
 
-      <div className="flex gap-1 rounded-lg bg-slate-100 p-1 dark:bg-slate-800">
+      <div className="flex gap-6 border-b border-brass-dim">
         {(
           [
             ["scores", t.tabScores],
@@ -172,10 +190,10 @@ export function Step3Results({ result, topRiasec, onReset, lang, genieLabels }: 
             key={id}
             type="button"
             onClick={() => setTab(id)}
-            className={`flex-1 rounded-md px-3 py-2 text-sm font-semibold transition ${
+            className={`border-b-2 px-1 pb-2 text-sm font-medium transition ${
               tab === id
-                ? "bg-white text-indigo-700 shadow dark:bg-slate-900 dark:text-indigo-300"
-                : "text-slate-600 hover:text-slate-900 dark:text-slate-400"
+                ? "border-brass text-ink"
+                : "border-transparent text-ink-muted hover:text-brass"
             }`}
           >
             {label}
@@ -186,18 +204,18 @@ export function Step3Results({ result, topRiasec, onReset, lang, genieLabels }: 
       {tab === "scores" && (
         <>
           {top && (
-            <div className="rounded-xl border-2 border-indigo-300 bg-indigo-50/90 p-5 shadow-sm dark:border-indigo-800 dark:bg-indigo-950/50">
-              <p className="text-xs font-semibold uppercase tracking-wide text-indigo-600 dark:text-indigo-300">
+            <div className="border border-brass-dim bg-surface px-4 py-6 text-center">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-brass">
                 {t.topRecommendation}
               </p>
-              <div className="mt-1 flex flex-wrap items-center gap-2">
-                <h3 className="text-xl font-bold text-slate-900 dark:text-slate-50">{top.specialtyTitle}</h3>
+              <div className="mt-4">
+                <MatchSeal code={top.specialtyCode} score={top.finalScore} />
+              </div>
+              <h3 className="mt-4 font-display text-xl font-semibold text-ink">{top.specialtyTitle}</h3>
+              <div className="mt-2 flex justify-center">
                 <LabelBadge label={top.matchLabel} text={matchLabelText(lang, top.matchLabel)} />
               </div>
-              <p className="mt-2 text-3xl font-bold text-indigo-600 dark:text-indigo-300">
-                {fmt(top.finalScore, 1)}%
-                <span className="ml-2 text-sm font-medium text-slate-500">{t.finalFit}</span>
-              </p>
+              <p className="mt-1 text-xs text-ink-muted">{t.finalFit}</p>
             </div>
           )}
 
@@ -205,27 +223,23 @@ export function Step3Results({ result, topRiasec, onReset, lang, genieLabels }: 
             <button
               type="button"
               onClick={() => setShowDetails((v) => !v)}
-              className="text-xs text-slate-400 underline-offset-2 hover:underline"
+              className="text-xs text-ink-muted underline-offset-2 hover:underline"
             >
               {showDetails ? t.hideDetails : t.showDetails}
             </button>
           </div>
 
-          <div className="space-y-4">
+          <div className="space-y-0">
             {visible.map((match) => (
               <article
                 key={match.specialtyId}
-                className={`rounded-xl border bg-white p-4 shadow-sm dark:bg-slate-900 ${
-                  match.rank === 1
-                    ? "border-indigo-200 dark:border-indigo-900"
-                    : "border-slate-200 dark:border-slate-800"
-                }`}
+                className="border-b border-brass-dim py-4 last:border-0"
               >
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-xs font-semibold text-slate-400">#{match.rank}</span>
-                      <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">
+                      <span className="font-mono text-xs text-ink-muted">#{match.rank}</span>
+                      <h3 className="font-display text-base font-semibold text-ink">
                         {match.specialtyTitle}
                       </h3>
                       <LabelBadge
@@ -233,21 +247,21 @@ export function Step3Results({ result, topRiasec, onReset, lang, genieLabels }: 
                         text={matchLabelText(lang, match.matchLabel)}
                       />
                     </div>
-                    <p className="mt-1 text-xs text-slate-500">
+                    <p className="mt-1 font-mono text-xs text-ink-muted">
                       {match.specialtyCode} · {match.department} · {match.hollandCode.join("-")}
                       {match.isTechnical ? ` · ${t.technicalSpecialty}` : ""}
                     </p>
                   </div>
                   <div className="text-right">
-                    <div className="text-2xl font-bold text-indigo-600 dark:text-indigo-300">
+                    <div className="font-mono text-2xl font-medium tabular-nums text-ink">
                       {fmt(match.finalScore, 1)}%
                     </div>
-                    <div className="text-[11px] text-slate-500">{t.finalFit}</div>
+                    <div className="text-[11px] text-ink-muted">{t.finalFit}</div>
                   </div>
                 </div>
 
                 {match.description && (
-                  <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">{match.description}</p>
+                  <p className="mt-2 text-sm text-ink-muted">{match.description}</p>
                 )}
 
                 <div className="mt-3">
@@ -265,43 +279,35 @@ export function Step3Results({ result, topRiasec, onReset, lang, genieLabels }: 
                   />
                 </div>
 
-                <dl className="mt-3 grid grid-cols-2 gap-2 text-xs text-slate-500 sm:grid-cols-4">
+                <dl className="mt-3 grid grid-cols-2 gap-2 font-mono text-xs text-ink-muted sm:grid-cols-4">
                   <div>
                     <dt>{t.codeMatch}</dt>
-                    <dd className="font-semibold text-slate-800 dark:text-slate-200">
-                      {fmt(match.details?.codeMatchScore, 1)}%
-                    </dd>
+                    <dd className="font-medium text-ink">{fmt(match.details?.codeMatchScore, 1)}%</dd>
                   </div>
                   <div>
                     <dt>{t.cosSim}</dt>
-                    <dd className="font-semibold text-slate-800 dark:text-slate-200">
-                      {fmt(match.details?.vectorCosineSimilarity, 3)}
-                    </dd>
+                    <dd className="font-medium text-ink">{fmt(match.details?.vectorCosineSimilarity, 3)}</dd>
                   </div>
                   <div>
                     <dt>{t.marksTech}</dt>
-                    <dd className="font-semibold text-slate-800 dark:text-slate-200">
-                      {fmt(match.details?.technicalMarksComponent, 0)}%
-                    </dd>
+                    <dd className="font-medium text-ink">{fmt(match.details?.technicalMarksComponent, 0)}%</dd>
                   </div>
                   <div>
                     <dt>{t.techAlign}</dt>
-                    <dd className="font-semibold text-slate-800 dark:text-slate-200">
-                      {fmt(match.technicalScore, 0)}%
-                    </dd>
+                    <dd className="font-medium text-ink">{fmt(match.technicalScore, 0)}%</dd>
                   </div>
                 </dl>
 
                 {match.details?.genieBiasPoints != null && match.details.genieBiasPoints > 0 && (
-                  <p className="mt-2 text-xs text-cyan-700 dark:text-cyan-300">
+                  <p className="mt-2 text-xs text-brass">
                     {t.genieBias}: +{fmt(match.details.genieBiasPoints, 0)}
                   </p>
                 )}
 
                 {showDetails && match.details && (
-                  <div className="mt-3 rounded-lg border border-dashed border-slate-200 bg-slate-50 p-3 text-xs dark:border-slate-700 dark:bg-slate-950/50">
-                    <p className="font-semibold text-slate-700 dark:text-slate-200">{t.slotBreakdown}</p>
-                    <ul className="mt-1 grid grid-cols-2 gap-1 text-slate-600 dark:text-slate-400 sm:grid-cols-4">
+                  <div className="mt-3 border border-dashed border-brass-dim p-3 font-mono text-xs">
+                    <p className="font-semibold text-ink">{t.slotBreakdown}</p>
+                    <ul className="mt-1 grid grid-cols-2 gap-1 text-ink-muted sm:grid-cols-4">
                       <li>main1: {fmt(match.details.slotBreakdown?.main1)}</li>
                       <li>main2: {fmt(match.details.slotBreakdown?.main2)}</li>
                       <li>opposite: {fmt(match.details.slotBreakdown?.opposite)}</li>
@@ -315,11 +321,7 @@ export function Step3Results({ result, topRiasec, onReset, lang, genieLabels }: 
 
           {result.matches.length > 3 && (
             <div className="text-center">
-              <button
-                type="button"
-                onClick={() => setShowAll((v) => !v)}
-                className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800"
-              >
+              <button type="button" onClick={() => setShowAll((v) => !v)} className="intended-btn-ghost">
                 {showAll ? t.showLess : t.showMore}
               </button>
             </div>
@@ -329,20 +331,18 @@ export function Step3Results({ result, topRiasec, onReset, lang, genieLabels }: 
 
       {tab === "careers" && (
         <div className="space-y-6">
-          <p className="text-sm text-slate-600 dark:text-slate-400">{t.careersIntro}</p>
+          <p className="text-sm text-ink-muted">{t.careersIntro}</p>
           {result.matches.map((match) => {
             const paths = match.careerPaths ?? [];
             return (
               <section key={match.specialtyId} className="space-y-3">
-                <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 pb-2 dark:border-slate-700">
-                  <span className="text-xs font-semibold text-slate-400">#{match.rank}</span>
-                  <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">
-                    {match.specialtyTitle}
-                  </h3>
-                  <span className="text-xs text-slate-500">{fmt(match.finalScore, 1)}%</span>
+                <div className="flex flex-wrap items-center gap-2 border-b border-brass-dim pb-2">
+                  <span className="font-mono text-xs text-ink-muted">#{match.rank}</span>
+                  <h3 className="font-display text-base font-semibold text-ink">{match.specialtyTitle}</h3>
+                  <span className="font-mono text-xs text-ink-muted">{fmt(match.finalScore, 1)}%</span>
                 </div>
                 {paths.length === 0 ? (
-                  <p className="text-sm text-slate-500">{t.noCareers}</p>
+                  <p className="text-sm text-ink-muted">{t.noCareers}</p>
                 ) : (
                   <div className="grid gap-3 sm:grid-cols-2">
                     {paths.map((path) => (
@@ -356,7 +356,7 @@ export function Step3Results({ result, topRiasec, onReset, lang, genieLabels }: 
         </div>
       )}
 
-      <p className="text-center text-xs text-slate-400">{t.disclaimer}</p>
+      <p className="text-center text-xs text-ink-muted">{t.disclaimer}</p>
     </div>
   );
 }
