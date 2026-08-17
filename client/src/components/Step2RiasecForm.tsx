@@ -13,6 +13,14 @@ type Props = {
   onSlotChange: (index: 0 | 1 | 2, entry: TopRiasecEntry | null) => void;
 };
 
+const inputClass =
+  "mt-1 w-full rounded-md border bg-surface px-3 py-2.5 font-body text-sm text-ink transition-colors focus:outline-none focus:ring-2";
+const okBorder =
+  "border-brass-dim focus:border-brass focus:ring-brass/25";
+const errBorder =
+  "border-burgundy/50 focus:border-burgundy focus:ring-burgundy/20";
+const errText = "mt-1 text-xs text-burgundy";
+
 export function Step2RiasecForm({
   config,
   form,
@@ -31,20 +39,25 @@ export function Step2RiasecForm({
     .join("");
 
   return (
-    <div className={`space-y-6 text-left ${disabled ? "pointer-events-none opacity-60" : ""}`}>
+    <div className={`space-y-6 text-left font-body ${disabled ? "pointer-events-none opacity-60" : ""}`}>
       <div>
-        <h2 className="text-xl font-semibold text-slate-900 dark:text-slate-100">{t.riasecTitle}</h2>
-        <p className="mt-1 text-sm text-slate-500">{t.riasecHelp}</p>
+        <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-brass">
+          {"stepRiasec" in t ? t.stepRiasec : "II"}
+        </p>
+        <h2 className="mt-1 font-display text-xl font-semibold tracking-tight text-ink">
+          {t.riasecTitle}
+        </h2>
+        <p className="mt-1.5 text-sm text-ink-muted">{t.riasecHelp}</p>
       </div>
 
       <div
-        className="rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-3 text-center dark:border-indigo-900 dark:bg-indigo-950/40"
+        className="border border-brass bg-surface px-4 py-4 text-center"
         aria-live="polite"
       >
-        <span className="text-xs font-medium uppercase tracking-wide text-indigo-600 dark:text-indigo-300">
+        <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-brass">
           {t.codePreview}
         </span>
-        <div className="mt-1 font-mono text-2xl font-bold tracking-[0.3em] text-indigo-900 dark:text-indigo-100">
+        <div className="mt-1.5 font-mono text-2xl font-medium tracking-[0.35em] text-ink">
           {codePreview}
         </div>
       </div>
@@ -61,21 +74,24 @@ export function Step2RiasecForm({
           return (
             <div
               key={index}
-              className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/60"
+              className="border border-brass-dim bg-surface/70 p-4"
             >
-              <div className="mb-3 text-sm font-semibold text-slate-700 dark:text-slate-200">
-                {rankLabels[index]}
+              <div className="mb-3 flex items-center gap-2">
+                <span className="font-mono text-xs tracking-widest text-brass">
+                  {["I", "II", "III"][index]}
+                </span>
+                <span className="text-sm font-semibold text-ink">
+                  {rankLabels[index]}
+                </span>
               </div>
               <div className="grid gap-3 sm:grid-cols-2">
                 <label className="block">
-                  <span className="text-xs text-slate-500">{t.letter}</span>
+                  <span className="text-xs font-medium uppercase tracking-wide text-ink-muted">
+                    {t.letter}
+                  </span>
                   <select
                     aria-invalid={Boolean(letterErr)}
-                    className={`mt-1 w-full rounded-lg border bg-white px-3 py-2 text-slate-900 shadow-sm focus:outline-none focus:ring-2 dark:bg-slate-900 dark:text-slate-100 ${
-                      letterErr
-                        ? "border-burgundy/50 focus:ring-burgundy/20"
-                        : "border-slate-300 focus:border-indigo-500 focus:ring-indigo-200 dark:border-slate-600"
-                    }`}
+                    className={`${inputClass} ${letterErr ? errBorder : okBorder}`}
                     value={current?.letter ?? ""}
                     onChange={(e) => {
                       const letter = e.target.value as RiasecLetter | "";
@@ -85,7 +101,7 @@ export function Step2RiasecForm({
                       }
                       onSlotChange(index, {
                         letter,
-                        weight: current?.weight ?? 70 - index * 15,
+                        weight: current?.weight ?? 50,
                       });
                     }}
                   >
@@ -96,13 +112,11 @@ export function Step2RiasecForm({
                       </option>
                     ))}
                   </select>
-                  {letterErr && (
-                    <p className="mt-1 text-xs text-burgundy dark:text-burgundy">{letterErr}</p>
-                  )}
+                  {letterErr && <p className={errText}>{letterErr}</p>}
                 </label>
 
                 <div className="block">
-                  <span className="text-xs text-slate-500">
+                  <span className="text-xs font-medium uppercase tracking-wide text-ink-muted">
                     {t.weight} {current ? `(${current.weight})` : ""}
                   </span>
                   <div className="mt-1 flex items-center gap-3">
@@ -111,7 +125,7 @@ export function Step2RiasecForm({
                       min={1}
                       max={100}
                       disabled={!current}
-                      className="w-full flex-1 accent-indigo-600"
+                      className="w-full flex-1 accent-brass"
                       value={current?.weight ?? 50}
                       onChange={(e) => {
                         if (!current) return;
@@ -127,10 +141,10 @@ export function Step2RiasecForm({
                       max={100}
                       disabled={!current}
                       aria-invalid={Boolean(weightErr)}
-                      className={`w-16 rounded-lg border px-2 py-1.5 text-center text-sm dark:bg-slate-900 ${
+                      className={`w-16 rounded-md border bg-surface px-2 py-1.5 text-center font-mono text-sm text-ink focus:outline-none focus:ring-2 ${
                         weightErr
-                          ? "border-burgundy/50"
-                          : "border-slate-300 dark:border-slate-600"
+                          ? "border-burgundy/50 focus:ring-burgundy/20"
+                          : "border-brass-dim focus:border-brass focus:ring-brass/25"
                       }`}
                       value={current?.weight ?? ""}
                       onChange={(e) => {
@@ -144,9 +158,7 @@ export function Step2RiasecForm({
                       }}
                     />
                   </div>
-                  {weightErr && (
-                    <p className="mt-1 text-xs text-burgundy dark:text-burgundy">{weightErr}</p>
-                  )}
+                  {weightErr && <p className={errText}>{weightErr}</p>}
                 </div>
               </div>
             </div>
@@ -155,10 +167,10 @@ export function Step2RiasecForm({
       </div>
 
       {fieldErrors.riasec && (
-        <p className="text-sm text-burgundy dark:text-burgundy">{fieldErrors.riasec}</p>
+        <p className="text-sm text-burgundy">{fieldErrors.riasec}</p>
       )}
 
-      <div className="rounded-lg bg-slate-100 px-4 py-3 text-sm text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+      <div className="border border-brass-dim bg-surface/50 px-4 py-3 text-sm text-ink-muted">
         {t.riasecScoringHelp}
       </div>
     </div>

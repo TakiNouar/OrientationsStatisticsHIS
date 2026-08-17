@@ -24,9 +24,14 @@ type Props = {
 };
 
 const inputClass =
-  "mt-1 w-full rounded-lg border bg-white px-3 py-2 text-slate-900 shadow-sm focus:outline-none focus:ring-2 dark:bg-slate-800 dark:text-slate-100";
-const okBorder = "border-slate-300 focus:border-indigo-500 focus:ring-indigo-200 dark:border-slate-600";
-const errBorder = "border-burgundy/50 focus:border-burgundy focus:ring-burgundy/20 dark:border-burgundy/60";
+  "mt-1 w-full rounded-md border bg-surface px-3 py-2.5 font-body text-sm text-ink shadow-none transition-colors focus:outline-none focus:ring-2";
+const okBorder =
+  "border-brass-dim focus:border-brass focus:ring-brass/25";
+const errBorder =
+  "border-burgundy/50 focus:border-burgundy focus:ring-burgundy/20";
+const labelClass = "text-sm font-medium text-ink";
+const helpClass = "mt-1 text-xs text-ink-muted";
+const errText = "mt-1 text-xs text-burgundy";
 
 export function Step1AcademicForm({
   config,
@@ -59,14 +64,19 @@ export function Step1AcademicForm({
   };
 
   return (
-    <div className={`space-y-6 text-left ${disabled ? "pointer-events-none opacity-60" : ""}`}>
+    <div className={`space-y-6 text-left font-body ${disabled ? "pointer-events-none opacity-60" : ""}`}>
       <div>
-        <h2 className="text-xl font-semibold text-slate-900 dark:text-slate-100">{t.academicTitle}</h2>
-        <p className="mt-1 text-sm text-slate-500">{t.academicHelp}</p>
+        <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-brass">
+          {"stepAcademic" in t ? t.stepAcademic : "I"}
+        </p>
+        <h2 className="mt-1 font-display text-xl font-semibold tracking-tight text-ink">
+          {t.academicTitle}
+        </h2>
+        <p className="mt-1.5 text-sm text-ink-muted">{t.academicHelp}</p>
       </div>
 
       <label className="block">
-        <span className="text-sm font-medium text-slate-700 dark:text-slate-300">{t.fullName}</span>
+        <span className={labelClass}>{t.fullName}</span>
         <input
           type="text"
           autoComplete="name"
@@ -75,13 +85,11 @@ export function Step1AcademicForm({
           value={form.fullName}
           onChange={(e) => onFullName(e.target.value)}
         />
-        {fieldErrors.fullName && (
-          <p className="mt-1 text-xs text-burgundy dark:text-burgundy">{fieldErrors.fullName}</p>
-        )}
+        {fieldErrors.fullName && <p className={errText}>{fieldErrors.fullName}</p>}
       </label>
 
       <label className="block">
-        <span className="text-sm font-medium text-slate-700 dark:text-slate-300">{t.preferredSpecialty}</span>
+        <span className={labelClass}>{t.preferredSpecialty}</span>
         <select
           aria-invalid={Boolean(fieldErrors.preferredSpecialtyCode)}
           className={`${inputClass} ${fieldErrors.preferredSpecialtyCode ? errBorder : okBorder}`}
@@ -96,13 +104,13 @@ export function Step1AcademicForm({
           ))}
         </select>
         {fieldErrors.preferredSpecialtyCode && (
-          <p className="mt-1 text-xs text-burgundy dark:text-burgundy">{fieldErrors.preferredSpecialtyCode}</p>
+          <p className={errText}>{fieldErrors.preferredSpecialtyCode}</p>
         )}
-        <p className="mt-1 text-xs text-slate-500">{t.preferredSpecialtyHelp}</p>
+        <p className={helpClass}>{t.preferredSpecialtyHelp}</p>
       </label>
 
       <label className="block">
-        <span className="text-sm font-medium text-slate-700 dark:text-slate-300">{t.bacStream}</span>
+        <span className={labelClass}>{t.bacStream}</span>
         <select
           aria-invalid={Boolean(fieldErrors.bacStream)}
           className={`${inputClass} ${fieldErrors.bacStream ? errBorder : okBorder}`}
@@ -116,14 +124,12 @@ export function Step1AcademicForm({
             </option>
           ))}
         </select>
-        {fieldErrors.bacStream && (
-          <p className="mt-1 text-xs text-burgundy dark:text-burgundy">{fieldErrors.bacStream}</p>
-        )}
+        {fieldErrors.bacStream && <p className={errText}>{fieldErrors.bacStream}</p>}
       </label>
 
       {form.bacStream === "TECHNICAL_MATHEMATICS" && (
         <label className="block">
-          <span className="text-sm font-medium text-slate-700 dark:text-slate-300">{t.genieOption}</span>
+          <span className={labelClass}>{t.genieOption}</span>
           <select
             aria-invalid={Boolean(fieldErrors.technicalOption)}
             className={`${inputClass} ${fieldErrors.technicalOption ? errBorder : okBorder}`}
@@ -138,13 +144,13 @@ export function Step1AcademicForm({
             ))}
           </select>
           {fieldErrors.technicalOption && (
-            <p className="mt-1 text-xs text-burgundy dark:text-burgundy">{fieldErrors.technicalOption}</p>
+            <p className={errText}>{fieldErrors.technicalOption}</p>
           )}
         </label>
       )}
 
       <label className="block">
-        <span className="text-sm font-medium text-slate-700 dark:text-slate-300">{t.overallMark}</span>
+        <span className={labelClass}>{t.overallMark}</span>
         <input
           type="number"
           min={0}
@@ -157,14 +163,17 @@ export function Step1AcademicForm({
           onChange={(e) => onOverallBacMark(e.target.value)}
         />
         {fieldErrors.overallBacMark && (
-          <p className="mt-1 text-xs text-burgundy dark:text-burgundy">{fieldErrors.overallBacMark}</p>
+          <p className={errText}>{fieldErrors.overallBacMark}</p>
         )}
       </label>
 
       {slots && form.bacStream && (
-        <div>
-          <h3 className="mb-3 text-sm font-semibold text-slate-800 dark:text-slate-200">
-            {t.gradesHeading} — {streamLabels[form.bacStream]}
+        <div className="border border-brass-dim bg-surface/60 p-4">
+          <h3 className="mb-3 font-display text-sm font-semibold text-ink">
+            {t.gradesHeading}
+            <span className="ml-2 font-body text-xs font-normal text-ink-muted">
+              — {streamLabels[form.bacStream]}
+            </span>
           </h3>
           <div className="grid gap-3 sm:grid-cols-2">
             {slotOrder.map((slotKey) => {
@@ -172,8 +181,11 @@ export function Step1AcademicForm({
               const err = fieldErrors[`grade_${subject}`];
               return (
                 <label key={slotKey} className="block">
-                  <span className="text-sm text-slate-600 dark:text-slate-400">
-                    {slotLabel[slotKey]} — {subjectLabels[subject]}
+                  <span className="text-xs font-medium uppercase tracking-wide text-ink-muted">
+                    {slotLabel[slotKey]}
+                  </span>
+                  <span className="mt-0.5 block text-sm text-ink">
+                    {subjectLabels[subject]}
                   </span>
                   <input
                     type="number"
@@ -186,7 +198,7 @@ export function Step1AcademicForm({
                     value={form.grades[subject] ?? ""}
                     onChange={(e) => onGrade(subject, e.target.value)}
                   />
-                  {err && <p className="mt-1 text-xs text-burgundy dark:text-burgundy">{err}</p>}
+                  {err && <p className={errText}>{err}</p>}
                 </label>
               );
             })}
