@@ -108,10 +108,6 @@ export const STREAM_GRADE_SLOTS: Record<BacStream, StreamGradeSlots> = {
   },
 };
 
-/**
- * Retuned slot mix inside academic (sum = 1).
- * Mains carry more weight; opposite still meaningful for cross-type flips.
- */
 export const ACADEMIC_SLOT_WEIGHTS = {
   main1: 0.4,
   main2: 0.3,
@@ -119,7 +115,6 @@ export const ACADEMIC_SLOT_WEIGHTS = {
   english: 0.1,
 } as const;
 
-/** Aggressive specialty subject multipliers mapped from seed weights. */
 export const AFFINITY_MIN = 0.6;
 export const AFFINITY_MAX = 1.8;
 
@@ -158,7 +153,6 @@ export interface StudentProfile {
   fullName: string;
   bacStream: BacStream;
   technicalOption?: TechnicalMathOption;
-  /** Required preferred HIS specialty code (soft boost: 100 match / 50 else). */
   preferredSpecialtyCode: string;
   academicPerformance: BacGrades;
   topRiasec: TopRiasecProfile;
@@ -291,17 +285,37 @@ export const topRiasecToVector = (top: TopRiasecProfile): RiasecVector => {
     enterprising: 0,
     conventional: 0,
   };
-
   for (const entry of top) {
     const key = RIASEC_LETTER_TO_KEY[entry.letter];
     vector[key] = entry.weight;
   }
-
   return vector;
 };
 
 export const isTechnicalBacStream = (stream: BacStream): boolean =>
   (TECHNICAL_BAC_STREAMS as readonly string[]).includes(stream);
+
+/**
+ * Specialty-dependent academic slots (model A, choice 2).
+ * Aligned stream↔specialty polarity keeps STREAM_GRADE_SLOTS.
+ * Mismatch flips identity subjects into main weights and core subjects into opposite.
+ */
+export const resolveAcademicSlots = (
+  bacStream: BacStream,
+  specialtyIsTechnical: boolean,
+): StreamGradeSlots => {
+  const base = STREAM_GRADE_SLOTS[bacStream];
+  const studentTechnical = isTechnicalBacStream(bacStream);
+  if (specialtyIsTechnical === studentTechnical) {
+    return base;
+  }
+  return {
+    main1: base.opposite,
+    main2: base.english,
+    opposite: base.main1,
+    english: base.english,
+  };
+};
 
 export const labelFromFinalScore = (finalScore: number): MatchLabel => {
   if (finalScore >= 80) return "STRONG_MATCH";
