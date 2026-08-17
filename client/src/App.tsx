@@ -71,87 +71,83 @@ export default function App() {
 
   if (configLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-slate-950">
-        <p className="text-slate-600 dark:text-slate-300">{t.loadingConfig}</p>
+      <div className="analytics-mesh flex min-h-screen items-center justify-center font-body text-ink">
+        <p className="text-ink-muted">{t.loadingConfig}</p>
       </div>
     );
   }
 
   if (configError || !config) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-3 bg-slate-50 p-6 dark:bg-slate-950">
-        <p className="text-red-600 dark:text-red-400">{configError ?? t.configError}</p>
-        <button
-          type="button"
-          className="rounded-lg bg-indigo-600 px-4 py-2 text-white"
-          onClick={() => window.location.reload()}
-        >
+      <div className="analytics-mesh flex min-h-screen flex-col items-center justify-center gap-3 p-6 font-body text-ink">
+        <p className="text-burgundy">{configError ?? t.configError}</p>
+        <button type="button" className="intended-btn-primary" onClick={() => window.location.reload()}>
           {t.retry}
         </button>
       </div>
     );
   }
 
+  const navBtn = (active: boolean) =>
+    [
+      "rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+      active
+        ? "border-b-2 border-brass text-brass"
+        : "text-ink-muted hover:text-brass",
+    ].join(" ");
+
   return (
-    <div className="min-h-screen bg-gradient-to-b from-sky-50 via-slate-50 to-indigo-50/40 text-slate-900 dark:from-slate-950 dark:via-slate-950 dark:to-slate-900 dark:text-slate-100">
-      <header className="sticky top-0 z-20 border-b border-sky-100/80 bg-white/85 backdrop-blur-md dark:border-slate-800 dark:bg-slate-900/90">
-        <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3 px-4 py-3.5">
+    <div className="analytics-mesh min-h-screen font-body text-ink">
+      <header className="sticky top-0 z-20 border-b border-brass-dim bg-surface">
+        <div className="mx-auto flex max-w-2xl flex-wrap items-center justify-between gap-3 px-4 py-4">
           <div>
-            <h1 className="text-lg font-bold tracking-tight">{t.appTitle}</h1>
-            <p className="text-xs text-slate-500">{t.appSubtitle}</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-brass">
+              HIS · Higher Institute of Science
+            </p>
+            <h1 className="font-display text-2xl font-semibold tracking-tight text-ink">{t.appTitle}</h1>
+            <p className="text-xs text-ink-muted">{t.appSubtitle}</p>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              className={`rounded-lg px-3 py-1.5 text-sm ${
-                route === "wizard"
-                  ? "bg-indigo-600 text-white shadow-sm shadow-indigo-500/25"
-                  : "bg-slate-100/90 text-slate-700 hover:bg-slate-200/80 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
-              }`}
-              onClick={() => setRoute("wizard")}
-            >
+          <div className="flex flex-wrap items-center gap-1 sm:gap-2">
+            <button type="button" className={navBtn(route === "wizard")} onClick={() => setRoute("wizard")}>
               {t.navWizard}
             </button>
             <button
               type="button"
-              className={`rounded-lg px-3 py-1.5 text-sm ${
-                route === "analytics"
-                  ? "bg-indigo-600 text-white shadow-sm shadow-indigo-500/25"
-                  : "bg-slate-100/90 text-slate-700 hover:bg-slate-200/80 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
-              }`}
+              className={navBtn(route === "analytics")}
               onClick={() => setRoute("analytics")}
             >
               {t.navAnalytics}
             </button>
             <button
               type="button"
-              className="rounded-lg bg-slate-100 px-3 py-1.5 text-sm dark:bg-slate-800"
+              className="rounded-md px-2 py-1.5 text-xs font-medium text-ink-muted hover:text-brass"
               onClick={() => setLang(lang === "fr" ? "en" : "fr")}
             >
               {lang === "fr" ? "EN" : "FR"}
             </button>
             <button
               type="button"
-              className="rounded-lg bg-slate-100 px-3 py-1.5 text-sm dark:bg-slate-800"
+              className="rounded-md px-2 py-1.5 text-sm text-ink-muted hover:text-brass"
               onClick={onToggleTheme}
+              aria-label="Toggle theme"
             >
-              {theme === "dark" ? "☀️" : "🌙"}
+              {theme === "dark" ? "☀" : "☾"}
             </button>
           </div>
         </div>
       </header>
 
-      <main className="mx-auto max-w-5xl px-4 py-6">
+      <main className={`mx-auto px-4 py-8 ${route === "analytics" ? "max-w-4xl" : "max-w-2xl"}`}>
         {route === "analytics" ? (
           <AnalyticsPage config={config} lang={lang} onBack={() => setRoute("wizard")} />
         ) : (
-          <div className="space-y-6">
-            <p className="text-sm text-slate-500">{t.disclaimer}</p>
-            <div className="rounded-2xl border border-sky-100 bg-white/95 p-5 shadow-lg shadow-sky-500/5 dark:border-slate-800 dark:bg-slate-900/95 dark:shadow-none">
+          <div className="analytics-rise space-y-6">
+            <p className="text-sm text-ink-muted">{t.disclaimer}</p>
+            <div className="analytics-card p-6 sm:p-8">
               <StepIndicator step={wizard.step} lang={lang} onGoToStep={wizard.goToStep} />
 
               {wizard.error && (
-                <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200">
+                <div className="mb-4 border border-burgundy/40 bg-burgundy/5 px-3 py-2 text-sm text-burgundy">
                   <p className="font-medium">{wizard.error}</p>
                   {Object.keys(wizard.fieldErrors).length > 0 && (
                     <ul className="mt-1 list-inside list-disc text-xs">
@@ -204,10 +200,10 @@ export default function App() {
               )}
 
               {wizard.step !== 3 && (
-                <div className="mt-6 flex justify-between gap-3">
+                <div className="mt-8 flex justify-between gap-3 border-t border-brass-dim pt-6">
                   <button
                     type="button"
-                    className="rounded-lg border border-slate-300 px-4 py-2 text-sm dark:border-slate-600"
+                    className="intended-btn-ghost"
                     onClick={wizard.goBack}
                     disabled={wizard.step === 1 || wizard.loading}
                   >
@@ -215,7 +211,7 @@ export default function App() {
                   </button>
                   <button
                     type="button"
-                    className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+                    className="intended-btn-primary"
                     onClick={wizard.goNext}
                     disabled={wizard.loading}
                   >
