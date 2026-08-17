@@ -19,6 +19,7 @@ import {
   labelFromFinalScore,
   MATCH_LABEL_TEXT,
   STREAM_GRADE_SLOTS,
+  resolveAcademicSlots,
   topRiasecToVector,
 } from "./types.js";
 
@@ -152,7 +153,8 @@ const subjectMultiplier = (specialty: HisSpecialtyConfig, subject: SubjectCode):
 };
 
 const calculateAcademicScore = (studentProfile: StudentProfile, specialty: HisSpecialtyConfig) => {
-  const slots = STREAM_GRADE_SLOTS[studentProfile.bacStream];
+  // Specialty retargets which grades sit in main vs opposite (model A/2).
+  const slots = resolveAcademicSlots(studentProfile.bacStream, specialty.isTechnical);
   const grades = studentProfile.academicPerformance.grades;
   const slotDefs = [
     { key: "main1" as const, subject: slots.main1, weight: ACADEMIC_SLOT_WEIGHTS.main1 },
