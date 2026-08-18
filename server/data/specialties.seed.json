@@ -1,146 +1,127 @@
 [
   {
     "code": "HIS-INFO-SI",
-    "title": "Informatique – Systèmes Informatiques",
-    "department": "Sciences et Technologies",
-    "description": "Analyse de problèmes complexes, développement d'applications, systèmes distribués, bases de données et aide à la décision.",
+    "title": "Informatique — Systèmes d'Information",
+    "department": "Informatique",
+    "description": "Conception et gestion des systèmes d'information.",
     "isTechnical": true,
     "hollandCode": ["I", "C", "E"],
-    "weights": {"MATH": 1.4, "PHYSICS": 1.0, "ENGLISH": 0.7, "FRENCH": 0.5},
-    "streamModifiers": {
-      "MATHEMATICS": 1.0,
-      "EXPERIMENTAL_SCIENCES": 0.95,
-      "TECHNICAL_MATHEMATICS": 0.98,
-      "MANAGEMENT_ECONOMY": 0.78,
-      "FOREIGN_LANGUAGES": 0.7,
-      "LITERATURE_PHILOSOPHY": 0.65
+    "weights": {
+      "MATH": 1.4,
+      "PHYSICS": 1.2,
+      "ENGLISH": 1.1,
+      "FRENCH": 0.9
     },
-    "riasecBenchmark": {"R": 35, "I": 95, "A": 25, "S": 30, "E": 55, "C": 80}
+    "riasecBenchmark": { "R": 40, "I": 85, "A": 25, "S": 30, "E": 55, "C": 70 }
   },
   {
     "code": "HIS-SEC-SI",
-    "title": "Sécurité des Systèmes Informatiques",
-    "department": "Sciences et Technologies",
-    "description": "Fondamentaux de la sécurité, analyse des risques, pentest, aspects légaux/éthiques et réponse aux incidents.",
+    "title": "Sécurité des Systèmes d'Information",
+    "department": "Informatique",
+    "description": "Cybersécurité et protection des systèmes.",
     "isTechnical": true,
-    "hollandCode": ["I", "C", "R"],
-    "weights": {"MATH": 1.3, "PHYSICS": 1.0, "ENGLISH": 0.8, "FRENCH": 0.5},
-    "streamModifiers": {
-      "MATHEMATICS": 1.0,
-      "EXPERIMENTAL_SCIENCES": 0.94,
-      "TECHNICAL_MATHEMATICS": 0.97,
-      "MANAGEMENT_ECONOMY": 0.75,
-      "FOREIGN_LANGUAGES": 0.7,
-      "LITERATURE_PHILOSOPHY": 0.65
+    "hollandCode": ["I", "R", "C"],
+    "weights": {
+      "MATH": 1.3,
+      "PHYSICS": 1.1,
+      "ENGLISH": 1.2,
+      "FRENCH": 0.9
     },
-    "riasecBenchmark": {"R": 60, "I": 92, "A": 20, "S": 28, "E": 40, "C": 85}
+    "riasecBenchmark": { "R": 50, "I": 80, "A": 20, "S": 25, "E": 45, "C": 75 }
   },
   {
     "code": "HIS-ELEC",
-    "title": "Technologies et Systèmes Électroniques",
-    "department": "Sciences et Technologies",
-    "description": "Systèmes analogiques/numériques, conception de circuits, systèmes embarqués, traitement du signal et microprocesseurs.",
+    "title": "Électronique / Génie électrique",
+    "department": "Sciences & Technologies",
+    "description": "Systèmes électroniques et énergétiques.",
     "isTechnical": true,
     "hollandCode": ["R", "I", "C"],
-    "weights": {"PHYSICS": 1.5, "MATH": 1.3, "ENGLISH": 0.6, "NATURAL_SCIENCES": 0.5},
-    "streamModifiers": {
-      "MATHEMATICS": 0.98,
-      "EXPERIMENTAL_SCIENCES": 1.0,
-      "TECHNICAL_MATHEMATICS": 1.0,
-      "MANAGEMENT_ECONOMY": 0.72,
-      "FOREIGN_LANGUAGES": 0.68,
-      "LITERATURE_PHILOSOPHY": 0.62
+    "weights": {
+      "PHYSICS": 1.5,
+      "MATH": 1.3,
+      "ENGLISH": 1.0,
+      "NATURAL_SCIENCES": 1.1
     },
-    "riasecBenchmark": {"R": 95, "I": 88, "A": 22, "S": 25, "E": 35, "C": 70}
+    "riasecBenchmark": { "R": 80, "I": 75, "A": 20, "S": 25, "E": 40, "C": 55 }
   },
   {
     "code": "HIS-DROIT",
-    "title": "Droit Public",
-    "department": "Droit",
-    "description": "Qualification en droit public, recherche approfondie, compétences interdisciplinaires et préparation aux concours.",
+    "title": "Droit",
+    "department": "Droit & Sciences Politiques",
+    "description": "Études juridiques et institutions.",
     "isTechnical": false,
-    "hollandCode": ["C", "E", "I"],
-    "weights": {"ARABIC": 1.4, "PHILOSOPHY": 1.0, "HISTORY_GEOGRAPHY": 1.0, "FRENCH": 0.7, "ENGLISH": 0.5},
-    "streamModifiers": {
-      "MATHEMATICS": 0.75,
-      "EXPERIMENTAL_SCIENCES": 0.78,
-      "TECHNICAL_MATHEMATICS": 0.72,
-      "MANAGEMENT_ECONOMY": 0.9,
-      "FOREIGN_LANGUAGES": 0.95,
-      "LITERATURE_PHILOSOPHY": 1.0
+    "hollandCode": ["E", "S", "C"],
+    "weights": {
+      "ARABIC": 1.4,
+      "PHILOSOPHY": 1.3,
+      "HISTORY_GEOGRAPHY": 1.2,
+      "FRENCH": 1.2,
+      "ENGLISH": 1.0
     },
-    "riasecBenchmark": {"R": 20, "I": 70, "A": 30, "S": 45, "E": 82, "C": 92}
+    "riasecBenchmark": { "R": 20, "I": 45, "A": 35, "S": 60, "E": 75, "C": 70 }
   },
   {
     "code": "HIS-ECOM",
-    "title": "E-commerce",
-    "department": "Économie et Gestion",
-    "description": "Mentalité proactive, supervision d'équipes, conception de services numériques, marketing et créativité digitale.",
+    "title": "Économie",
+    "department": "Économie & Gestion",
+    "description": "Analyse économique et politiques publiques.",
     "isTechnical": false,
-    "hollandCode": ["E", "C", "A"],
-    "weights": {"ECONOMICS": 1.2, "ACCOUNTING_FINANCE": 1.0, "MATH": 0.8, "FRENCH": 0.8, "ENGLISH": 0.9, "ARABIC": 0.6},
-    "streamModifiers": {
-      "MATHEMATICS": 0.85,
-      "EXPERIMENTAL_SCIENCES": 0.82,
-      "TECHNICAL_MATHEMATICS": 0.84,
-      "MANAGEMENT_ECONOMY": 1.0,
-      "FOREIGN_LANGUAGES": 0.92,
-      "LITERATURE_PHILOSOPHY": 0.88
+    "hollandCode": ["E", "C", "I"],
+    "weights": {
+      "ECONOMICS": 1.5,
+      "MATH": 1.2,
+      "ACCOUNTING_FINANCE": 1.1,
+      "ENGLISH": 1.1,
+      "FRENCH": 1.0
     },
-    "riasecBenchmark": {"R": 30, "I": 45, "A": 75, "S": 50, "E": 95, "C": 80}
+    "riasecBenchmark": { "R": 25, "I": 60, "A": 30, "S": 45, "E": 70, "C": 65 }
   },
   {
     "code": "HIS-ECO-GEST",
-    "title": "Économie et Gestion des Entreprises",
-    "department": "Économie et Gestion",
-    "description": "Analyse des institutions économiques, techniques quantitatives, méthodologie et gestion d'entreprise.",
+    "title": "Économie & Gestion",
+    "department": "Économie & Gestion",
+    "description": "Gestion d'entreprise et finance.",
     "isTechnical": false,
-    "hollandCode": ["C", "E", "I"],
-    "weights": {"ECONOMICS": 1.4, "ACCOUNTING_FINANCE": 1.3, "MATH": 1.0, "ENGLISH": 0.7, "FRENCH": 0.6},
-    "streamModifiers": {
-      "MATHEMATICS": 0.9,
-      "EXPERIMENTAL_SCIENCES": 0.85,
-      "TECHNICAL_MATHEMATICS": 0.88,
-      "MANAGEMENT_ECONOMY": 1.0,
-      "FOREIGN_LANGUAGES": 0.82,
-      "LITERATURE_PHILOSOPHY": 0.8
+    "hollandCode": ["E", "C", "S"],
+    "weights": {
+      "ACCOUNTING_FINANCE": 1.5,
+      "ECONOMICS": 1.3,
+      "MATH": 1.1,
+      "ENGLISH": 1.1,
+      "FRENCH": 1.0
     },
-    "riasecBenchmark": {"R": 25, "I": 72, "A": 28, "S": 40, "E": 85, "C": 92}
+    "riasecBenchmark": { "R": 25, "I": 50, "A": 30, "S": 50, "E": 80, "C": 75 }
   },
   {
     "code": "HIS-PSY-CLIN",
-    "title": "Psychologie Clinique",
-    "department": "Sciences Humaines et Sociales",
-    "description": "Comprendre les troubles mentaux, modèles explicatifs, analyse psychologique et travail pluridisciplinaire.",
+    "title": "Psychologie clinique",
+    "department": "Sciences Humaines",
+    "description": "Psychologie et accompagnement clinique.",
     "isTechnical": false,
-    "hollandCode": ["S", "I", "C"],
-    "weights": {"ARABIC": 1.3, "PHILOSOPHY": 1.2, "NATURAL_SCIENCES": 0.7, "HISTORY_GEOGRAPHY": 0.6, "FRENCH": 0.7},
-    "streamModifiers": {
-      "MATHEMATICS": 0.78,
-      "EXPERIMENTAL_SCIENCES": 0.88,
-      "TECHNICAL_MATHEMATICS": 0.75,
-      "MANAGEMENT_ECONOMY": 0.82,
-      "FOREIGN_LANGUAGES": 0.9,
-      "LITERATURE_PHILOSOPHY": 1.0
+    "hollandCode": ["S", "I", "A"],
+    "weights": {
+      "ARABIC": 1.3,
+      "PHILOSOPHY": 1.4,
+      "NATURAL_SCIENCES": 1.1,
+      "FRENCH": 1.2,
+      "ENGLISH": 1.0
     },
-    "riasecBenchmark": {"R": 22, "I": 80, "A": 35, "S": 95, "E": 40, "C": 75}
+    "riasecBenchmark": { "R": 20, "I": 65, "A": 55, "S": 85, "E": 35, "C": 40 }
   },
   {
     "code": "HIS-ORIENT",
-    "title": "Sciences de l'éducation: Orientation et conseil",
-    "department": "Sciences de l'Éducation",
-    "description": "Guidance, mentorship, counseling institutionnel, recherche scientifique et esprit critique.",
+    "title": "Sciences de l'orientation",
+    "department": "Sciences Humaines",
+    "description": "Orientation scolaire et professionnelle.",
     "isTechnical": false,
     "hollandCode": ["S", "E", "I"],
-    "weights": {"ARABIC": 1.3, "PHILOSOPHY": 1.0, "HISTORY_GEOGRAPHY": 0.9, "FRENCH": 0.7, "ENGLISH": 0.6},
-    "streamModifiers": {
-      "MATHEMATICS": 0.76,
-      "EXPERIMENTAL_SCIENCES": 0.8,
-      "TECHNICAL_MATHEMATICS": 0.74,
-      "MANAGEMENT_ECONOMY": 0.88,
-      "FOREIGN_LANGUAGES": 0.92,
-      "LITERATURE_PHILOSOPHY": 1.0
+    "weights": {
+      "ARABIC": 1.3,
+      "PHILOSOPHY": 1.2,
+      "HISTORY_GEOGRAPHY": 1.2,
+      "FRENCH": 1.2,
+      "ENGLISH": 1.1
     },
-    "riasecBenchmark": {"R": 20, "I": 70, "A": 40, "S": 95, "E": 82, "C": 55}
+    "riasecBenchmark": { "R": 25, "I": 55, "A": 45, "S": 80, "E": 60, "C": 50 }
   }
 ]
