@@ -8,28 +8,25 @@
 - [x] Phase B0/B1 analytics + dashboard
 - [x] Career paths
 - [x] DELETE protected by `ADMIN_TOKEN`
-- [x] Preference parameter (0.05) + required step-1 dropdown
-- [x] Specialty-dependent academic slots (A/2)
-- [x] Google Sheets full resync (A–P), 5 min timer, delete → resync
-- [x] Idempotent sheet styling (format reset + band delete every resync)
-- [x] Persist + export `technical_option`
-- [x] Brass/ink restyle of Step 1 & 2 forms
+- [x] Preference (0.05) + specialty-dependent slots (A/2)
+- [x] Google Sheets full resync + idempotent styling
+- [x] Persist/export `technical_option`
+- [x] Engine audit safe fixes: codeMatch weight-order, remove dead streamModifiers, stream-fit UI labels
 
 ## Optional later
 
+### Product / calibration (only with evidence)
+- [ ] Academic affinity band if top ranks feel flattened
+- [ ] Defense-in-depth missing-grade backfill on API path
+- [ ] Counsellor feedback on seed weights
+
 ### Product
-- [ ] Counsellor feedback loop for seed weights / affinity calibration
-- [ ] Serve `client/dist` from Express (single-port LAN)
-- [ ] Debounce Sheets resync under rapid burst submissions
+- [ ] Serve `client/dist` from Express (single-port)
+- [ ] Debounce Sheets resync under bursts
 
 ### Phase B2
-- [ ] Logins / roles
-- [ ] Auth on analytics **read** routes
-- [ ] Retention auto-purge
-- [ ] Capacity planning
-- [ ] Multi-user hardening
+- [ ] Logins / roles; auth on analytics reads; retention; capacity
 
 ### Ops
-- [ ] Regular backups of `server/data/his-sre.db`
+- [ ] Backups of `server/data/his-sre.db`
 - [ ] Strong `ADMIN_TOKEN` on shared LAN
-- [ ] Watch Sheets quota logs after full style-every-resync

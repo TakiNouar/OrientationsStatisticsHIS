@@ -14,7 +14,6 @@ const normalizeSeed = (seed: SeedSpecialty): HisSpecialtyConfig => ({
   isTechnical: Boolean(seed.isTechnical),
   hollandCode: seed.hollandCode,
   subjectWeights: { weights: seed.weights },
-  streamModifiers: seed.streamModifiers,
   riasecBenchmark: {
     vector: {
       realistic: seed.riasecBenchmark.R,
@@ -63,7 +62,7 @@ export const upsertSpecialties = (): void => {
         isTechnical: s.isTechnical ? 1 : 0,
         hollandCodeJson: JSON.stringify(s.hollandCode),
         subjectWeightsJson: JSON.stringify(s.subjectWeights),
-        streamModifiersJson: JSON.stringify(s.streamModifiers),
+        streamModifiersJson: JSON.stringify({}),
         riasecBenchmarkJson: JSON.stringify(s.riasecBenchmark),
         isActive: s.isActive ? 1 : 0,
       });

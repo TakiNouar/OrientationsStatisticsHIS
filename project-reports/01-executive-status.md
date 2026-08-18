@@ -1,44 +1,26 @@
 # 01 — Executive status
 
 **Updated:** 2026-08-18  
-**Status:** Phase A + Phase B0/B1 **on `main`**, operational. Google Sheets live mirror shipped. Engine includes preference + specialty-dependent academic slots.
+**Status:** Phase A + B0/B1 operational on `main`. Sheets mirror live. Engine audit safe hygiene applied (no formula change).
 
 ## Done
 
-### Phase A — orientation wizard
-- Offline Express API + SQLite (`better-sqlite3`)
-- Scoring engine with locked formula (see `05-math-engine.md`)
-- 3-step wizard (FR/EN), brass/ink UI, career paths on results
-- Persist each analysis (student, grades, RIASEC, ranked matches)
-- Required **preferred HIS specialty** (5% soft boost)
-- Specialty-dependent academic slots (model **A/2**)
+### Phase A
+- Wizard FR/EN, scoring, persist, career paths, preference, A/2 academic slots
 
-### Phase B0/B1 — analytics
-- Analytics nav, filters, summary, recent sessions, student profiles
-- Dashboard charts / matrix / data-quality
-- CSV export (named or anonymized)
-- DELETE requires `ADMIN_TOKEN` (`X-Admin-Token`)
+### Phase B0/B1
+- Analytics dashboard, profiles, CSV export, admin DELETE token
 
-### Google Sheets mirror (optional)
-- Full-table resync from SQLite after persist / delete / every 5 min
-- Columns **A–P** (preferred specialty + top-3 matches)
-- Idempotent styling (reset formats + bands every resync)
-- Brass highlight when preferred === Specialty #1
-- `technical_option` persisted and exported
-- DB is **never** wiped by sheet logic
+### Integrations
+- Google Sheets full resync A–P, idempotent styling, 5 min timer
 
-### Security / ops
-- Helmet, CORS allowlist, rate limit on calculate
-- `createTables` only via `initDatabase`
-- Windows: native rebuild for `better-sqlite3` when needed
+### Engine hygiene (2026-08-18)
+- `codeMatchScore` ranks by weight order
+- Dead `streamModifiers` removed from seed/API
+- Results UI labels technical fit as stream/category (scoring unchanged)
 
-## Explicitly out of scope (for now)
-- Docker / Postgres
-- Automated unit tests (product decision)
-- Phase B2 full auth on read routes / multi-tenant roles
+## Out of scope
+- Docker/Postgres, automated tests, Phase B2 full auth
 
 ## Optional next
-- Counsellor feedback loop for seed weights
-- Single-port serve of `client/dist`
-- Backups of `server/data/his-sre.db`
-- Debounce Sheets resync under submission bursts
+See [08-remaining-work.md](./08-remaining-work.md).

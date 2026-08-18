@@ -35,7 +35,6 @@ export const getActiveSpecialties = (): HisSpecialtyConfig[] => {
     isTechnical: Boolean(row.is_technical),
     hollandCode: JSON.parse(row.holland_code_json || '["I","C","E"]') as HisSpecialtyConfig["hollandCode"],
     subjectWeights: JSON.parse(row.subject_weights_json) as HisSpecialtyConfig["subjectWeights"],
-    streamModifiers: JSON.parse(row.stream_modifiers_json) as HisSpecialtyConfig["streamModifiers"],
     riasecBenchmark: JSON.parse(row.riasec_benchmark_json) as HisSpecialtyConfig["riasecBenchmark"],
     isActive: Boolean(row.is_active),
   }));
