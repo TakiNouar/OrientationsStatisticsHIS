@@ -30,6 +30,10 @@ const ACADEMIC_WEIGHT = 0.5;
 const RIASEC_WEIGHT = 0.25;
 const TECHNICAL_WEIGHT = 0.2;
 const PREFERENCE_WEIGHT = 0.05;
+/** Alternate path: RIASEC 0.25 split equally into technical + preference */
+const NO_RIASEC_ACADEMIC = 0.5;
+const NO_RIASEC_TECHNICAL = 0.325; // 0.20 + 0.125
+const NO_RIASEC_PREFERENCE = 0.175; // 0.05 + 0.125
 const PREFERENCE_MATCH = 100;
 const PREFERENCE_OTHER = 50;
 
@@ -65,7 +69,6 @@ export const cosineSimilarity = (a: RiasecVector, b: RiasecVector): number => {
 };
 
 export const codeMatchScore = (top: TopRiasecProfile, hollandCode: HollandCode): number => {
-  // Rank by weight so client array order cannot change the score
   const sorted = [...top].sort((a, b) => b.weight - a.weight || a.letter.localeCompare(b.letter));
   const studentOrder = sorted.map((e) => e.letter) as RiasecLetter[];
   const weightByLetter: Partial<Record<RiasecLetter, number>> = {};
@@ -220,6 +223,12 @@ export const calculateRecommendations = (
       );
       const finalScore = toFixedNumber(Math.min(100, Math.max(0, blended + bias)));
       const matchLabel = labelFromFinalScore(finalScore);
+      const blendedNoRiasec = toFixedNumber(
+        NO_RIASEC_ACADEMIC * academic.academicScore +
+          NO_RIASEC_TECHNICAL * tech.technicalScore +
+          NO_RIASEC_PREFERENCE * preferenceScore,
+      );
+      const finalScoreNoRiasec = toFixedNumber(Math.min(100, Math.max(0, blendedNoRiasec + bias)));
       return {
         specialtyId: specialty.id,
         specialtyCode: specialty.code,
@@ -233,6 +242,7 @@ export const calculateRecommendations = (
         technicalScore: tech.technicalScore,
         preferenceScore,
         finalScore,
+        finalScoreNoRiasec,
         rank: 0,
         matchLabel,
         details: {
@@ -251,6 +261,20 @@ export const calculateRecommendations = (
     .sort((a, b) => b.finalScore - a.finalScore || a.specialtyCode.localeCompare(b.specialtyCode))
     .map((m, i) => ({ ...m, rank: i + 1 }));
 
+  const matchesWithoutRiasec: SpecialtyMatchBreakdown[] = [...matches]
+    .map((m) => {
+      const finalScore = (m as { finalScoreNoRiasec?: number }).finalScoreNoRiasec ?? m.finalScore;
+      return {
+        ...m,
+        psychometricScore: 0,
+        finalScore,
+        matchLabel: labelFromFinalScore(finalScore),
+        rank: 0,
+      };
+    })
+    .sort((a, b) => b.finalScore - a.finalScore || a.specialtyCode.localeCompare(b.specialtyCode))
+    .map((m, i) => ({ ...m, rank: i + 1 }));
+
   return {
     evaluationId: crypto.randomUUID(),
     timestamp: new Date().toISOString(),
@@ -262,11 +286,18 @@ export const calculateRecommendations = (
     preferredSpecialtyCode: studentProfile.preferredSpecialtyCode,
     overallBacMark: studentProfile.academicPerformance.overallBacMark,
     matches,
+    matchesWithoutRiasec,
     weights: {
       academic: ACADEMIC_WEIGHT,
       riasec: RIASEC_WEIGHT,
       technical: TECHNICAL_WEIGHT,
       preference: PREFERENCE_WEIGHT,
+    },
+    weightsWithoutRiasec: {
+      academic: NO_RIASEC_ACADEMIC,
+      riasec: 0,
+      technical: NO_RIASEC_TECHNICAL,
+      preference: NO_RIASEC_PREFERENCE,
     },
     isTechnicalStream: technicalStream,
     technicalStream,
