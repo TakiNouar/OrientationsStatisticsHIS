@@ -10,11 +10,18 @@ type Props = {
 const ROMAN = ["I", "II", "III"] as const;
 
 export function StepIndicator({ step, lang, onGoToStep }: Props) {
-  const t = strings[lang];
+  const t = strings[lang] ?? strings.fr;
   const labels = [t.stepAcademic, t.stepRiasec, t.stepResults];
+  const stepOfTemplate =
+    typeof (t as { stepOf?: string }).stepOf === "string"
+      ? (t as { stepOf: string }).stepOf
+      : lang === "fr"
+        ? "Étape {n} sur 3"
+        : "Step {n} of 3";
+  const stepOfLabel = stepOfTemplate.replace("{n}", String(step));
 
   return (
-    <nav aria-label={t.stepOf.replace("{n}", String(step))} className="mb-8">
+    <nav aria-label={stepOfLabel} className="mb-8">
       <ol className="flex flex-wrap items-end justify-center gap-6 sm:gap-10">
         {labels.map((label, index) => {
           const n = (index + 1) as 1 | 2 | 3;
@@ -23,7 +30,7 @@ export function StepIndicator({ step, lang, onGoToStep }: Props) {
           const canJump = Boolean(onGoToStep) && n < step;
 
           return (
-            <li key={label}>
+            <li key={label ?? n}>
               <button
                 type="button"
                 disabled={!canJump}
@@ -46,9 +53,7 @@ export function StepIndicator({ step, lang, onGoToStep }: Props) {
           );
         })}
       </ol>
-      <p className="mt-3 text-center font-mono text-[11px] text-ink-muted">
-        {t.stepOf.replace("{n}", String(step))}
-      </p>
+      <p className="mt-3 text-center font-mono text-[11px] text-ink-muted">{stepOfLabel}</p>
       <hr className="intended-rule mt-4" />
     </nav>
   );
