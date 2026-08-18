@@ -118,6 +118,14 @@ export const ACADEMIC_SLOT_WEIGHTS = {
 export const AFFINITY_MIN = 0.6;
 export const AFFINITY_MAX = 1.8;
 
+/** RIASEC: cosine vs Holland code-match blend */
+export const COSINE_BLEND = 0.3;
+export const CODE_MATCH_BLEND = 0.7;
+
+/** Technical fit: stream base vs marks component */
+export const STREAM_BLEND = 0.45;
+export const MARKS_BLEND = 0.55;
+
 export const STREAM_SUBJECT_MAP: Record<BacStream, SubjectCode[]> = {
   MATHEMATICS: ["MATH", "PHYSICS", "ARABIC", "ENGLISH"],
   EXPERIMENTAL_SCIENCES: ["MATH", "PHYSICS", "ARABIC", "ENGLISH"],
@@ -127,47 +135,40 @@ export const STREAM_SUBJECT_MAP: Record<BacStream, SubjectCode[]> = {
   LITERATURE_PHILOSOPHY: ["ARABIC", "PHILOSOPHY", "MATH", "ENGLISH"],
 };
 
-export interface BacGrades {
-  grades: Partial<Record<SubjectCode, number>>;
-  overallBacMark: number;
-}
-
-export interface RiasecVector {
+export type RiasecVector = {
   realistic: number;
   investigative: number;
   artistic: number;
   social: number;
   enterprising: number;
   conventional: number;
-}
+};
 
-export interface TopRiasecEntry {
-  letter: RiasecLetter;
-  weight: number;
-}
-
+export type TopRiasecEntry = { letter: RiasecLetter; weight: number };
 export type TopRiasecProfile = [TopRiasecEntry, TopRiasecEntry, TopRiasecEntry];
+
+export type HollandCode = [RiasecLetter, RiasecLetter, RiasecLetter];
+
+export type SubjectWeightMap = {
+  weights: Partial<Record<SubjectCode, number>>;
+};
+
+export type RiasecBenchmark = {
+  vector: RiasecVector;
+};
 
 export interface StudentProfile {
   studentId?: string;
   fullName: string;
   bacStream: BacStream;
   technicalOption?: TechnicalMathOption;
-  preferredSpecialtyCode: string;
-  academicPerformance: BacGrades;
+  preferredSpecialtyCode?: string;
+  academicPerformance: {
+    overallBacMark: number;
+    grades: Partial<Record<SubjectCode, number>>;
+  };
   topRiasec: TopRiasecProfile;
-  evaluatedAt?: Date;
 }
-
-export interface SubjectWeightMap {
-  weights: Partial<Record<SubjectCode, number>>;
-}
-
-export interface RiasecBenchmark {
-  vector: RiasecVector;
-}
-
-export type HollandCode = [RiasecLetter, RiasecLetter, RiasecLetter];
 
 export interface HisSpecialtyConfig {
   id: string;
@@ -178,7 +179,6 @@ export interface HisSpecialtyConfig {
   isTechnical: boolean;
   hollandCode: HollandCode;
   subjectWeights: SubjectWeightMap;
-  streamModifiers: Record<BacStream, number>;
   riasecBenchmark: RiasecBenchmark;
   isActive: boolean;
 }
@@ -196,15 +196,14 @@ export interface SpecialtyMatchBreakdown {
   technicalScore: number;
   preferenceScore: number;
   finalScore: number;
-  matchLabel: MatchLabel;
-  matchLabelText: string;
   rank: number;
+  matchLabel: MatchLabel;
+  careerPaths?: CareerPath[];
   details: {
     rawAcademicPercentage: number;
     vectorCosineSimilarity: number;
     codeMatchScore: number;
-    cosineComponent: number;
-    codeMatchComponent: number;
+    preferenceScore: number;
     genieBiasPoints: number;
     slotBreakdown: {
       main1: number;
@@ -227,9 +226,14 @@ export interface CalculationResult {
   evaluationId: string;
   timestamp: string;
   studentName: string;
+  studentId?: string;
+  fullName?: string;
   bacStream: BacStream;
   technicalOption?: TechnicalMathOption;
+  preferredSpecialtyCode?: string;
+  overallBacMark?: number;
   isTechnicalStream: boolean;
+  technicalStream?: boolean;
   weights: {
     academic: number;
     riasec: number;
@@ -239,6 +243,20 @@ export interface CalculationResult {
   matches: SpecialtyMatchBreakdown[];
 }
 
+export type CareerPath = {
+  id: string;
+  specialtyCode: string;
+  titleFr: string;
+  titleEn: string;
+  sectorFr: string;
+  sectorEn: string;
+  level: string;
+  descriptionFr: string;
+  descriptionEn: string;
+  examplesFr: string[];
+  examplesEn: string[];
+};
+
 export type SeedSpecialty = {
   code: string;
   title: string;
@@ -247,7 +265,6 @@ export type SeedSpecialty = {
   isTechnical: boolean;
   hollandCode: [RiasecLetter, RiasecLetter, RiasecLetter];
   weights: Partial<Record<SubjectCode, number>>;
-  streamModifiers: Record<BacStream, number>;
   riasecBenchmark: {
     R: number;
     I: number;
@@ -323,4 +340,12 @@ export const labelFromFinalScore = (finalScore: number): MatchLabel => {
   if (finalScore >= 50) return "POSSIBLE_FIT";
   if (finalScore >= 35) return "PROFILE_DEVELOPING";
   return "WEAK_MATCH";
+};
+
+export const LABEL_STYLES: Record<MatchLabel, string> = {
+  STRONG_MATCH: "bg-brass/20 text-ink",
+  STRONG_MATCH_CONVERSATION: "bg-brass/15 text-ink",
+  POSSIBLE_FIT: "bg-brass-dim/30 text-ink-muted",
+  PROFILE_DEVELOPING: "bg-surface text-ink-muted",
+  WEAK_MATCH: "bg-burgundy/10 text-burgundy",
 };
