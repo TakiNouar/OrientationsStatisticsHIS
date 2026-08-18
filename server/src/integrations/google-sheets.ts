@@ -31,7 +31,7 @@ const HEADER_ROW = [
 
 const COL_COUNT = HEADER_ROW.length;
 
-const COLUMN_WIDTHS = [
+const COLUMN_WIDTHS: number[] = [
   280, 160, 160, 150, 130, 90, 140, 140, 90, 160, 140, 90, 160, 140, 90, 160,
 ];
 
@@ -263,6 +263,7 @@ async function ensureHeaderAndStyle(
   ];
 
   for (let i = 0; i < COLUMN_WIDTHS.length; i++) {
+    const width = COLUMN_WIDTHS[i] ?? 120;
     requests.push({
       updateDimensionProperties: {
         range: {
@@ -271,7 +272,7 @@ async function ensureHeaderAndStyle(
           startIndex: i,
           endIndex: i + 1,
         },
-        properties: { pixelSize: COLUMN_WIDTHS[i] },
+        properties: { pixelSize: width },
         fields: "pixelSize",
       },
     });
