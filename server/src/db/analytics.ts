@@ -8,11 +8,12 @@ export type { AnalyticsFilters };
 export type CountRow = { key: string; label: string; count: number };
 
 export type AnalyticsSummary = {
-  totalSessions: number;
-  byStream: CountRow[];
+  totalEvaluations: number;
+  uniqueStudents: number;
+  byBacStream: CountRow[];
   byTopSpecialty: CountRow[];
   byMatchLabel: CountRow[];
-  filters: AnalyticsFilters;
+  averageFinalScore: number | null;
 };
 
 export type SessionListRow = {
@@ -31,20 +32,15 @@ export type SessionListRow = {
 };
 
 export type StudentMatchRow = {
-  specialtyId: string;
   specialtyCode: string;
   specialtyTitle: string;
   department: string;
-  description: string;
-  isTechnical: boolean;
-  hollandCode: [RiasecLetter, RiasecLetter, RiasecLetter];
-  academicScore: number;
-  psychometricScore: number;
   finalScore: number;
+  academicScore: number;
+  riasecScore: number;
   rank: number;
   matchLabel: MatchLabel;
   matchLabelText: string;
-  evaluatedAt: string;
 };
 
 export type StudentProfileDetail = {
@@ -55,22 +51,21 @@ export type StudentProfileDetail = {
   preferredSpecialtyCode: string | null;
   preferredSpecialtyTitle: string | null;
   createdAt: string;
-  grades: Record<string, number>;
-  topRiasec: Array<{ letter: RiasecLetter; weight: number }> | null;
-  riasecVector: {
+  grades: Array<{ subjectCode: string; grade: number }>;
+  riasec: {
     realistic: number;
     investigative: number;
     artistic: number;
     social: number;
     enterprising: number;
     conventional: number;
+    topRiasec: Array<{ letter: RiasecLetter; weight: number }> | null;
   } | null;
   matches: StudentMatchRow[];
 };
 
 export const getAnalyticsSummary = (filters: AnalyticsFilters = {}): AnalyticsSummary => {
   const { where, params } = buildEvaluationWhere(filters);
-  const rankClause = where ? `${where} AND me.rank_position = 1` : `WHERE me.rank_position = 1`;
 
   const totalRow = db
     .prepare(
@@ -78,36 +73,45 @@ export const getAnalyticsSummary = (filters: AnalyticsFilters = {}): AnalyticsSu
       SELECT COUNT(*) AS c
       FROM match_evaluations me
       JOIN students s ON s.id = me.student_id
-      JOIN his_specialties hs ON hs.id = me.specialty_id
-      ${rankClause}
+      ${where}
     `,
     )
     .get(params) as { c: number };
 
-  const byStreamRows = db
+  const uniqueRow = db
+    .prepare(
+      `
+      SELECT COUNT(DISTINCT me.student_id) AS c
+      FROM match_evaluations me
+      JOIN students s ON s.id = me.student_id
+      ${where}
+    `,
+    )
+    .get(params) as { c: number };
+
+  const byStream = db
     .prepare(
       `
       SELECT s.bac_stream AS key, COUNT(*) AS count
       FROM match_evaluations me
       JOIN students s ON s.id = me.student_id
-      JOIN his_specialties hs ON hs.id = me.specialty_id
-      ${rankClause}
+      ${where ? where + " AND me.rank_position = 1" : "WHERE me.rank_position = 1"}
       GROUP BY s.bac_stream
-      ORDER BY count DESC, key ASC
+      ORDER BY count DESC
     `,
     )
     .all(params) as Array<{ key: string; count: number }>;
 
-  const bySpecialtyRows = db
+  const bySpec = db
     .prepare(
       `
       SELECT hs.code AS key, hs.title AS label, COUNT(*) AS count
       FROM match_evaluations me
       JOIN students s ON s.id = me.student_id
       JOIN his_specialties hs ON hs.id = me.specialty_id
-      ${rankClause}
-      GROUP BY hs.code, hs.title
-      ORDER BY count DESC, key ASC
+      ${where ? where + " AND me.rank_position = 1" : "WHERE me.rank_position = 1"}
+      GROUP BY hs.code
+      ORDER BY count DESC
     `,
     )
     .all(params) as Array<{ key: string; label: string; count: number }>;
@@ -118,8 +122,7 @@ export const getAnalyticsSummary = (filters: AnalyticsFilters = {}): AnalyticsSu
       SELECT me.final_score AS final_score
       FROM match_evaluations me
       JOIN students s ON s.id = me.student_id
-      JOIN his_specialties hs ON hs.id = me.specialty_id
-      ${rankClause}
+      ${where ? where + " AND me.rank_position = 1" : "WHERE me.rank_position = 1"}
     `,
     )
     .all(params) as Array<{ final_score: number }>;
@@ -131,28 +134,33 @@ export const getAnalyticsSummary = (filters: AnalyticsFilters = {}): AnalyticsSu
     PROFILE_DEVELOPING: 0,
     WEAK_MATCH: 0,
   };
+  let sum = 0;
   for (const row of scoreRows) {
-    labelCounts[labelFromFinalScore(Number(row.final_score))] += 1;
+    const score = Number(row.final_score);
+    sum += score;
+    labelCounts[labelFromFinalScore(score)] += 1;
   }
 
-  const order: MatchLabel[] = [
-    "STRONG_MATCH",
-    "STRONG_MATCH_CONVERSATION",
-    "POSSIBLE_FIT",
-    "PROFILE_DEVELOPING",
-    "WEAK_MATCH",
-  ];
-
   return {
-    totalSessions: Number(totalRow?.c ?? 0),
-    byStream: byStreamRows.map((r) => ({ key: r.key, label: r.key, count: Number(r.count) })),
-    byTopSpecialty: bySpecialtyRows.map((r) => ({
+    totalEvaluations: Number(totalRow?.c ?? 0),
+    uniqueStudents: Number(uniqueRow?.c ?? 0),
+    byBacStream: byStream.map((r) => ({
+      key: r.key,
+      label: r.key.replaceAll("_", " "),
+      count: Number(r.count),
+    })),
+    byTopSpecialty: bySpec.map((r) => ({
       key: r.key,
       label: r.label,
       count: Number(r.count),
     })),
-    byMatchLabel: order.map((key) => ({ key, label: key, count: labelCounts[key] })),
-    filters,
+    byMatchLabel: (Object.keys(labelCounts) as MatchLabel[]).map((key) => ({
+      key,
+      label: MATCH_LABEL_TEXT[key],
+      count: labelCounts[key],
+    })),
+    averageFinalScore:
+      scoreRows.length > 0 ? Number((sum / scoreRows.length).toFixed(2)) : null,
   };
 };
 
@@ -239,23 +247,19 @@ export const getStudentProfile = (studentId: string): StudentProfileDetail | nul
 
   if (!student) return null;
 
-  let preferredSpecialtyTitle: string | null = null;
-  const prefCode = student.preferred_specialty_code?.trim() || null;
-  if (prefCode) {
-    const titleRow = db
+  let preferredTitle: string | null = null;
+  if (student.preferred_specialty_code) {
+    const t = db
       .prepare(`SELECT title FROM his_specialties WHERE code = ? LIMIT 1`)
-      .get(prefCode) as { title: string } | undefined;
-    preferredSpecialtyTitle = titleRow?.title ?? null;
+      .get(student.preferred_specialty_code) as { title: string } | undefined;
+    preferredTitle = t?.title ?? null;
   }
 
-  const gradeRows = db
+  const grades = db
     .prepare(`SELECT subject_code, grade_value FROM bac_grades WHERE student_id = ?`)
     .all(studentId) as Array<{ subject_code: string; grade_value: number }>;
 
-  const grades: Record<string, number> = {};
-  for (const g of gradeRows) grades[g.subject_code] = Number(g.grade_value);
-
-  const riasec = db
+  const riasecRow = db
     .prepare(
       `SELECT realistic_score, investigative_score, artistic_score, social_score,
               enterprising_score, conventional_score, top_riasec_json
@@ -273,31 +277,29 @@ export const getStudentProfile = (studentId: string): StudentProfileDetail | nul
       }
     | undefined;
 
-  let topRiasec: StudentProfileDetail["topRiasec"] = null;
-  if (riasec?.top_riasec_json) {
+  let topRiasec: Array<{ letter: RiasecLetter; weight: number }> | null = null;
+  if (riasecRow?.top_riasec_json) {
     try {
-      topRiasec = JSON.parse(riasec.top_riasec_json) as StudentProfileDetail["topRiasec"];
+      topRiasec = JSON.parse(riasecRow.top_riasec_json) as Array<{
+        letter: RiasecLetter;
+        weight: number;
+      }>;
     } catch {
       topRiasec = null;
     }
   }
 
-  const matchRows = db
+  const matches = db
     .prepare(
       `
       SELECT
-        me.specialty_id,
         hs.code AS specialty_code,
         hs.title AS specialty_title,
         hs.department,
-        hs.description,
-        hs.is_technical,
-        hs.holland_code_json,
+        me.final_score,
         me.academic_score,
         me.riasec_score,
-        me.final_score,
-        me.rank_position,
-        me.evaluated_at
+        me.rank_position
       FROM match_evaluations me
       JOIN his_specialties hs ON hs.id = me.specialty_id
       WHERE me.student_id = ?
@@ -305,71 +307,138 @@ export const getStudentProfile = (studentId: string): StudentProfileDetail | nul
     `,
     )
     .all(studentId) as Array<{
-    specialty_id: string;
     specialty_code: string;
     specialty_title: string;
     department: string;
-    description: string;
-    is_technical: number;
-    holland_code_json: string;
+    final_score: number;
     academic_score: number;
     riasec_score: number;
-    final_score: number;
     rank_position: number;
-    evaluated_at: string;
   }>;
-
-  const matches: StudentMatchRow[] = matchRows.map((row) => {
-    const finalScore = Number(row.final_score);
-    const matchLabel = labelFromFinalScore(finalScore);
-    let hollandCode: [RiasecLetter, RiasecLetter, RiasecLetter] = ["I", "C", "E"];
-    try {
-      hollandCode = JSON.parse(row.holland_code_json || '["I","C","E"]') as [
-        RiasecLetter,
-        RiasecLetter,
-        RiasecLetter,
-      ];
-    } catch {
-      // default
-    }
-    return {
-      specialtyId: row.specialty_id,
-      specialtyCode: row.specialty_code,
-      specialtyTitle: row.specialty_title,
-      department: row.department,
-      description: row.description ?? "",
-      isTechnical: Boolean(row.is_technical),
-      hollandCode,
-      academicScore: Number(row.academic_score),
-      psychometricScore: Number(row.riasec_score),
-      finalScore,
-      rank: Number(row.rank_position),
-      matchLabel,
-      matchLabelText: MATCH_LABEL_TEXT[matchLabel],
-      evaluatedAt: row.evaluated_at,
-    };
-  });
 
   return {
     studentId: student.id,
     fullName: student.full_name,
     bacStream: student.bac_stream,
     overallBacMark: Number(student.overall_bac_mark),
-    preferredSpecialtyCode: prefCode,
-    preferredSpecialtyTitle,
+    preferredSpecialtyCode: student.preferred_specialty_code,
+    preferredSpecialtyTitle: preferredTitle,
     createdAt: student.created_at,
-    grades,
-    topRiasec,
-    riasecVector: riasec
+    grades: grades.map((g) => ({
+      subjectCode: g.subject_code,
+      grade: Number(g.grade_value),
+    })),
+    riasec: riasecRow
       ? {
-          realistic: Number(riasec.realistic_score),
-          investigative: Number(riasec.investigative_score),
-          artistic: Number(riasec.artistic_score),
-          social: Number(riasec.social_score),
-          enterprising: Number(riasec.enterprising_score),
-          conventional: Number(riasec.conventional_score),
+          realistic: Number(riasecRow.realistic_score),
+          investigative: Number(riasecRow.investigative_score),
+          artistic: Number(riasecRow.artistic_score),
+          social: Number(riasecRow.social_score),
+          enterprising: Number(riasecRow.enterprising_score),
+          conventional: Number(riasecRow.conventional_score),
+          topRiasec,
         }
       : null,
-    matches,
+    matches: matches.map((m) => {
+      const finalScore = Number(m.final_score);
+      const matchLabel = labelFromFinalScore(finalScore);
+      return {
+        specialtyCode: m.specialty_code,
+        specialtyTitle: m.specialty_title,
+        department: m.department,
+        finalScore,
+        academicScore: Number(m.academic_score),
+        riasecScore: Number(m.riasec_score),
+        rank: Number(m.rank_position),
+        matchLabel,
+        matchLabelText: MATCH_LABEL_TEXT[matchLabel],
+      };
+    }),
   };
+};
+
+/** One orientation session flattened for Google Sheets mirror (top 3 matches). */
+export type SheetSessionRow = {
+  evaluationId: string;
+  submittedAt: string;
+  fullName: string;
+  bacStream: string;
+  technicalOption: string;
+  overallMark: number;
+  preferredSpecialtyCode: string;
+  matches: Array<{ code: string; score: number; label: string }>;
+};
+
+/**
+ * All sessions in the DB for a full sheet rebuild.
+ * One row per student (each calculation creates a student row).
+ * Does not modify or wipe the database — read only.
+ */
+export const listAllSessionsForSheet = (): SheetSessionRow[] => {
+  const students = db
+    .prepare(
+      `
+      SELECT
+        s.id AS student_id,
+        s.full_name AS full_name,
+        s.bac_stream AS bac_stream,
+        s.overall_bac_mark AS overall_bac_mark,
+        COALESCE(s.preferred_specialty_code, '') AS preferred_specialty_code,
+        (
+          SELECT me.evaluated_at
+          FROM match_evaluations me
+          WHERE me.student_id = s.id
+          ORDER BY me.rank_position ASC
+          LIMIT 1
+        ) AS evaluated_at
+      FROM students s
+      WHERE EXISTS (SELECT 1 FROM match_evaluations me WHERE me.student_id = s.id)
+      ORDER BY evaluated_at DESC
+    `,
+    )
+    .all() as Array<{
+    student_id: string;
+    full_name: string;
+    bac_stream: string;
+    overall_bac_mark: number;
+    preferred_specialty_code: string;
+    evaluated_at: string | null;
+  }>;
+
+  const matchStmt = db.prepare(
+    `
+    SELECT
+      hs.code AS code,
+      me.final_score AS final_score,
+      me.rank_position AS rank_position
+    FROM match_evaluations me
+    JOIN his_specialties hs ON hs.id = me.specialty_id
+    WHERE me.student_id = ?
+    ORDER BY me.rank_position ASC
+    LIMIT 3
+  `,
+  );
+
+  return students.map((s) => {
+    const matchRows = matchStmt.all(s.student_id) as Array<{
+      code: string;
+      final_score: number;
+      rank_position: number;
+    }>;
+    const matches = matchRows.map((m) => {
+      const score = Number(m.final_score);
+      const label = MATCH_LABEL_TEXT[labelFromFinalScore(score)];
+      return { code: m.code, score, label };
+    });
+    return {
+      evaluationId: s.student_id,
+      submittedAt: s.evaluated_at ?? "",
+      fullName: s.full_name,
+      bacStream: s.bac_stream.replaceAll("_", " "),
+      technicalOption: "—",
+      overallMark: Number(s.overall_bac_mark),
+      preferredSpecialtyCode: s.preferred_specialty_code || "—",
+      matches,
+    };
+  });
 };
