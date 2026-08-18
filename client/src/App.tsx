@@ -65,7 +65,8 @@ export default function App() {
         if (!cancelled) setConfig(cfg);
       } catch (e) {
         if (!cancelled) {
-          setConfigError(e instanceof Error ? e.message : "Config load failed");
+          setConfigError(e instanceof Error ? e.message : t.configError);
+          setConfig(null);
         }
       } finally {
         if (!cancelled) setConfigLoading(false);
@@ -74,9 +75,11 @@ export default function App() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [t.configError]);
 
-  const onCycleTheme = () => setThemeMode(cycleThemeMode(themeMode));
+  const onCycleTheme = () => {
+    setThemeMode((prev) => cycleThemeMode(prev));
+  };
 
   if (configLoading) {
     return (
@@ -108,41 +111,48 @@ export default function App() {
   return (
     <div className="analytics-mesh min-h-screen font-body text-ink">
       <header className="sticky top-0 z-20 border-b border-brass-dim bg-surface">
-        <div className="mx-auto flex max-w-2xl flex-wrap items-center justify-between gap-3 px-4 py-4">
-          <div>
+        <div className="mx-auto max-w-2xl px-4 py-4">
+          {/* Title block — own row, not mixed with controls */}
+          <div className="min-w-0 pr-2">
             <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-brass">
               HIS · Higher Institute of Science
             </p>
             <h1 className="font-display text-2xl font-semibold tracking-tight text-ink">{t.appTitle}</h1>
-            <p className="text-xs text-ink-muted">{t.appSubtitle}</p>
+            <p className="mt-0.5 text-xs text-ink-muted">{t.appSubtitle}</p>
           </div>
-          <div className="flex flex-wrap items-center gap-1 sm:gap-2">
-            <button type="button" className={navBtn(route === "wizard")} onClick={() => setRoute("wizard")}>
-              {t.navWizard}
-            </button>
-            <button
-              type="button"
-              className={navBtn(route === "analytics")}
-              onClick={() => setRoute("analytics")}
-            >
-              {t.navAnalytics}
-            </button>
-            <button
-              type="button"
-              className="rounded-md px-2 py-1.5 text-xs font-medium text-ink-muted hover:text-brass"
-              onClick={() => setLang(lang === "fr" ? "en" : "fr")}
-            >
-              {lang === "fr" ? "EN" : "FR"}
-            </button>
-            <button
-              type="button"
-              className="rounded-md px-2 py-1.5 text-sm text-ink-muted hover:text-brass"
-              onClick={onCycleTheme}
-              aria-label={`Theme: ${themeMode}. Click to change.`}
-              title={themeMode === "system" ? "System" : themeMode === "dark" ? "Dark" : "Light"}
-            >
-              {themeMode === "system" ? "◐" : themeMode === "dark" ? "☾" : "☀"}
-            </button>
+
+          {/* Nav + utilities — separated from title */}
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-brass-dim/60 pt-3">
+            <nav className="flex items-center gap-1" aria-label="Primary">
+              <button type="button" className={navBtn(route === "wizard")} onClick={() => setRoute("wizard")}>
+                {t.navWizard}
+              </button>
+              <button
+                type="button"
+                className={navBtn(route === "analytics")}
+                onClick={() => setRoute("analytics")}
+              >
+                {t.navAnalytics}
+              </button>
+            </nav>
+            <div className="flex items-center gap-1 border-l border-brass-dim/60 pl-3">
+              <button
+                type="button"
+                className="rounded-md px-2 py-1.5 text-xs font-medium text-ink-muted hover:text-brass"
+                onClick={() => setLang(lang === "fr" ? "en" : "fr")}
+              >
+                {lang === "fr" ? "EN" : "FR"}
+              </button>
+              <button
+                type="button"
+                className="rounded-md px-2 py-1.5 text-sm text-ink-muted hover:text-brass"
+                onClick={onCycleTheme}
+                aria-label={`Theme: ${themeMode}. Click to change.`}
+                title={themeMode === "system" ? "System" : themeMode === "dark" ? "Dark" : "Light"}
+              >
+                {themeMode === "system" ? "◐" : themeMode === "dark" ? "☾" : "☀"}
+              </button>
+            </div>
           </div>
         </div>
       </header>
