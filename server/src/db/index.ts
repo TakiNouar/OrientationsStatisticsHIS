@@ -17,6 +17,7 @@ export {
   getRecentSessions,
   getRecentEvaluationsAnonymized,
   getStudentProfile,
+  listAllSessionsForSheet,
 } from "./analytics.js";
 export type {
   AnalyticsFilters,
@@ -25,6 +26,7 @@ export type {
   SessionListRow,
   StudentMatchRow,
   StudentProfileDetail,
+  SheetSessionRow,
 } from "./analytics.js";
 
 /** Create schema (if needed) and re-seed specialties + career paths. */
