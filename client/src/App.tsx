@@ -46,7 +46,6 @@ export default function App() {
     localStorage.setItem("his-sre-lang", lang);
   }, [lang]);
 
-  // Live-follow the OS theme while in "system" mode.
   useEffect(() => {
     if (themeMode !== "system") return;
     const mql = window.matchMedia("(prefers-color-scheme: dark)");
@@ -102,28 +101,28 @@ export default function App() {
 
   const navBtn = (active: boolean) =>
     [
-      "rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
-      active
-        ? "border-b-2 border-brass text-brass"
-        : "text-ink-muted hover:text-brass",
+      "rounded-sm px-3 py-1.5 text-xs font-medium tracking-wide transition-colors",
+      active ? "text-brass" : "text-ink-muted hover:text-brass",
     ].join(" ");
 
   return (
     <div className="analytics-mesh min-h-screen font-body text-ink">
-      <header className="sticky top-0 z-20 border-b border-brass-dim bg-surface">
-        <div className="mx-auto max-w-2xl px-4 py-4">
-          {/* Title block — own row, not mixed with controls */}
-          <div className="min-w-0 pr-2">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-brass">
+      <header className="intended-header sticky top-0 z-20">
+        <div className="mx-auto flex max-w-2xl items-center justify-between gap-6 px-4 py-3.5">
+          <div className="min-w-0 flex-1">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-brass">
               HIS · Higher Institute of Science
             </p>
-            <h1 className="font-display text-2xl font-semibold tracking-tight text-ink">{t.appTitle}</h1>
-            <p className="mt-0.5 text-xs text-ink-muted">{t.appSubtitle}</p>
+            <h1 className="truncate font-display text-xl font-semibold tracking-tight text-ink sm:text-2xl">
+              {t.appTitle}
+            </h1>
           </div>
 
-          {/* Nav + utilities — separated from title */}
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-brass-dim/60 pt-3">
-            <nav className="flex items-center gap-1" aria-label="Primary">
+          <div className="flex shrink-0 items-center gap-3 sm:gap-4">
+            <nav
+              className="flex items-center gap-0.5 border-r border-brass-dim/70 pr-3 sm:pr-4"
+              aria-label="Primary"
+            >
               <button type="button" className={navBtn(route === "wizard")} onClick={() => setRoute("wizard")}>
                 {t.navWizard}
               </button>
@@ -135,17 +134,17 @@ export default function App() {
                 {t.navAnalytics}
               </button>
             </nav>
-            <div className="flex items-center gap-1 border-l border-brass-dim/60 pl-3">
+            <div className="flex items-center gap-0.5">
               <button
                 type="button"
-                className="rounded-md px-2 py-1.5 text-xs font-medium text-ink-muted hover:text-brass"
+                className="rounded-sm px-2 py-1.5 text-[11px] font-medium tracking-wide text-ink-muted transition-colors hover:text-brass"
                 onClick={() => setLang(lang === "fr" ? "en" : "fr")}
               >
                 {lang === "fr" ? "EN" : "FR"}
               </button>
               <button
                 type="button"
-                className="rounded-md px-2 py-1.5 text-sm text-ink-muted hover:text-brass"
+                className="rounded-sm px-2 py-1.5 text-sm text-ink-muted transition-colors hover:text-brass"
                 onClick={onCycleTheme}
                 aria-label={`Theme: ${themeMode}. Click to change.`}
                 title={themeMode === "system" ? "System" : themeMode === "dark" ? "Dark" : "Light"}
@@ -162,7 +161,7 @@ export default function App() {
           <AnalyticsPage config={config} lang={lang} onBack={() => setRoute("wizard")} />
         ) : (
           <div className="analytics-rise space-y-6">
-            <p className="text-sm text-ink-muted">{t.disclaimer}</p>
+            <p className="text-center text-[11px] leading-relaxed tracking-wide text-ink-muted/80">{t.disclaimer}</p>
             <div className="analytics-card p-6 sm:p-8">
               <StepIndicator step={wizard.step} lang={lang} onGoToStep={wizard.goToStep} />
 
