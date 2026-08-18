@@ -80,7 +80,7 @@ function MatchSeal({ code, score }: { code: string; score: number }) {
   );
 }
 
-function fmt(value: number | undefined | null, digits = 1, fallback = "\u2014"): string {
+function fmt(value: number | undefined | null, digits = 1, fallback = "—"): string {
   if (typeof value !== "number" || Number.isNaN(value)) return fallback;
   return value.toFixed(digits);
 }
@@ -162,6 +162,9 @@ export function Step3Results({ result, topRiasec, onReset, lang, genieLabels }: 
     preference: t.preference,
   };
 
+  const showAllLabel = lang === "fr" ? "Voir tout" : "Show all";
+  const showLessLabel = lang === "fr" ? "Réduire" : "Show less";
+
   return (
     <div className="space-y-8">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -170,15 +173,15 @@ export function Step3Results({ result, topRiasec, onReset, lang, genieLabels }: 
           <p className="mt-1 font-display text-lg text-ink">{result.studentName}</p>
           <p className="mt-0.5 text-sm text-ink-muted">
             {streamLabels[result.bacStream]}
-            {genieLabel ? ` \u00b7 ${genieLabel}` : ""}
-            {" \u00b7 "}RIASEC <span className="font-mono">{topCode}</span>
+            {genieLabel ? ` · ${genieLabel}` : ""}
+            {" · "}RIASEC <span className="font-mono">{topCode}</span>
           </p>
           <p className="mt-2 font-mono text-[11px] text-ink-muted">
-            {t.weightsLine}: {t.academic} {(result.weights.academic * 100).toFixed(0)}% \u00b7 {t.riasec}{" "}
-            {(result.weights.riasec * 100).toFixed(0)}% \u00b7 {t.technical}{" "}
+            {t.weightsLine}: {t.academic} {(result.weights.academic * 100).toFixed(0)}% · {t.riasec}{" "}
+            {(result.weights.riasec * 100).toFixed(0)}% · {t.technical}{" "}
             {(result.weights.technical * 100).toFixed(0)}%
             {result.weights.preference != null
-              ? ` \u00b7 ${t.preference} ${(result.weights.preference * 100).toFixed(0)}%`
+              ? ` · ${t.preference} ${(result.weights.preference * 100).toFixed(0)}%`
               : ""}
           </p>
         </div>
@@ -262,8 +265,8 @@ export function Step3Results({ result, topRiasec, onReset, lang, genieLabels }: 
                       />
                     </div>
                     <p className="mt-1 font-mono text-xs text-ink-muted">
-                      {match.specialtyCode} \u00b7 {match.department} \u00b7 {match.hollandCode.join("-")}
-                      {match.isTechnical ? ` \u00b7 ${t.technicalSpecialty}` : ""}
+                      {match.specialtyCode} · {match.department} · {match.hollandCode.join("-")}
+                      {match.isTechnical ? ` · ${t.technicalSpecialty}` : ""}
                     </p>
                   </div>
                   <div className="text-right">
@@ -335,7 +338,7 @@ export function Step3Results({ result, topRiasec, onReset, lang, genieLabels }: 
           {result.matches.length > 3 && (
             <div className="text-center">
               <button type="button" onClick={() => setShowAll((v) => !v)} className="intended-btn-ghost">
-                {showAll ? t.hideDetails : t.showDetails}
+                {showAll ? showLessLabel : showAllLabel}
               </button>
             </div>
           )}
@@ -348,8 +351,8 @@ export function Step3Results({ result, topRiasec, onReset, lang, genieLabels }: 
           {result.weightsWithoutRiasec && (
             <p className="font-mono text-[11px] text-ink-muted">
               {t.weightsLine}: {t.academic}{" "}
-              {(result.weightsWithoutRiasec.academic * 100).toFixed(0)}% \u00b7 {t.technical}{" "}
-              {(result.weightsWithoutRiasec.technical * 100).toFixed(1)}% \u00b7 {t.preference}{" "}
+              {(result.weightsWithoutRiasec.academic * 100).toFixed(0)}% · {t.technical}{" "}
+              {(result.weightsWithoutRiasec.technical * 100).toFixed(1)}% · {t.preference}{" "}
               {(result.weightsWithoutRiasec.preference * 100).toFixed(1)}%
             </p>
           )}
@@ -372,8 +375,8 @@ export function Step3Results({ result, topRiasec, onReset, lang, genieLabels }: 
                       />
                     </div>
                     <p className="mt-1 font-mono text-xs text-ink-muted">
-                      {match.specialtyCode} \u00b7 {match.department}
-                      {match.hollandCode ? ` \u00b7 ${match.hollandCode.join("-")}` : ""}
+                      {match.specialtyCode} · {match.department}
+                      {match.hollandCode ? ` · ${match.hollandCode.join("-")}` : ""}
                     </p>
                   </div>
                   <div className="text-right">
@@ -397,12 +400,12 @@ export function Step3Results({ result, topRiasec, onReset, lang, genieLabels }: 
           {(result.matchesWithoutRiasec?.length ?? 0) > 3 && (
             <div className="text-center">
               <button type="button" onClick={() => setShowAll((v) => !v)} className="intended-btn-ghost">
-                {showAll ? t.hideDetails : t.showDetails}
+                {showAll ? showLessLabel : showAllLabel}
               </button>
             </div>
           )}
           {(result.matchesWithoutRiasec ?? []).length === 0 && (
-            <p className="text-sm text-ink-muted">\u2014</p>
+            <p className="text-sm text-ink-muted">—</p>
           )}
         </>
       )}
