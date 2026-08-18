@@ -3,11 +3,6 @@ import type { CalculationResult, StudentProfile, SubjectCode } from "../types.js
 import { topRiasecToVector } from "../types.js";
 import type { Statement } from "better-sqlite3";
 
-/**
- * Prepared statements must NOT run at module load time.
- * ESM evaluates imports before index.ts reaches initDatabase()/createTables(),
- * so top-level db.prepare() crashes on a fresh DB with "no such table".
- */
 let insertStudent: Statement | null = null;
 let insertGrade: Statement | null = null;
 let insertRiasec: Statement | null = null;
@@ -41,15 +36,9 @@ const getStatements = () => {
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `);
   }
-  return {
-    insertStudent,
-    insertGrade,
-    insertRiasec,
-    insertEvaluation,
-  };
+  return { insertStudent, insertGrade, insertRiasec, insertEvaluation };
 };
 
-/** Persist one orientation session (student + grades + RIASEC + ranked matches). */
 export const persistEvaluation = (
   studentProfile: StudentProfile,
   result: CalculationResult,
