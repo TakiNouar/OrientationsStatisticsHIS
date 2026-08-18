@@ -254,6 +254,7 @@ export const calculateRecommendations = (
   return {
     evaluationId: crypto.randomUUID(),
     timestamp: new Date().toISOString(),
+    studentName: studentProfile.fullName,
     studentId: studentProfile.studentId,
     fullName: studentProfile.fullName,
     bacStream: studentProfile.bacStream,
@@ -267,6 +268,7 @@ export const calculateRecommendations = (
       technical: TECHNICAL_WEIGHT,
       preference: PREFERENCE_WEIGHT,
     },
+    isTechnicalStream: technicalStream,
     technicalStream,
   };
 };
