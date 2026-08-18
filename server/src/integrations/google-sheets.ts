@@ -1,14 +1,15 @@
 /**
- * Optional live mirror of each evaluation to Google Sheets.
+ * Live mirror of orientation sessions → Google Sheets.
+ * Full-table resync from SQLite (never wipes the database).
  * No-op when GOOGLE_SHEETS_ID is unset. Never throws to the request path.
- * Applies a readable table style (header, freeze, widths, zebra) once per process.
  */
 import { google } from "googleapis";
 import type { sheets_v4 } from "googleapis";
+import { listAllSessionsForSheet } from "../db.js";
+import type { SheetSessionRow } from "../db.js";
 import { logger } from "../logger.js";
 import type { CalculationResult, StudentProfile } from "../types.js";
 
-/** Human-friendly headers (row 1). */
 const HEADER_ROW = [
   "Evaluation ID",
   "Submitted at",
@@ -16,41 +17,36 @@ const HEADER_ROW = [
   "BAC stream",
   "Technical option",
   "Overall mark",
-  "Top specialty",
-  "Department",
-  "Top score",
-  "Match label",
-  "All matches",
+  "Preferred specialty",
+  "Specialty #1",
+  "Score #1",
+  "Match label #1",
+  "Specialty #2",
+  "Score #2",
+  "Match label #2",
+  "Specialty #3",
+  "Score #3",
+  "Match label #3",
 ] as const;
 
-/** Approximate pixel widths for columns A–K */
-const COLUMN_WIDTHS_PX = [
-  280, // Evaluation ID
-  160, // Submitted at
-  180, // Student name
-  160, // BAC stream
-  140, // Technical option
-  110, // Overall mark
-  220, // Top specialty
-  160, // Department
-  100, // Top score
-  200, // Match label
-  320, // All matches
+const COL_COUNT = HEADER_ROW.length;
+
+const COLUMN_WIDTHS = [
+  280, 160, 160, 150, 130, 90, 140, 140, 90, 160, 140, 90, 160, 140, 90, 160,
 ];
 
-const HEADER_BG = { red: 0.12, green: 0.25, blue: 0.45 }; // deep navy
-const HEADER_FG = { red: 1, green: 1, blue: 1 };
-const ZEBRA_BG = { red: 0.93, green: 0.95, blue: 0.98 }; // light blue-gray
-const BORDER = {
-  style: "SOLID" as const,
-  width: 1,
-  color: { red: 0.75, green: 0.8, blue: 0.85 },
-};
+const HEADER_BG = { red: 0.071, green: 0.078, blue: 0.11 };
+const HEADER_FG = { red: 0.961, green: 0.949, blue: 0.918 };
+const BODY_FG = { red: 0.071, green: 0.078, blue: 0.11 };
+const ZEBRA_BG = { red: 0.937, green: 0.906, blue: 0.824 };
+const BRASS_HL = { red: 0.851, green: 0.776, blue: 0.549 };
 
 let sheetsClient: sheets_v4.Sheets | null = null;
 let headerEnsured = false;
 let styleApplied = false;
 let cachedSheetId: number | null = null;
+let resyncTimer: ReturnType<typeof setInterval> | null = null;
+let resyncInFlight = false;
 
 const isConfigured = (): boolean =>
   Boolean((process.env.GOOGLE_SHEETS_ID ?? "").trim());
@@ -121,33 +117,53 @@ async function resolveTabSheetId(sheets: sheets_v4.Sheets): Promise<number | nul
   return null;
 }
 
-/** Header row + freeze + column widths + header look + zebra banded range. */
-async function ensureHeaderAndStyle(sheets: sheets_v4.Sheets): Promise<void> {
+function matchSlot(
+  matches: SheetSessionRow["matches"],
+  index: number,
+): [string, number | "", string] {
+  const m = matches[index];
+  if (!m) return ["\u2014", "", "\u2014"];
+  return [m.code, m.score / 100, m.label];
+}
+
+function buildDataRow(session: SheetSessionRow): (string | number)[] {
+  const [c1, s1, l1] = matchSlot(session.matches, 0);
+  const [c2, s2, l2] = matchSlot(session.matches, 1);
+  const [c3, s3, l3] = matchSlot(session.matches, 2);
+  return [
+    session.evaluationId,
+    session.submittedAt,
+    session.fullName,
+    session.bacStream,
+    session.technicalOption,
+    session.overallMark,
+    session.preferredSpecialtyCode || "\u2014",
+    c1,
+    s1,
+    l1,
+    c2,
+    s2,
+    l2,
+    c3,
+    s3,
+    l3,
+  ];
+}
+
+async function ensureHeaderAndStyle(
+  sheets: sheets_v4.Sheets,
+  dataRowCount: number,
+): Promise<void> {
   const id = spreadsheetId();
   const tab = tabName();
-  const range = `${tab}!A1:K1`;
 
   if (!headerEnsured) {
-    const existing = await sheets.spreadsheets.values.get({
-      spreadsheetId: id,
-      range,
-    });
-    const first = existing.data.values?.[0];
-    const empty =
-      !first ||
-      first.length === 0 ||
-      first.every((cell) => String(cell ?? "").trim() === "");
-
-    // Always refresh header labels so older sheets get the cleaner titles.
     await sheets.spreadsheets.values.update({
       spreadsheetId: id,
       range: `${tab}!A1`,
       valueInputOption: "USER_ENTERED",
       requestBody: { values: [Array.from(HEADER_ROW)] },
     });
-    if (empty) {
-      // first write only
-    }
     headerEnsured = true;
   }
 
@@ -156,8 +172,9 @@ async function ensureHeaderAndStyle(sheets: sheets_v4.Sheets): Promise<void> {
   const sheetId = await resolveTabSheetId(sheets);
   if (sheetId == null) return;
 
+  const bodyEnd = Math.max(2000, dataRowCount + 50);
+
   const requests: sheets_v4.Schema$Request[] = [
-    // Freeze header
     {
       updateSheetProperties: {
         properties: {
@@ -167,7 +184,6 @@ async function ensureHeaderAndStyle(sheets: sheets_v4.Sheets): Promise<void> {
         fields: "gridProperties.frozenRowCount",
       },
     },
-    // Header cell style
     {
       repeatCell: {
         range: {
@@ -175,7 +191,7 @@ async function ensureHeaderAndStyle(sheets: sheets_v4.Sheets): Promise<void> {
           startRowIndex: 0,
           endRowIndex: 1,
           startColumnIndex: 0,
-          endColumnIndex: 11,
+          endColumnIndex: COL_COUNT,
         },
         cell: {
           userEnteredFormat: {
@@ -195,121 +211,58 @@ async function ensureHeaderAndStyle(sheets: sheets_v4.Sheets): Promise<void> {
           "userEnteredFormat(backgroundColor,textFormat,horizontalAlignment,verticalAlignment,wrapStrategy)",
       },
     },
-    // Header row height
     {
       updateDimensionProperties: {
-        range: {
-          sheetId,
-          dimension: "ROWS",
-          startIndex: 0,
-          endIndex: 1,
-        },
+        range: { sheetId, dimension: "ROWS", startIndex: 0, endIndex: 1 },
         properties: { pixelSize: 36 },
         fields: "pixelSize",
       },
     },
-    // Body text defaults for a large band (grows as rows are added)
     {
       repeatCell: {
         range: {
           sheetId,
           startRowIndex: 1,
-          endRowIndex: 2000,
+          endRowIndex: bodyEnd,
           startColumnIndex: 0,
-          endColumnIndex: 11,
+          endColumnIndex: COL_COUNT,
         },
         cell: {
           userEnteredFormat: {
             textFormat: {
+              foregroundColor: BODY_FG,
               fontFamily: "Google Sans",
               fontSize: 10,
             },
             verticalAlignment: "MIDDLE",
-            wrapStrategy: "CLIP",
           },
         },
-        fields: "userEnteredFormat(textFormat,verticalAlignment,wrapStrategy)",
+        fields: "userEnteredFormat(textFormat,verticalAlignment)",
       },
     },
-    // Score column (I) — center + number format
-    {
-      repeatCell: {
-        range: {
-          sheetId,
-          startRowIndex: 1,
-          endRowIndex: 2000,
-          startColumnIndex: 8,
-          endColumnIndex: 9,
-        },
-        cell: {
-          userEnteredFormat: {
-            horizontalAlignment: "CENTER",
-            numberFormat: { type: "NUMBER", pattern: "0.0" },
-          },
-        },
-        fields: "userEnteredFormat(horizontalAlignment,numberFormat)",
-      },
-    },
-    // Overall mark (F) — center
-    {
-      repeatCell: {
-        range: {
-          sheetId,
-          startRowIndex: 1,
-          endRowIndex: 2000,
-          startColumnIndex: 5,
-          endColumnIndex: 6,
-        },
-        cell: {
-          userEnteredFormat: {
-            horizontalAlignment: "CENTER",
-            numberFormat: { type: "NUMBER", pattern: "0.00" },
-          },
-        },
-        fields: "userEnteredFormat(horizontalAlignment,numberFormat)",
-      },
-    },
-    // Thin borders on used-looking range
-    {
-      updateBorders: {
-        range: {
-          sheetId,
-          startRowIndex: 0,
-          endRowIndex: 2000,
-          startColumnIndex: 0,
-          endColumnIndex: 11,
-        },
-        top: BORDER,
-        bottom: BORDER,
-        left: BORDER,
-        right: BORDER,
-        innerHorizontal: BORDER,
-        innerVertical: BORDER,
-      },
-    },
-    // Alternating row colors (banded rows) — rows 2+ even indices
-    {
-      addBanding: {
-        bandedRange: {
+    ...[8, 11, 14].map(
+      (col): sheets_v4.Schema$Request => ({
+        repeatCell: {
           range: {
             sheetId,
-            startRowIndex: 0,
-            endRowIndex: 2000,
-            startColumnIndex: 0,
-            endColumnIndex: 11,
+            startRowIndex: 1,
+            endRowIndex: bodyEnd,
+            startColumnIndex: col,
+            endColumnIndex: col + 1,
           },
-          rowProperties: {
-            headerColor: HEADER_BG,
-            firstBandColor: { red: 1, green: 1, blue: 1 },
-            secondBandColor: ZEBRA_BG,
+          cell: {
+            userEnteredFormat: {
+              numberFormat: { type: "PERCENT", pattern: "0.0%" },
+              textFormat: { foregroundColor: BODY_FG },
+            },
           },
+          fields: "userEnteredFormat(numberFormat,textFormat)",
         },
-      },
-    },
+      }),
+    ),
   ];
 
-  // Column widths
-  for (let i = 0; i < COLUMN_WIDTHS_PX.length; i++) {
+  for (let i = 0; i < COLUMN_WIDTHS.length; i++) {
     requests.push({
       updateDimensionProperties: {
         range: {
@@ -318,11 +271,30 @@ async function ensureHeaderAndStyle(sheets: sheets_v4.Sheets): Promise<void> {
           startIndex: i,
           endIndex: i + 1,
         },
-        properties: { pixelSize: COLUMN_WIDTHS_PX[i] ?? 120 },
+        properties: { pixelSize: COLUMN_WIDTHS[i] },
         fields: "pixelSize",
       },
     });
   }
+
+  requests.push({
+    addBanding: {
+      bandedRange: {
+        range: {
+          sheetId,
+          startRowIndex: 0,
+          endRowIndex: bodyEnd,
+          startColumnIndex: 0,
+          endColumnIndex: COL_COUNT,
+        },
+        rowProperties: {
+          headerColor: HEADER_BG,
+          firstBandColor: { red: 0.969, green: 0.953, blue: 0.91 },
+          secondBandColor: ZEBRA_BG,
+        },
+      },
+    },
+  });
 
   try {
     await sheets.spreadsheets.batchUpdate({
@@ -330,20 +302,16 @@ async function ensureHeaderAndStyle(sheets: sheets_v4.Sheets): Promise<void> {
       requestBody: { requests },
     });
     styleApplied = true;
-    logger.info("google_sheets_style_ok", { tab });
   } catch (error) {
-    // Banding may fail if a band already exists — still mark applied for other styles
     const msg = error instanceof Error ? error.message : String(error);
-    if (/band/i.test(msg)) {
-      // Retry without addBanding
-      const withoutBand = requests.filter((r) => !r.addBanding);
+    if (msg.toLowerCase().includes("band")) {
+      const withoutBand = requests.filter((r) => !("addBanding" in r));
       try {
         await sheets.spreadsheets.batchUpdate({
           spreadsheetId: id,
           requestBody: { requests: withoutBand },
         });
         styleApplied = true;
-        logger.info("google_sheets_style_ok", { tab, banding: "skipped" });
         return;
       } catch (e2) {
         logger.error("google_sheets_style_failed", {
@@ -356,144 +324,132 @@ async function ensureHeaderAndStyle(sheets: sheets_v4.Sheets): Promise<void> {
   }
 }
 
-function buildRow(
-  studentProfile: StudentProfile,
-  result: CalculationResult,
-): (string | number)[] {
-  const top = result.matches[0];
-  const allMatches = result.matches
-    .map((m) => `${m.specialtyCode}: ${Number(m.finalScore).toFixed(1)}`)
-    .join(" · ");
+async function applyPreferenceHighlights(sheets: sheets_v4.Sheets): Promise<void> {
+  const sheetId = await resolveTabSheetId(sheets);
+  if (sheetId == null) return;
 
-  return [
-    result.evaluationId,
-    result.timestamp,
-    studentProfile.fullName,
-    studentProfile.bacStream.replaceAll("_", " "),
-    studentProfile.technicalOption?.replaceAll("_", " ") ?? "—",
-    studentProfile.academicPerformance.overallBacMark,
-    top?.specialtyTitle ?? "",
-    top?.department ?? "",
-    top != null ? Number(top.finalScore) : "",
-    top?.matchLabelText ?? "",
-    allMatches,
-  ];
+  try {
+    const sessions = listAllSessionsForSheet();
+    const requests: sheets_v4.Schema$Request[] = [];
+    sessions.forEach((s, i) => {
+      const top = s.matches[0]?.code;
+      if (!top || !s.preferredSpecialtyCode || s.preferredSpecialtyCode === "\u2014") return;
+      if (s.preferredSpecialtyCode !== top) return;
+      const rowIndex = i + 1;
+      requests.push({
+        repeatCell: {
+          range: {
+            sheetId,
+            startRowIndex: rowIndex,
+            endRowIndex: rowIndex + 1,
+            startColumnIndex: 6,
+            endColumnIndex: 8,
+          },
+          cell: {
+            userEnteredFormat: {
+              backgroundColor: BRASS_HL,
+              textFormat: { bold: true, foregroundColor: BODY_FG },
+            },
+          },
+          fields: "userEnteredFormat(backgroundColor,textFormat)",
+        },
+      });
+    });
+    if (requests.length === 0) return;
+    const chunk = 50;
+    for (let i = 0; i < requests.length; i += chunk) {
+      await sheets.spreadsheets.batchUpdate({
+        spreadsheetId: spreadsheetId(),
+        requestBody: { requests: requests.slice(i, i + chunk) },
+      });
+    }
+  } catch (error) {
+    logger.warn("google_sheets_highlight_failed", {
+      err: error instanceof Error ? error.message : String(error),
+    });
+  }
 }
 
-/** Append one evaluation row. Safe without await; never throws to callers. */
-export async function syncEvaluationToSheet(
-  studentProfile: StudentProfile,
-  result: CalculationResult,
-): Promise<void> {
+/** Rebuild entire data region from SQLite. Header refreshed; DB never modified. */
+export async function fullResyncToSheet(): Promise<void> {
   if (!isConfigured()) return;
+  if (resyncInFlight) {
+    logger.info("google_sheets_resync_skipped", { reason: "in_flight" });
+    return;
+  }
+  resyncInFlight = true;
 
   try {
     const sheets = await getSheetsClient();
     if (!sheets) return;
 
-    await ensureHeaderAndStyle(sheets);
-
+    const sessions = listAllSessionsForSheet();
+    const rows = sessions.map(buildDataRow);
     const tab = tabName();
-    await sheets.spreadsheets.values.append({
+
+    try {
+      await ensureHeaderAndStyle(sheets, rows.length);
+    } catch (styleErr) {
+      logger.warn("google_sheets_style_failed", {
+        err: styleErr instanceof Error ? styleErr.message : String(styleErr),
+      });
+    }
+
+    await sheets.spreadsheets.values.clear({
       spreadsheetId: spreadsheetId(),
-      range: `${tab}!A:K`,
-      valueInputOption: "USER_ENTERED",
-      insertDataOption: "INSERT_ROWS",
-      requestBody: {
-        values: [buildRow(studentProfile, result)],
-      },
+      range: `${tab}!A2:P`,
     });
 
-    logger.info("google_sheets_sync_ok", {
-      evaluationId: result.evaluationId,
+    if (rows.length > 0) {
+      await sheets.spreadsheets.values.update({
+        spreadsheetId: spreadsheetId(),
+        range: `${tab}!A2`,
+        valueInputOption: "USER_ENTERED",
+        requestBody: { values: rows },
+      });
+    }
+
+    await applyPreferenceHighlights(sheets);
+
+    logger.info("google_sheets_resync_ok", {
+      rows: rows.length,
       spreadsheetId: spreadsheetId(),
       tab,
     });
   } catch (error) {
-    logger.error("google_sheets_sync_failed", {
-      evaluationId: result.evaluationId,
+    logger.error("google_sheets_resync_failed", {
       err: error instanceof Error ? error.message : String(error),
     });
+  } finally {
+    resyncInFlight = false;
   }
 }
 
-/**
- * Delete sheet data rows matching evaluation IDs (column A).
- * If no IDs are provided, falls back to exact Student Name (column C).
- */
-export async function removeStudentRowsFromSheet(options: {
+/** After persist \u2014 full mirror. */
+export async function syncEvaluationToSheet(
+  _studentProfile: StudentProfile,
+  _result: CalculationResult,
+): Promise<void> {
+  await fullResyncToSheet();
+}
+
+/** After admin delete \u2014 rebuild from remaining DB rows. */
+export async function removeStudentRowsFromSheet(_options: {
   evaluationIds: string[];
   fullName?: string | null;
 }): Promise<void> {
+  await fullResyncToSheet();
+}
+
+/** 5-minute self-heal when Sheets is configured. */
+export function startSheetsPeriodicResync(intervalMs = 5 * 60 * 1000): void {
   if (!isConfigured()) return;
-
-  const idSet = new Set(
-    options.evaluationIds.map((x) => x.trim()).filter(Boolean),
-  );
-  const name = (options.fullName ?? "").trim();
-  if (idSet.size === 0 && !name) return;
-
-  try {
-    const sheets = await getSheetsClient();
-    if (!sheets) return;
-
-    const tab = tabName();
-    const sheetId = await resolveTabSheetId(sheets);
-    if (sheetId == null) return;
-
-    const all = await sheets.spreadsheets.values.get({
-      spreadsheetId: spreadsheetId(),
-      range: `${tab}!A:C`,
-    });
-    const values = all.data.values ?? [];
-    if (values.length <= 1) return;
-
-    const toDelete: number[] = [];
-    for (let i = 1; i < values.length; i++) {
-      const row = values[i] ?? [];
-      const evalId = String(row[0] ?? "").trim();
-      const studentName = String(row[2] ?? "").trim();
-      if (idSet.size > 0) {
-        if (idSet.has(evalId)) toDelete.push(i);
-      } else if (name && studentName === name) {
-        toDelete.push(i);
-      }
-    }
-
-    if (toDelete.length === 0) {
-      logger.info("google_sheets_delete_noop", {
-        evaluationIds: [...idSet],
-        fullName: name || undefined,
-      });
-      return;
-    }
-
-    toDelete.sort((a, b) => b - a);
-    const requests = toDelete.map((rowIndex) => ({
-      deleteDimension: {
-        range: {
-          sheetId,
-          dimension: "ROWS" as const,
-          startIndex: rowIndex,
-          endIndex: rowIndex + 1,
-        },
-      },
-    }));
-
-    await sheets.spreadsheets.batchUpdate({
-      spreadsheetId: spreadsheetId(),
-      requestBody: { requests },
-    });
-
-    logger.info("google_sheets_delete_ok", {
-      removed: toDelete.length,
-      evaluationIds: [...idSet],
-      fullName: name || undefined,
-    });
-  } catch (error) {
-    logger.error("google_sheets_delete_failed", {
-      evaluationIds: options.evaluationIds,
-      err: error instanceof Error ? error.message : String(error),
-    });
+  if (resyncTimer) return;
+  resyncTimer = setInterval(() => {
+    void fullResyncToSheet();
+  }, intervalMs);
+  if (typeof resyncTimer === "object" && resyncTimer !== null && "unref" in resyncTimer) {
+    (resyncTimer as NodeJS.Timeout).unref?.();
   }
+  logger.info("google_sheets_periodic_resync_started", { intervalMs });
 }
