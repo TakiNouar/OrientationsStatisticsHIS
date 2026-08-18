@@ -56,6 +56,8 @@ export const createTables = (): void => {
       riasec_score NUMERIC NOT NULL,
       final_score NUMERIC NOT NULL,
       rank_position INTEGER NOT NULL,
+      final_score_no_riasec NUMERIC,
+      rank_position_no_riasec INTEGER,
       evaluated_at TEXT DEFAULT CURRENT_TIMESTAMP
     );
 
@@ -97,4 +99,6 @@ export const createTables = (): void => {
   tryAlter(
     `ALTER TABLE his_specialties ADD COLUMN holland_code_json TEXT DEFAULT '["I","C","E"]'`,
   );
+  tryAlter(`ALTER TABLE match_evaluations ADD COLUMN final_score_no_riasec NUMERIC`);
+  tryAlter(`ALTER TABLE match_evaluations ADD COLUMN rank_position_no_riasec INTEGER`);
 };

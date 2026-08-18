@@ -32,8 +32,9 @@ const getStatements = () => {
   if (!insertEvaluation) {
     insertEvaluation = db.prepare(`
       INSERT INTO match_evaluations (
-        id, student_id, specialty_id, academic_score, riasec_score, final_score, rank_position, evaluated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        id, student_id, specialty_id, academic_score, riasec_score, final_score, rank_position,
+        final_score_no_riasec, rank_position_no_riasec, evaluated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
   }
   return { insertStudent, insertGrade, insertRiasec, insertEvaluation };
@@ -77,7 +78,11 @@ export const persistEvaluation = (
       JSON.stringify(studentProfile.topRiasec),
     );
 
+    const noRiasecBySpec = new Map(
+      (result.matchesWithoutRiasec ?? []).map((m) => [m.specialtyId, m]),
+    );
     for (const match of result.matches) {
+      const alt = noRiasecBySpec.get(match.specialtyId);
       stmts.insertEvaluation.run(
         `${result.evaluationId}_${match.specialtyId}`,
         studentId,
@@ -86,6 +91,8 @@ export const persistEvaluation = (
         match.psychometricScore,
         match.finalScore,
         match.rank,
+        alt?.finalScore ?? null,
+        alt?.rank ?? null,
         result.timestamp,
       );
     }
