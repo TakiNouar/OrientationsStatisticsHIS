@@ -1,33 +1,23 @@
 # 09 — Design decisions
 
+**Updated:** 2026-08-18
+
 | Decision | Choice |
 |----------|--------|
-| Scope | Phase A only |
-| DB | Local SQLite, no Docker |
+| Scope | Phase A + optional B0/B1 analytics; no Docker/Postgres |
+| DB | Local SQLite; additive migrations only; never wiped by Sheets |
 | Tests | **None** (product decision) |
-| Formula | 50% academic / 30% RIASEC / 20% technical |
+| Formula | 50% academic / 25% RIASEC / 20% technical / **5% preference** |
+| Preference | Soft 100/50; required on step 1 |
 | RIASEC | Top-3 + 0.3 cosine / 0.7 code match |
-| Grade slots | Fixed per stream |
+| Grade slots | **Specialty-dependent (A/2)** via `resolveAcademicSlots` |
 | Academic multipliers | Aggressive ×0.6–×1.8 from seed weights |
 | Stream μ on academic | Removed |
-| Missing subject weight | **Specialty average mapped multiplier** |
-| Technical fit | 0.45 stream base + 0.55 marksFit |
+| Missing subject weight | Specialty average mapped multiplier |
+| Technical fit | 0.45 stream base + 0.55 marksFit (stream-fixed slots) |
+| Sheets | Full resync mirror; sheet resets, DB does not |
+| Sheet deletes | Disappear on next resync (mirror DB) |
+| Preference = #1 UI | Brass highlight on columns G–H |
 | UI language | Default **French**, toggle EN |
-| Deploy target docs | Windows-first |
-
-## AFFINITY_MISSING analysis (pre-change)
-
-Slot subjects used in engine: MATH, PHYSICS, ARABIC, ENGLISH, ACCOUNTING_FINANCE, ECONOMICS, FRENCH, PHILOSOPHY.
-
-| Specialty | Seed weight keys | Typical missing vs slots |
-|-----------|------------------|---------------------------|
-| HIS-INFO-SI | MATH, PHYSICS, ENGLISH, FRENCH | ARABIC; Accounting/Economics/Philosophy when those streams |
-| HIS-SEC-SI | MATH, PHYSICS, ENGLISH, FRENCH | same |
-| HIS-ELEC | PHYSICS, MATH, ENGLISH, NATURAL_SCIENCES | ARABIC, FRENCH, … |
-| HIS-DROIT | ARABIC, PHILOSOPHY, … | MATH/PHYSICS/ENGLISH often |
-| HIS-ECOM | (commerce-oriented) | technical mains often |
-| HIS-ECO-GEST | ECONOMICS, ACCOUNTING_FINANCE, MATH, ENGLISH, FRENCH | ARABIC, PHYSICS |
-| HIS-PSY-CLIN | ARABIC, PHILOSOPHY, … | MATH/PHYSICS/ENGLISH often |
-| HIS-ORIENT | ARABIC, PHILOSOPHY, HISTORY_GEOGRAPHY, FRENCH, ENGLISH | MATH/PHYSICS often |
-
-**Policy:** fixed 0.75 was a silent below-midpoint penalty (midpoint of 0.6–1.8 is 1.2). Replaced with mean of that specialty’s mapped multipliers so incomplete seed rows do not systematically under-score.
+| Visual | Ink / brass / parchment |
+| Deploy docs | Windows-first |

@@ -1,6 +1,6 @@
 # Project reports — HIS-SRE
 
-Status documentation for **OrientationsStatisticsHIS**.
+Status documentation for **OrientationsStatisticsHIS** (Guide-Me orientation tool).
 
 | File | Topic |
 |------|--------|
@@ -15,4 +15,6 @@ Status documentation for **OrientationsStatisticsHIS**.
 | [09-design-decisions.md](./09-design-decisions.md) | Decisions |
 | [10-phase-b0-analytics.md](./10-phase-b0-analytics.md) | Phase B0 |
 | [11-phase-b1-dashboard.md](./11-phase-b1-dashboard.md) | Phase B1 |
-| [12-phase-b-branch-summary-merge-ready.md](./12-phase-b-branch-summary-merge-ready.md) | **Branch summary + merge checklist** |
+| [12-phase-b-branch-summary-merge-ready.md](./12-phase-b-branch-summary-merge-ready.md) | Branch summary |
+| [13-broken-and-non-working.md](./13-broken-and-non-working.md) | Historical incident log |
+| [26-progress-2026-08-18.md](./26-progress-2026-08-18.md) | **Latest progress (preference, slots, Sheets)** |
