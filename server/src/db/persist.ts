@@ -16,8 +16,8 @@ let insertEvaluation: Statement | null = null;
 const getStatements = () => {
   if (!insertStudent) {
     insertStudent = db.prepare(`
-      INSERT INTO students (id, full_name, bac_stream, overall_bac_mark, preferred_specialty_code)
-      VALUES (?, ?, ?, ?, ?)
+      INSERT INTO students (id, full_name, bac_stream, overall_bac_mark, preferred_specialty_code, technical_option)
+      VALUES (?, ?, ?, ?, ?, ?)
     `);
   }
   if (!insertGrade) {
@@ -64,6 +64,7 @@ export const persistEvaluation = (
       studentProfile.bacStream,
       studentProfile.academicPerformance.overallBacMark,
       studentProfile.preferredSpecialtyCode ?? null,
+      studentProfile.technicalOption ?? null,
     );
 
     const gradeEntries = Object.entries(studentProfile.academicPerformance.grades) as [

@@ -9,6 +9,7 @@ export const createTables = (): void => {
       bac_stream TEXT NOT NULL,
       overall_bac_mark NUMERIC NOT NULL CHECK (overall_bac_mark BETWEEN 0.00 AND 20.00),
       preferred_specialty_code TEXT,
+      technical_option TEXT,
       created_at TEXT DEFAULT CURRENT_TIMESTAMP
     );
 
@@ -90,6 +91,7 @@ export const createTables = (): void => {
   };
 
   tryAlter(`ALTER TABLE students ADD COLUMN preferred_specialty_code TEXT`);
+  tryAlter(`ALTER TABLE students ADD COLUMN technical_option TEXT`);
   tryAlter(`ALTER TABLE riasec_profiles ADD COLUMN top_riasec_json TEXT`);
   tryAlter(`ALTER TABLE his_specialties ADD COLUMN is_technical INTEGER DEFAULT 0`);
   tryAlter(
