@@ -32,15 +32,21 @@ export type SessionListRow = {
 };
 
 export type StudentMatchRow = {
+  specialtyId: string;
   specialtyCode: string;
   specialtyTitle: string;
   department: string;
+  description: string;
+  isTechnical: boolean;
+  hollandCode: [RiasecLetter, RiasecLetter, RiasecLetter];
   finalScore: number;
   academicScore: number;
   riasecScore: number;
+  psychometricScore: number;
   rank: number;
   matchLabel: MatchLabel;
   matchLabelText: string;
+  evaluatedAt: string;
 };
 
 export type StudentProfileDetail = {
@@ -51,7 +57,8 @@ export type StudentProfileDetail = {
   preferredSpecialtyCode: string | null;
   preferredSpecialtyTitle: string | null;
   createdAt: string;
-  grades: Array<{ subjectCode: string; grade: number }>;
+  grades: Record<string, number>;
+  topRiasec: Array<{ letter: RiasecLetter; weight: number }> | null;
   riasec: {
     realistic: number;
     investigative: number;
@@ -293,13 +300,18 @@ export const getStudentProfile = (studentId: string): StudentProfileDetail | nul
     .prepare(
       `
       SELECT
+        hs.id AS specialty_id,
         hs.code AS specialty_code,
         hs.title AS specialty_title,
         hs.department,
+        COALESCE(hs.description, '') AS description,
+        hs.is_technical AS is_technical,
+        hs.holland_code_json AS holland_code_json,
         me.final_score,
         me.academic_score,
         me.riasec_score,
-        me.rank_position
+        me.rank_position,
+        me.evaluated_at AS evaluated_at
       FROM match_evaluations me
       JOIN his_specialties hs ON hs.id = me.specialty_id
       WHERE me.student_id = ?
@@ -307,13 +319,18 @@ export const getStudentProfile = (studentId: string): StudentProfileDetail | nul
     `,
     )
     .all(studentId) as Array<{
+    specialty_id: string;
     specialty_code: string;
     specialty_title: string;
     department: string;
+    description: string;
+    is_technical: number;
+    holland_code_json: string;
     final_score: number;
     academic_score: number;
     riasec_score: number;
     rank_position: number;
+    evaluated_at: string;
   }>;
 
   return {
@@ -324,10 +341,8 @@ export const getStudentProfile = (studentId: string): StudentProfileDetail | nul
     preferredSpecialtyCode: student.preferred_specialty_code,
     preferredSpecialtyTitle: preferredTitle,
     createdAt: student.created_at,
-    grades: grades.map((g) => ({
-      subjectCode: g.subject_code,
-      grade: Number(g.grade_value),
-    })),
+    grades: Object.fromEntries(grades.map((g) => [g.subject_code, Number(g.grade_value)])),
+    topRiasec,
     riasec: riasecRow
       ? {
           realistic: Number(riasecRow.realistic_score),
@@ -342,16 +357,31 @@ export const getStudentProfile = (studentId: string): StudentProfileDetail | nul
     matches: matches.map((m) => {
       const finalScore = Number(m.final_score);
       const matchLabel = labelFromFinalScore(finalScore);
+      let hollandCode: [RiasecLetter, RiasecLetter, RiasecLetter] = ["I", "C", "E"];
+      try {
+        const parsed = JSON.parse(m.holland_code_json || '["I","C","E"]');
+        if (Array.isArray(parsed) && parsed.length >= 3) {
+          hollandCode = [parsed[0], parsed[1], parsed[2]];
+        }
+      } catch {
+        /* keep default */
+      }
       return {
+        specialtyId: m.specialty_id,
         specialtyCode: m.specialty_code,
         specialtyTitle: m.specialty_title,
         department: m.department,
+        description: m.description,
+        isTechnical: Boolean(m.is_technical),
+        hollandCode,
         finalScore,
         academicScore: Number(m.academic_score),
         riasecScore: Number(m.riasec_score),
+        psychometricScore: Number(m.riasec_score),
         rank: Number(m.rank_position),
         matchLabel,
         matchLabelText: MATCH_LABEL_TEXT[matchLabel],
+        evaluatedAt: m.evaluated_at,
       };
     }),
   };
