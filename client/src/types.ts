@@ -33,31 +33,14 @@ export type MatchLabel =
   | "PROFILE_DEVELOPING"
   | "WEAK_MATCH";
 
-export interface TopRiasecEntry {
-  letter: RiasecLetter;
-  weight: number;
-}
-
-export type TopRiasecProfile = [TopRiasecEntry, TopRiasecEntry, TopRiasecEntry];
-
-export interface StreamGradeSlots {
+export type StreamGradeSlots = {
   main1: SubjectCode;
   main2: SubjectCode;
   opposite: SubjectCode;
   english: SubjectCode;
-}
+};
 
-export interface RecommendationInput {
-  fullName: string;
-  bacStream: BacStream;
-  technicalOption?: TechnicalMathOption;
-  preferredSpecialtyCode: string;
-  overallBacMark: number;
-  grades: Partial<Record<SubjectCode, number>>;
-  topRiasec: TopRiasecProfile;
-}
-
-export interface CareerPath {
+export type CareerPath = {
   id: string;
   specialtyCode: string;
   titleFr: string;
@@ -69,14 +52,16 @@ export interface CareerPath {
   descriptionEn: string;
   examplesFr: string[];
   examplesEn: string[];
-}
+};
+
+export type TopRiasecEntry = { letter: RiasecLetter; weight: number };
+export type TopRiasecProfile = [TopRiasecEntry, TopRiasecEntry, TopRiasecEntry];
 
 export interface MatchDetails {
   rawAcademicPercentage: number;
   vectorCosineSimilarity: number;
   codeMatchScore: number;
-  cosineComponent: number;
-  codeMatchComponent: number;
+  preferenceScore: number;
   genieBiasPoints: number;
   slotBreakdown: {
     main1: number;
@@ -108,7 +93,7 @@ export interface SpecialtyMatchBreakdown {
   preferenceScore: number;
   finalScore: number;
   matchLabel: MatchLabel;
-  matchLabelText: string;
+  matchLabelText?: string;
   rank: number;
   careerPaths?: CareerPath[];
   details: MatchDetails;
@@ -122,7 +107,9 @@ export interface CalculationResult {
   technicalOption?: TechnicalMathOption;
   isTechnicalStream: boolean;
   weights: { academic: number; riasec: number; technical: number; preference: number };
+  weightsWithoutRiasec?: { academic: number; riasec: number; technical: number; preference: number };
   matches: SpecialtyMatchBreakdown[];
+  matchesWithoutRiasec?: SpecialtyMatchBreakdown[];
   persisted?: boolean;
 }
 
@@ -153,29 +140,20 @@ export interface ConfigResponse {
     description: string;
     isTechnical: boolean;
     hollandCode: [RiasecLetter, RiasecLetter, RiasecLetter];
-    streamModifiers: Record<BacStream, number>;
     subjectWeights: Partial<Record<SubjectCode, number>>;
     riasecBenchmark: Record<string, number>;
   }>;
 }
 
-export interface AnalyticsCountRow {
-  key: string;
-  label: string;
-  count: number;
-}
-
 export interface AnalyticsSummary {
-  totalSessions: number;
-  byStream: AnalyticsCountRow[];
-  byTopSpecialty: AnalyticsCountRow[];
-  byMatchLabel: AnalyticsCountRow[];
-  filters: {
-    from?: string;
-    to?: string;
-    bacStream?: string;
-    specialtyCode?: string;
-  };
+  totalEvaluations: number;
+  uniqueStudents: number;
+  byBacStream: Array<{ key: string; label: string; count: number }>;
+  byTopSpecialty: Array<{ key: string; label: string; count: number }>;
+  byMatchLabel: Array<{ key: string; label: string; count: number }>;
+  averageFinalScore: number | null;
+  totalSessions?: number;
+  filters?: Record<string, unknown>;
 }
 
 export interface SessionListRow {
@@ -195,8 +173,8 @@ export interface SessionListRow {
 
 export interface AnalyticsRecentResponse {
   rows: SessionListRow[];
-  filters: AnalyticsSummary["filters"];
-  limit: number;
+  filters?: AnalyticsSummary["filters"];
+  limit?: number;
 }
 
 export interface StudentMatchRow {
@@ -204,16 +182,16 @@ export interface StudentMatchRow {
   specialtyCode: string;
   specialtyTitle: string;
   department: string;
-  description: string;
-  isTechnical: boolean;
-  hollandCode: [RiasecLetter, RiasecLetter, RiasecLetter];
+  description?: string;
+  isTechnical?: boolean;
+  hollandCode?: [RiasecLetter, RiasecLetter, RiasecLetter];
   academicScore: number;
-  psychometricScore: number;
+  psychometricScore?: number;
   finalScore: number;
   rank: number;
   matchLabel: MatchLabel;
-  matchLabelText: string;
-  evaluatedAt: string;
+  matchLabelText?: string;
+  evaluatedAt?: string;
 }
 
 export interface StudentProfileDetail {
@@ -225,14 +203,15 @@ export interface StudentProfileDetail {
   preferredSpecialtyTitle?: string | null;
   createdAt: string;
   grades: Record<string, number>;
-  topRiasec: Array<{ letter: RiasecLetter; weight: number }> | null;
-  riasecVector: {
+  topRiasec?: Array<{ letter: RiasecLetter; weight: number }> | null;
+  riasec?: {
     realistic: number;
     investigative: number;
     artistic: number;
     social: number;
     enterprising: number;
     conventional: number;
+    topRiasec: Array<{ letter: RiasecLetter; weight: number }> | null;
   } | null;
   matches: StudentMatchRow[];
 }
@@ -245,29 +224,13 @@ export interface AnalyticsDashboard {
     specialtyTitle: string;
     count: number;
   }>;
-  scoreBuckets: Array<{
-    key: string;
-    label: string;
-    min: number;
-    max: number;
-    count: number;
-  }>;
-  byMatchLabel: AnalyticsCountRow[];
-  dataQuality: {
-    neverRankedSpecialtyCodes: Array<{ code: string; title: string }>;
-    highScoreSessions: number;
-    lowScoreSessions: number;
-    averageFinalScore: number | null;
-    averageOverallBac: number | null;
-    sessionsMissingRiasec: number;
-  };
-  filters: AnalyticsSummary["filters"];
+  scoreBuckets: Array<{ key: string; label: string; count: number }>;
 }
 
 export const LABEL_STYLES: Record<MatchLabel, string> = {
-  STRONG_MATCH: "bg-brass text-parchment",
-  STRONG_MATCH_CONVERSATION: "bg-brass/15 text-brass border border-brass/40",
-  POSSIBLE_FIT: "bg-brass-dim/30 text-ink",
-  PROFILE_DEVELOPING: "bg-brass-dim/20 text-ink-muted",
-  WEAK_MATCH: "border border-burgundy/40 text-burgundy",
+  STRONG_MATCH: "bg-brass/20 text-ink",
+  STRONG_MATCH_CONVERSATION: "bg-brass/15 text-ink",
+  POSSIBLE_FIT: "bg-brass-dim/30 text-ink-muted",
+  PROFILE_DEVELOPING: "bg-surface text-ink-muted",
+  WEAK_MATCH: "bg-burgundy/10 text-burgundy",
 };
