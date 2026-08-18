@@ -17,4 +17,5 @@ Status documentation for **OrientationsStatisticsHIS** (Guide-Me orientation too
 | [11-phase-b1-dashboard.md](./11-phase-b1-dashboard.md) | Phase B1 |
 | [12-phase-b-branch-summary-merge-ready.md](./12-phase-b-branch-summary-merge-ready.md) | Branch summary |
 | [13-broken-and-non-working.md](./13-broken-and-non-working.md) | Historical incident log |
-| [26-progress-2026-08-18.md](./26-progress-2026-08-18.md) | **Latest progress (preference, slots, Sheets)** |
+| [26-progress-2026-08-18.md](./26-progress-2026-08-18.md) | Progress (preference, slots, Sheets) |
+| [27-engine-audit-verification.md](./27-engine-audit-verification.md) | **Engine audit verification (2026-08-18)** |
