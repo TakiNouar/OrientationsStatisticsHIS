@@ -37,7 +37,7 @@ const GENIE_BIAS: Record<TechnicalMathOption, Partial<Record<string, number>>> =
   GENIE_ELECTRIQUE: { "HIS-ELEC": 8, "HIS-INFO-SI": 3, "HIS-SEC-SI": 2 },
   GENIE_MECANIQUE: { "HIS-ELEC": 5, "HIS-INFO-SI": 2 },
   GENIE_CIVIL: { "HIS-ELEC": 4 },
-  GENIE_METHODES: { "HIS-INFO-SI": 4, "HIS-SEC-SI": 3, "HIS-ELEC": 2 },
+  GENIE_PROCEDES: { "HIS-INFO-SI": 4, "HIS-SEC-SI": 3, "HIS-ELEC": 2 },
 };
 
 const toFixedNumber = (value: number, digits = 2): number =>
