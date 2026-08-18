@@ -25,6 +25,7 @@ import { isAdminAuthConfigured, requireAdminToken } from "./admin-auth.js";
 import { calculateRecommendations } from "./engine.js";
 import {
   removeStudentRowsFromSheet,
+  startSheetsPeriodicResync,
   syncEvaluationToSheet,
 } from "./integrations/google-sheets.js";
 import { logger } from "./logger.js";
@@ -400,4 +401,5 @@ app.listen(port, host, () => {
     allowedOrigins,
     health: `http://${host === "0.0.0.0" ? "127.0.0.1" : host}:${port}/api/v1/health`,
   });
+  startSheetsPeriodicResync();
 });
