@@ -384,6 +384,7 @@ export const listAllSessionsForSheet = (): SheetSessionRow[] => {
         s.bac_stream AS bac_stream,
         s.overall_bac_mark AS overall_bac_mark,
         COALESCE(s.preferred_specialty_code, '') AS preferred_specialty_code,
+        s.technical_option AS technical_option,
         (
           SELECT me.evaluated_at
           FROM match_evaluations me
@@ -402,6 +403,7 @@ export const listAllSessionsForSheet = (): SheetSessionRow[] => {
     bac_stream: string;
     overall_bac_mark: number;
     preferred_specialty_code: string;
+    technical_option: string | null;
     evaluated_at: string | null;
   }>;
 
@@ -435,9 +437,11 @@ export const listAllSessionsForSheet = (): SheetSessionRow[] => {
       submittedAt: s.evaluated_at ?? "",
       fullName: s.full_name,
       bacStream: s.bac_stream.replaceAll("_", " "),
-      technicalOption: "—",
+      technicalOption: s.technical_option
+        ? String(s.technical_option).replaceAll("_", " ")
+        : "\u2014",
       overallMark: Number(s.overall_bac_mark),
-      preferredSpecialtyCode: s.preferred_specialty_code || "—",
+      preferredSpecialtyCode: s.preferred_specialty_code || "\u2014",
       matches,
     };
   });
