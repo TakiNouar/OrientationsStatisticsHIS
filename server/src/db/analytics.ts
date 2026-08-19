@@ -406,7 +406,7 @@ export type SheetSessionRow = {
   matches: Array<{ code: string; score: number; label: string }>;
 };
 
-/** All sessions for sheet mirror (read-only). Newest first. */
+/** All sessions for sheet mirror (read-only). Oldest first → newest at bottom of sheet. */
 export const listAllSessionsForSheet = (): SheetSessionRow[] => {
   const students = db
     .prepare(
@@ -433,7 +433,7 @@ export const listAllSessionsForSheet = (): SheetSessionRow[] => {
         ) AS evaluated_at
       FROM students s
       WHERE EXISTS (SELECT 1 FROM match_evaluations me WHERE me.student_id = s.id)
-      ORDER BY evaluated_at DESC
+      ORDER BY evaluated_at ASC
     `,
     )
     .all() as Array<{
