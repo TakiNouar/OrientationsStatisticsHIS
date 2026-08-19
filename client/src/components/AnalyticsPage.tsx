@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   deleteStudentProfile,
   exportEvaluationsUrl,
@@ -17,13 +17,12 @@ import type {
   AnalyticsSummary,
   BacStream,
   ConfigResponse,
+  MatchLabel,
   StudentProfileDetail,
 } from "../types";
+import { LABEL_STYLES } from "../types";
 import type { Lang } from "../i18n/strings";
-import {
-  STREAM_LABELS_I18N,
-  strings,
-} from "../i18n/strings";
+import { STREAM_LABELS_I18N, matchLabelText, strings } from "../i18n/strings";
 
 type Props = {
   config: ConfigResponse;
@@ -135,7 +134,10 @@ export function AnalyticsPage({ config, lang, onBack }: Props) {
   }, [selectedStudentId, t.profileError]);
 
   const handleDelete = async (studentId: string, name: string) => {
-    if (!window.confirm(`${t.deleteConfirm} ${name}?`)) return;
+    const msg = t.deleteConfirm.includes("{name}")
+      ? t.deleteConfirm.replace("{name}", name)
+      : `${t.deleteConfirm} ${name}?`;
+    if (!window.confirm(msg)) return;
     if (!ensureAdminToken(lang)) return;
     setDeletingId(studentId);
     setError(null);
@@ -147,17 +149,36 @@ export function AnalyticsPage({ config, lang, onBack }: Props) {
       }
       await load(applied);
     } catch (e) {
-      const msg = e instanceof Error ? e.message : t.deleteFailed;
-      if (/401|403|token|admin/i.test(msg)) {
+      const errMsg = e instanceof Error ? e.message : t.deleteError;
+      if (/401|403|token|admin/i.test(errMsg)) {
         setStoredAdminToken("");
         setError(t.adminTokenRejected);
       } else {
-        setError(msg);
+        setError(errMsg);
       }
     } finally {
       setDeletingId(null);
     }
   };
+
+  const activeChips = useMemo(() => {
+    const chips: Array<{ key: string; label: string }> = [];
+    if (applied.from) chips.push({ key: "from", label: `${t.filterFrom}: ${applied.from}` });
+    if (applied.to) chips.push({ key: "to", label: `${t.filterTo}: ${applied.to}` });
+    if (applied.bacStream) {
+      chips.push({
+        key: "stream",
+        label: streamLabels[applied.bacStream] ?? applied.bacStream,
+      });
+    }
+    if (applied.specialtyCode) {
+      const sp = config.specialties.find((s) => s.code === applied.specialtyCode);
+      chips.push({ key: "spec", label: sp?.title ?? applied.specialtyCode });
+    }
+    return chips;
+  }, [applied, config.specialties, streamLabels, t.filterFrom, t.filterTo]);
+
+  const sessions = recent?.sessions ?? [];
 
   if (selectedStudentId) {
     return (
@@ -165,7 +186,14 @@ export function AnalyticsPage({ config, lang, onBack }: Props) {
         {profileLoading && (
           <div className="analytics-card intended-skeleton h-64" aria-busy="true" aria-label={t.loading} />
         )}
-        {profileError && <p className="text-sm text-burgundy">{profileError}</p>}
+        {profileError && (
+          <div className="border border-burgundy/40 bg-burgundy/5 px-3 py-2 text-sm text-burgundy">
+            {profileError}
+            <button type="button" className="ml-3 underline" onClick={() => setSelectedStudentId(null)}>
+              {t.backToList}
+            </button>
+          </div>
+        )}
         {profile && (
           <StudentProfileView
             profile={profile}
@@ -181,35 +209,56 @@ export function AnalyticsPage({ config, lang, onBack }: Props) {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <button
-            type="button"
-            onClick={onBack}
-            className="mb-2 text-xs font-medium text-brass underline-offset-2 hover:underline"
-          >
-            ← {t.backToWizard}
-          </button>
-          <h2 className="font-display text-2xl font-semibold tracking-tight text-ink">{t.analyticsTitle}</h2>
-          <p className="mt-1 text-sm text-ink-muted">{t.analyticsSubtitle}</p>
+    <div className="min-w-0 space-y-6 overflow-x-hidden">
+      {/* Header */}
+      <div className="flex min-w-0 flex-wrap items-start justify-between gap-4">
+        <div className="min-w-0">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-brass">HIS · Staff</p>
+          <h2 className="mt-1 font-display text-2xl font-semibold tracking-tight text-ink sm:text-3xl">
+            {t.analyticsTitle}
+          </h2>
+          <p className="mt-1 max-w-xl text-sm text-ink-muted">{t.analyticsSubtitle}</p>
+          <p className="mt-0.5 font-mono text-[11px] text-ink-muted">{t.analyticsClickHint}</p>
         </div>
-        <a
-          className="text-xs font-medium text-brass underline-offset-2 hover:underline"
-          href={exportEvaluationsUrl({
-            from: applied.from || undefined,
-            to: applied.to || undefined,
-            bacStream: applied.bacStream || undefined,
-            specialtyCode: applied.specialtyCode || undefined,
-          })}
-        >
-          {t.exportCsv}
-        </a>
+        <div className="flex flex-wrap items-center gap-2">
+          <a
+            className="intended-btn-ghost inline-flex items-center text-xs"
+            href={exportEvaluationsUrl({
+              from: applied.from || undefined,
+              to: applied.to || undefined,
+              bacStream: applied.bacStream || undefined,
+              specialtyCode: applied.specialtyCode || undefined,
+            })}
+          >
+            {t.exportCsv}
+          </a>
+          <button type="button" onClick={onBack} className="intended-btn-ghost text-xs">
+            {t.backToWizard}
+          </button>
+        </div>
       </div>
 
-      <div className="analytics-card space-y-3 p-4">
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <label className="block text-xs">
+      {/* Filters */}
+      <div className="analytics-card min-w-0 p-4 sm:p-5">
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <p className="font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-ink-muted">
+            Filters
+          </p>
+          {activeChips.length > 0 && (
+            <div className="flex max-w-full flex-wrap justify-end gap-1.5">
+              {activeChips.map((c) => (
+                <span
+                  key={c.key}
+                  className="rounded-sm border border-brass/40 bg-brass/10 px-2 py-0.5 font-mono text-[10px] text-ink"
+                >
+                  {c.label}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+        <div className="grid min-w-0 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <label className="block min-w-0">
             <span className="intended-label">{t.filterFrom}</span>
             <input
               type="date"
@@ -218,7 +267,7 @@ export function AnalyticsPage({ config, lang, onBack }: Props) {
               onChange={(e) => setFilters((prev) => ({ ...prev, from: e.target.value }))}
             />
           </label>
-          <label className="block text-xs">
+          <label className="block min-w-0">
             <span className="intended-label">{t.filterTo}</span>
             <input
               type="date"
@@ -227,7 +276,7 @@ export function AnalyticsPage({ config, lang, onBack }: Props) {
               onChange={(e) => setFilters((prev) => ({ ...prev, to: e.target.value }))}
             />
           </label>
-          <label className="block text-xs">
+          <label className="block min-w-0">
             <span className="intended-label">{t.filterStream}</span>
             <select
               className="intended-field"
@@ -239,7 +288,7 @@ export function AnalyticsPage({ config, lang, onBack }: Props) {
                 }))
               }
             >
-              <option value="">{t.allStreams}</option>
+              <option value="">{t.filterAll}</option>
               {config.bacStreams.map((s) => (
                 <option key={s} value={s}>
                   {streamLabels[s]}
@@ -247,14 +296,14 @@ export function AnalyticsPage({ config, lang, onBack }: Props) {
               ))}
             </select>
           </label>
-          <label className="block text-xs">
+          <label className="block min-w-0">
             <span className="intended-label">{t.filterSpecialty}</span>
             <select
               className="intended-field"
               value={filters.specialtyCode}
               onChange={(e) => setFilters((prev) => ({ ...prev, specialtyCode: e.target.value }))}
             >
-              <option value="">{t.allSpecialties}</option>
+              <option value="">{t.filterAll}</option>
               {config.specialties.map((s) => (
                 <option key={s.code} value={s.code}>
                   {s.title}
@@ -263,8 +312,8 @@ export function AnalyticsPage({ config, lang, onBack }: Props) {
             </select>
           </label>
         </div>
-        <div className="flex gap-2">
-          <button type="button" className="intended-btn-primary" onClick={() => setApplied(filters)}>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <button type="button" className="intended-btn-primary" onClick={() => setApplied({ ...filters })}>
             {t.applyFilters}
           </button>
           <button
@@ -282,7 +331,12 @@ export function AnalyticsPage({ config, lang, onBack }: Props) {
       </div>
 
       {error && (
-        <div className="border border-burgundy/40 bg-burgundy/5 px-3 py-2 text-sm text-burgundy">{error}</div>
+        <div className="flex flex-wrap items-center gap-3 border border-burgundy/40 bg-burgundy/5 px-3 py-2 text-sm text-burgundy">
+          <span className="min-w-0 flex-1 break-words">{error}</span>
+          <button type="button" className="shrink-0 underline" onClick={() => void load(applied)}>
+            {t.retry}
+          </button>
+        </div>
       )}
 
       {loading && (
@@ -292,23 +346,33 @@ export function AnalyticsPage({ config, lang, onBack }: Props) {
               <div key={i} className="analytics-card intended-skeleton h-24 p-4" />
             ))}
           </div>
-          <div className="analytics-card intended-skeleton h-40" />
           <div className="analytics-card intended-skeleton h-48" />
+          <div className="analytics-card intended-skeleton h-56" />
         </div>
       )}
 
+      {/* Summary KPIs */}
       {summary && !loading && (
         <div className="grid gap-3 sm:grid-cols-3">
-          <div className="analytics-card p-4">
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-ink-muted">{t.totalEvaluations}</p>
+          <div className="analytics-card dash-kpi p-4">
+            <div className="mb-2 h-0.5 w-8 bg-brass" />
+            <p className="font-mono text-[10px] font-medium uppercase tracking-[0.12em] text-ink-muted">
+              {t.totalEvaluations}
+            </p>
             <p className="mt-1 font-mono text-3xl tabular-nums text-ink">{summary.totalEvaluations}</p>
           </div>
-          <div className="analytics-card p-4">
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-ink-muted">{t.uniqueStudents}</p>
+          <div className="analytics-card dash-kpi p-4">
+            <div className="mb-2 h-0.5 w-8 bg-brass" />
+            <p className="font-mono text-[10px] font-medium uppercase tracking-[0.12em] text-ink-muted">
+              {t.uniqueStudents}
+            </p>
             <p className="mt-1 font-mono text-3xl tabular-nums text-ink">{summary.uniqueStudents}</p>
           </div>
-          <div className="analytics-card p-4">
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-ink-muted">{t.avgScore}</p>
+          <div className="analytics-card dash-kpi p-4">
+            <div className="mb-2 h-0.5 w-8 bg-brass" />
+            <p className="font-mono text-[10px] font-medium uppercase tracking-[0.12em] text-ink-muted">
+              {t.avgScore}
+            </p>
             <p className="mt-1 font-mono text-3xl tabular-nums text-ink">
               {summary.averageFinalScore != null ? `${summary.averageFinalScore.toFixed(1)}%` : "—"}
             </p>
@@ -320,73 +384,113 @@ export function AnalyticsPage({ config, lang, onBack }: Props) {
         <AnalyticsDashboardPanel dashboard={dashboard} lang={lang} totalSessions={summary?.totalEvaluations} />
       )}
 
+      {/* Recent sessions */}
       {recent && !loading && (
-        <div className="analytics-card overflow-x-auto">
-          <table className="min-w-full text-left text-sm">
-            <thead>
-              <tr className="border-b border-brass-dim text-[11px] uppercase tracking-wide text-ink-muted">
-                <th className="px-3 py-2">{t.colName}</th>
-                <th className="px-3 py-2">{t.colDate}</th>
-                <th className="px-3 py-2">{t.colStream}</th>
-                <th className="px-3 py-2">{t.colSpecialty}</th>
-                <th className="px-3 py-2">{t.colScore}</th>
-                <th className="px-3 py-2" />
-              </tr>
-            </thead>
-            <tbody>
-              {(recent.sessions ?? []).map((row) => (
-                <tr key={row.studentId} className="border-b border-brass-dim/60 hover:bg-brass/5">
-                  <td className="px-3 py-2">
-                    <button
-                      type="button"
-                      className="font-medium text-ink hover:text-brass"
-                      onClick={() => setSelectedStudentId(row.studentId)}
-                    >
-                      {row.fullName}
-                    </button>
-                  </td>
-                  <td
-                    className="cursor-pointer whitespace-nowrap px-3 py-2 font-mono text-xs text-ink-muted"
-                    onClick={() => setSelectedStudentId(row.studentId)}
-                  >
-                    {row.evaluatedAt.slice(0, 16).replace("T", " ")}
-                  </td>
-                  <td
-                    className="cursor-pointer px-3 py-2 text-ink-muted"
-                    onClick={() => setSelectedStudentId(row.studentId)}
-                  >
-                    {streamLabels[row.bacStream as BacStream] ?? row.bacStream}
-                  </td>
-                  <td
-                    className="cursor-pointer px-3 py-2"
-                    onClick={() => setSelectedStudentId(row.studentId)}
-                  >
-                    {row.topSpecialtyTitle}
-                  </td>
-                  <td
-                    className="cursor-pointer px-3 py-2 font-mono tabular-nums"
-                    onClick={() => setSelectedStudentId(row.studentId)}
-                  >
-                    {row.finalScore.toFixed(1)}%
-                  </td>
-                  <td className="px-3 py-2 text-right">
-                    <button
-                      type="button"
-                      className="text-xs text-burgundy hover:underline disabled:opacity-50"
-                      disabled={deletingId === row.studentId}
-                      onClick={() => void handleDelete(row.studentId, row.fullName)}
-                    >
-                      {deletingId === row.studentId ? t.deleting : t.deleteProfile}
-                    </button>
-                  </td>
+        <section className="analytics-card min-w-0 overflow-hidden p-0">
+          <div className="border-b border-brass-dim px-4 py-4 sm:px-5">
+            <div className="flex flex-wrap items-end justify-between gap-2">
+              <div>
+                <h3 className="font-display text-sm font-semibold tracking-tight text-ink">
+                  {t.recentSessions}
+                </h3>
+                <p className="mt-0.5 font-mono text-[11px] text-ink-muted">{t.analyticsClickHint}</p>
+              </div>
+              <span className="font-mono text-[11px] tabular-nums text-ink-muted">
+                {sessions.length}
+              </span>
+            </div>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="dash-table min-w-full text-left text-sm">
+              <thead>
+                <tr className="border-b border-brass-dim bg-surface font-mono text-[10px] uppercase tracking-wider text-ink-muted">
+                  <th className="px-4 py-3 font-medium">{t.colName}</th>
+                  <th className="px-3 py-3 font-medium">{t.colDate}</th>
+                  <th className="px-3 py-3 font-medium">{t.colStream}</th>
+                  <th className="px-3 py-3 font-medium">{t.colTopSpecialty}</th>
+                  <th className="px-3 py-3 font-medium">{t.colScore}</th>
+                  <th className="px-4 py-3 font-medium">{t.colActions}</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-          {(recent.sessions ?? []).length === 0 && (
-            <p className="intended-empty m-4">{t.noSessions}</p>
-          )}
-        </div>
+              </thead>
+              <tbody>
+                {sessions.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="px-4 py-10 text-center text-ink-muted">
+                      {t.noSessions}
+                    </td>
+                  </tr>
+                ) : (
+                  sessions.map((row) => (
+                    <tr
+                      key={row.studentId}
+                      className="border-t border-brass-dim/50 transition hover:bg-brass/5"
+                    >
+                      <td className="max-w-[12rem] px-4 py-3">
+                        <button
+                          type="button"
+                          className="analytics-truncate block w-full text-left font-medium text-ink hover:text-brass"
+                          onClick={() => setSelectedStudentId(row.studentId)}
+                        >
+                          {row.fullName}
+                        </button>
+                      </td>
+                      <td
+                        className="cursor-pointer whitespace-nowrap px-3 py-3 font-mono text-xs tabular-nums text-ink-muted"
+                        onClick={() => setSelectedStudentId(row.studentId)}
+                      >
+                        {row.evaluatedAt?.slice(0, 16).replace("T", " ")}
+                      </td>
+                      <td
+                        className="cursor-pointer px-3 py-3 text-ink-muted"
+                        onClick={() => setSelectedStudentId(row.studentId)}
+                      >
+                        <span className="analytics-truncate block max-w-[9rem]">
+                          {streamLabels[row.bacStream as BacStream] ?? row.bacStream}
+                        </span>
+                      </td>
+                      <td
+                        className="max-w-[14rem] cursor-pointer px-3 py-3"
+                        onClick={() => setSelectedStudentId(row.studentId)}
+                      >
+                        <div className="flex min-w-0 flex-col gap-1">
+                          <span className="analytics-truncate font-medium text-ink">
+                            {row.topSpecialtyTitle}
+                          </span>
+                          {row.matchLabel && (
+                            <span
+                              className={`inline-flex w-fit rounded-sm px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide ${LABEL_STYLES[row.matchLabel as MatchLabel]}`}
+                            >
+                              {matchLabelText(lang, row.matchLabel)}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td
+                        className="cursor-pointer px-3 py-3 font-mono text-sm font-medium tabular-nums text-ink"
+                        onClick={() => setSelectedStudentId(row.studentId)}
+                      >
+                        {Number(row.finalScore).toFixed(1)}%
+                      </td>
+                      <td className="px-4 py-3">
+                        <button
+                          type="button"
+                          className="rounded-sm border border-burgundy/40 bg-burgundy/5 px-2 py-1 text-[10px] font-semibold text-burgundy hover:bg-burgundy/10 disabled:opacity-50"
+                          disabled={deletingId === row.studentId}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            void handleDelete(row.studentId, row.fullName);
+                          }}
+                        >
+                          {deletingId === row.studentId ? t.deleting : t.deleteProfile}
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </section>
       )}
     </div>
   );
