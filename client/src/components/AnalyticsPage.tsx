@@ -304,7 +304,9 @@ export function AnalyticsPage({ config, lang, onBack }: Props) {
         </div>
       )}
 
-      {dashboard && !loading && <AnalyticsDashboardPanel data={dashboard} lang={lang} />}
+      {dashboard && !loading && (
+        <AnalyticsDashboardPanel dashboard={dashboard} lang={lang} totalSessions={summary?.totalEvaluations} />
+      )}
 
       {recent && !loading && (
         <div className="analytics-card overflow-x-auto">
