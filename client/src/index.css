@@ -65,7 +65,7 @@ html.dark {
 }
 
 .analytics-rise {
-  animation: analytics-rise 0.45s ease-out both;
+  animation: analytics-rise 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 .analytics-rise-delay-1 {
@@ -91,7 +91,6 @@ html.dark {
   }
 }
 
-/* Paper grain over parchment — no blue mesh */
 .analytics-mesh {
   background-color: var(--color-parchment);
   background-image: radial-gradient(
@@ -208,7 +207,6 @@ html.dark {
   margin: 0;
 }
 
-/* Sticky chrome — frosted parchment, single calm bar */
 .intended-header {
   border-bottom: 1px solid color-mix(in srgb, var(--color-brass-dim) 70%, transparent);
   background: color-mix(in srgb, var(--color-surface) 86%, transparent);
@@ -218,4 +216,54 @@ html.dark {
 
 .dark .intended-header {
   background: color-mix(in srgb, var(--color-surface) 88%, transparent);
+}
+
+/* —— Luxe form & interaction polish —— */
+.intended-field-error {
+  border-bottom-color: var(--color-burgundy) !important;
+}
+
+.intended-field,
+.intended-btn-primary,
+.intended-btn-ghost {
+  transition:
+    border-color 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+    color 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+    filter 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 0.2s ease,
+    transform 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.intended-btn-primary:active:not(:disabled),
+.intended-btn-ghost:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.intended-header {
+  transition: background-color 0.25s ease, border-color 0.25s ease;
+}
+
+.analytics-card {
+  transition:
+    box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 0.25s ease;
+}
+
+.analytics-card:hover {
+  box-shadow:
+    0 1px 0 color-mix(in srgb, var(--color-brass) 18%, transparent),
+    0 12px 28px -16px color-mix(in srgb, var(--color-ink) 18%, transparent);
+}
+
+select.intended-field {
+  cursor: pointer;
+  appearance: none;
+  background-image: linear-gradient(45deg, transparent 50%, var(--color-brass) 50%),
+    linear-gradient(135deg, var(--color-brass) 50%, transparent 50%);
+  background-position:
+    calc(100% - 12px) calc(50% - 2px),
+    calc(100% - 7px) calc(50% - 2px);
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+  padding-right: 1.5rem;
 }
