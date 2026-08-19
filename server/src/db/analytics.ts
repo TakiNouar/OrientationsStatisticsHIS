@@ -1,6 +1,6 @@
 import { db } from "./connection.js";
 import type { MatchLabel, RiasecLetter } from "../types.js";
-import { labelFromFinalScore, MATCH_LABEL_TEXT } from "../types.js";
+import { labelFromFinalScore, MATCH_LABEL_TEXT, RIASEC_LABELS } from "../types.js";
 import { buildEvaluationWhere, type AnalyticsFilters } from "./filters.js";
 
 export type { AnalyticsFilters };
@@ -387,23 +387,20 @@ export const getStudentProfile = (studentId: string): StudentProfileDetail | nul
   };
 };
 
-/** One orientation session flattened for Google Sheets mirror (top 3 matches). */
 export type SheetSessionRow = {
   evaluationId: string;
   submittedAt: string;
   fullName: string;
   bacStream: string;
   technicalOption: string;
+  /** Full English RIASEC names in weight order (top 3) */
+  riasecFullNames: [string, string, string];
   overallMark: number;
   preferredSpecialtyCode: string;
   matches: Array<{ code: string; score: number; label: string }>;
 };
 
-/**
- * All sessions in the DB for a full sheet rebuild.
- * One row per student (each calculation creates a student row).
- * Does not modify or wipe the database — read only.
- */
+/** All sessions for sheet mirror (read-only). Newest first. */
 export const listAllSessionsForSheet = (): SheetSessionRow[] => {
   const students = db
     .prepare(
@@ -415,6 +412,12 @@ export const listAllSessionsForSheet = (): SheetSessionRow[] => {
         s.overall_bac_mark AS overall_bac_mark,
         COALESCE(s.preferred_specialty_code, '') AS preferred_specialty_code,
         s.technical_option AS technical_option,
+        (
+          SELECT rp.top_riasec_json
+          FROM riasec_profiles rp
+          WHERE rp.student_id = s.id
+          LIMIT 1
+        ) AS top_riasec_json,
         (
           SELECT me.evaluated_at
           FROM match_evaluations me
@@ -434,6 +437,7 @@ export const listAllSessionsForSheet = (): SheetSessionRow[] => {
     overall_bac_mark: number;
     preferred_specialty_code: string;
     technical_option: string | null;
+    top_riasec_json: string | null;
     evaluated_at: string | null;
   }>;
 
@@ -462,6 +466,24 @@ export const listAllSessionsForSheet = (): SheetSessionRow[] => {
       const label = MATCH_LABEL_TEXT[labelFromFinalScore(score)];
       return { code: m.code, score, label };
     });
+
+    let riasecFullNames: [string, string, string] = ["—", "—", "—"];
+    if (s.top_riasec_json) {
+      try {
+        const top = JSON.parse(s.top_riasec_json) as Array<{ letter: RiasecLetter; weight: number }>;
+        const sorted = [...top].sort(
+          (a, b) => b.weight - a.weight || a.letter.localeCompare(b.letter),
+        );
+        riasecFullNames = [
+          sorted[0] ? RIASEC_LABELS[sorted[0].letter] ?? sorted[0].letter : "—",
+          sorted[1] ? RIASEC_LABELS[sorted[1].letter] ?? sorted[1].letter : "—",
+          sorted[2] ? RIASEC_LABELS[sorted[2].letter] ?? sorted[2].letter : "—",
+        ];
+      } catch {
+        /* keep dashes */
+      }
+    }
+
     return {
       evaluationId: s.student_id,
       submittedAt: s.evaluated_at ?? "",
@@ -469,9 +491,10 @@ export const listAllSessionsForSheet = (): SheetSessionRow[] => {
       bacStream: s.bac_stream.replaceAll("_", " "),
       technicalOption: s.technical_option
         ? String(s.technical_option).replaceAll("_", " ")
-        : "\u2014",
+        : "—",
+      riasecFullNames,
       overallMark: Number(s.overall_bac_mark),
-      preferredSpecialtyCode: s.preferred_specialty_code || "\u2014",
+      preferredSpecialtyCode: s.preferred_specialty_code || "—",
       matches,
     };
   });
