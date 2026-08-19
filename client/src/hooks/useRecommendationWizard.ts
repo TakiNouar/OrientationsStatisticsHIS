@@ -15,6 +15,9 @@ import { SUBJECT_LABELS_I18N, strings } from "../i18n/strings";
 
 export type WizardStep = 1 | 2 | 3;
 
+/** Fixed RIASEC rank weights (not user-editable). */
+export const RIASEC_FIXED_WEIGHTS = [88, 76, 69] as const;
+
 export type WizardFormState = {
   fullName: string;
   bacStream: BacStream | "";
@@ -35,11 +38,7 @@ const emptyForm = (): WizardFormState => ({
   topRiasec: [null, null, null],
 });
 
-/** Subjects shown on Step 1 (four academic slots). */
-function subjectsFromSlots(
-  config: ConfigResponse,
-  bacStream: BacStream,
-): SubjectCode[] {
+function subjectsFromSlots(config: ConfigResponse, bacStream: BacStream): SubjectCode[] {
   const slots = config.streamGradeSlots?.[bacStream];
   if (!slots) return [];
   return [slots.main1, slots.main2, slots.opposite, slots.english];
@@ -58,10 +57,8 @@ export function useRecommendationWizard(config: ConfigResponse | null, lang: Lan
 
   const requiredSubjects = useMemo(() => {
     if (!config || !form.bacStream) return [] as SubjectCode[];
-    // Prefer the four UI slots so validation matches what the user can enter.
     const fromSlots = subjectsFromSlots(config, form.bacStream);
     if (fromSlots.length > 0) return fromSlots;
-    // Fallback if slots missing from older config payloads.
     return (config.streamSubjectMap?.[form.bacStream] ?? []) as SubjectCode[];
   }, [config, form.bacStream]);
 
@@ -97,10 +94,15 @@ export function useRecommendationWizard(config: ConfigResponse | null, lang: Lan
       grades: { ...prev.grades, [subject]: value },
     }));
 
+  /** Letter only; weight always forced from rank (88 / 76 / 69). */
   const setTopRiasecSlot = (index: 0 | 1 | 2, entry: TopRiasecEntry | null) =>
     setForm((prev) => {
       const next = [...prev.topRiasec] as WizardFormState["topRiasec"];
-      next[index] = entry;
+      if (!entry || !entry.letter) {
+        next[index] = null;
+      } else {
+        next[index] = { letter: entry.letter, weight: RIASEC_FIXED_WEIGHTS[index] };
+      }
       return { ...prev, topRiasec: next };
     });
 
@@ -133,10 +135,6 @@ export function useRecommendationWizard(config: ConfigResponse | null, lang: Lan
       const e = entries[i];
       if (!e || !e.letter) {
         errors[`riasec_letter_${i}`] = t.errRiasecSlot;
-        continue;
-      }
-      if (!Number.isFinite(e.weight) || e.weight < 1 || e.weight > 100) {
-        errors[`riasec_weight_${i}`] = t.errRiasecWeight;
       }
     }
     const letters = entries.filter((e): e is TopRiasecEntry => Boolean(e?.letter)).map((e) => e.letter);
@@ -162,7 +160,11 @@ export function useRecommendationWizard(config: ConfigResponse | null, lang: Lan
       }
     }
 
-    const topRiasec = form.topRiasec as TopRiasecProfile;
+    // Guarantee fixed weights on the wire even if state was stale.
+    const topRiasec = form.topRiasec.map((e, i) => ({
+      letter: e!.letter,
+      weight: RIASEC_FIXED_WEIGHTS[i],
+    })) as TopRiasecProfile;
 
     setLoading(true);
     setError(null);
@@ -232,7 +234,6 @@ export function useRecommendationWizard(config: ConfigResponse | null, lang: Lan
     .filter((e): e is TopRiasecEntry => e !== null)
     .map((e) => e.letter);
 
-  /** Full RIASEC alphabet for selects; Step2 disables letters used in other slots. */
   const availableLetters = (config?.riasecLetters ??
     (["R", "I", "A", "S", "E", "C"] as RiasecLetter[])) as RiasecLetter[];
 
@@ -242,7 +243,6 @@ export function useRecommendationWizard(config: ConfigResponse | null, lang: Lan
     result,
     error,
     fieldErrors,
-    /** Preferred App name */
     submitting: loading,
     loading,
     requiredSubjects,
@@ -250,17 +250,14 @@ export function useRecommendationWizard(config: ConfigResponse | null, lang: Lan
     availableLetters,
     setFullName,
     setPreferredSpecialtyCode,
-    /** Preferred App name */
     setPreferredSpecialty: setPreferredSpecialtyCode,
     setBacStream,
     setTechnicalOption,
     setOverallBacMark,
     setGrade,
     setTopRiasecSlot,
-    /** Preferred App name */
     setRiasecSlot: setTopRiasecSlot,
     goNext,
-    /** Preferred App name */
     next: goNext,
     goBack,
     goToStep,

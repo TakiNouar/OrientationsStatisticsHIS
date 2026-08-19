@@ -1,5 +1,6 @@
 import type { ConfigResponse, RiasecLetter, TopRiasecEntry } from "../types";
 import type { WizardFormState } from "../hooks/useRecommendationWizard";
+import { RIASEC_FIXED_WEIGHTS } from "../hooks/useRecommendationWizard";
 import type { Lang } from "../i18n/strings";
 import { strings } from "../i18n/strings";
 
@@ -52,7 +53,7 @@ export function Step2RiasecForm({
         {([0, 1, 2] as const).map((index) => {
           const entry = form.topRiasec[index];
           const letterErr = fieldErrors[`riasec_letter_${index}`];
-          const weightErr = fieldErrors[`riasec_weight_${index}`];
+          const fixedWeight = RIASEC_FIXED_WEIGHTS[index];
           const usedElsewhere = new Set(
             form.topRiasec
               .map((e, i) => (i !== index && e?.letter ? e.letter : null))
@@ -60,8 +61,8 @@ export function Step2RiasecForm({
           );
 
           return (
-            <div key={index} className="grid gap-4 sm:grid-cols-2">
-              <label className="block">
+            <div key={index} className="grid items-end gap-4 sm:grid-cols-[1fr_auto]">
+              <label className="block min-w-0">
                 <span className={labelClass}>{rankLabels[index]}</span>
                 <select
                   value={entry?.letter ?? ""}
@@ -71,10 +72,7 @@ export function Step2RiasecForm({
                       onSlotChange(index, null);
                       return;
                     }
-                    onSlotChange(index, {
-                      letter,
-                      weight: entry?.weight ?? (index === 0 ? 50 : index === 1 ? 30 : 20),
-                    });
+                    onSlotChange(index, { letter, weight: fixedWeight });
                   }}
                   className={`${inputClass} ${letterErr ? errBorder : ""}`}
                   disabled={disabled}
@@ -89,26 +87,10 @@ export function Step2RiasecForm({
                 {letterErr && <p className={errText}>{letterErr}</p>}
               </label>
 
-              <label className="block">
-                <span className={labelClass}>{t.weight}</span>
-                <input
-                  type="number"
-                  min={1}
-                  max={100}
-                  value={entry?.weight ?? ""}
-                  onChange={(e) => {
-                    const weight = Number(e.target.value);
-                    if (!entry?.letter) return;
-                    onSlotChange(index, {
-                      letter: entry.letter,
-                      weight: Number.isFinite(weight) ? weight : 0,
-                    });
-                  }}
-                  className={`${inputClass} ${weightErr ? errBorder : ""}`}
-                  disabled={disabled || !entry?.letter}
-                />
-                {weightErr && <p className={errText}>{weightErr}</p>}
-              </label>
+              <div className="pb-1 sm:min-w-[4.5rem] sm:text-right">
+                <span className="intended-label">{t.weight}</span>
+                <p className="mt-1 font-mono text-lg tabular-nums text-ink">{fixedWeight}</p>
+              </div>
             </div>
           );
         })}
@@ -116,7 +98,11 @@ export function Step2RiasecForm({
 
       {fieldErrors.riasec && <p className="text-sm text-burgundy">{fieldErrors.riasec}</p>}
 
-      <p className="text-xs leading-relaxed text-ink-muted">{t.riasecScoringHelp}</p>
+      <p className="font-mono text-[11px] tracking-wide text-ink-muted">
+        {RIASEC_FIXED_WEIGHTS[0]} · {RIASEC_FIXED_WEIGHTS[1]} · {RIASEC_FIXED_WEIGHTS[2]}
+        {" — "}
+        {t.riasecScoringHelp}
+      </p>
     </div>
   );
 }

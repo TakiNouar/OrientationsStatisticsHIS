@@ -151,13 +151,15 @@ export function Step3Results({ result, topRiasec, onReset, lang, genieLabels }: 
   const [phase, setPhase] = useState<RevealPhase>("seal");
 
   useEffect(() => {
+    setPhase("seal");
     const reduce =
       typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (reduce) {
       setPhase("unrolled");
       return;
     }
-    const id = window.setTimeout(() => setPhase("unrolled"), 480);
+    // Hold focus on top recommendation a beat longer.
+    const id = window.setTimeout(() => setPhase("unrolled"), 1100);
     return () => window.clearTimeout(id);
   }, [result.evaluationId]);
 
@@ -166,7 +168,6 @@ export function Step3Results({ result, topRiasec, onReset, lang, genieLabels }: 
     return result.matches.slice(0, 3);
   }, [result.matches, showAll]);
 
-  /** Sans RIASEC: top-3 only by default (no bars, no seal). */
   const withoutVisible = useMemo(() => {
     const rows = result.matchesWithoutRiasec ?? [];
     return rows.slice(0, 3);
@@ -186,13 +187,21 @@ export function Step3Results({ result, topRiasec, onReset, lang, genieLabels }: 
   const printLabel = lang === "fr" ? "Imprimer le certificat" : "Print certificate";
   const fileLabel = lang === "fr" ? "Dossier" : "File";
 
+  /* First load: full focus on top recommendation */
   if (phase === "seal" && top) {
     return (
-      <div className="flex min-h-[18rem] flex-col items-center justify-center py-12">
-        <MatchSeal code={top.specialtyCode} score={top.finalScore} showScore={false} />
-        <p className="mt-6 font-mono text-[10px] uppercase tracking-[0.2em] text-ink-muted">
-          {lang === "fr" ? "Sceau appliqué" : "Seal applied"}
-        </p>
+      <div className="flex min-h-[22rem] flex-col items-center justify-center px-2 py-10 text-center">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-brass">{t.topRecommendation}</p>
+        <div className="mt-5">
+          <MatchSeal code={top.specialtyCode} score={top.finalScore} showScore />
+        </div>
+        <h3 className="mt-5 font-display text-xl font-semibold tracking-tight text-ink sm:text-2xl">
+          {top.specialtyTitle}
+        </h3>
+        <div className="mt-3 flex justify-center">
+          <LabelBadge label={top.matchLabel} text={matchLabelText(lang, top.matchLabel)} />
+        </div>
+        <p className="mt-2 font-mono text-sm tabular-nums text-ink-muted">{fmt(top.finalScore, 1)}%</p>
       </div>
     );
   }
@@ -229,7 +238,6 @@ export function Step3Results({ result, topRiasec, onReset, lang, genieLabels }: 
         <p className="mt-10 text-center text-xs text-ink-muted">{t.disclaimer}</p>
       </div>
 
-      {/* Meta — one quiet mono weight line under student identity */}
       <div className="no-print flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0 flex-1 space-y-2">
           <h2 className="font-display text-2xl font-semibold tracking-tight text-ink">{t.results}</h2>
@@ -274,7 +282,6 @@ export function Step3Results({ result, topRiasec, onReset, lang, genieLabels }: 
         </div>
       </div>
 
-      {/* Tabs: Scores default; brass underline only on active */}
       <div className="no-print flex flex-wrap gap-6 border-b border-brass-dim">
         {(
           [
@@ -301,7 +308,7 @@ export function Step3Results({ result, topRiasec, onReset, lang, genieLabels }: 
       {tab === "scores" && (
         <>
           {top && (
-            <div className="card-lift seal-expand border border-brass-dim bg-surface px-4 py-6 text-center">
+            <div className="seal-expand border border-brass-dim bg-surface px-4 py-6 text-center">
               <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-brass">{t.topRecommendation}</p>
               <div className="mt-4">
                 <MatchSeal code={top.specialtyCode} score={top.finalScore} />
@@ -326,7 +333,7 @@ export function Step3Results({ result, topRiasec, onReset, lang, genieLabels }: 
 
           <div className="no-print space-y-0">
             {visible.map((match) => (
-              <article key={match.specialtyId} className="card-lift border-b border-brass-dim py-4 last:border-0">
+              <article key={match.specialtyId} className="border-b border-brass-dim py-4 last:border-0">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
