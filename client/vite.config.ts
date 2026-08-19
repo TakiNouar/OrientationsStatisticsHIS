@@ -5,6 +5,9 @@ import tailwindcss from "@tailwindcss/vite";
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   server: {
+    // Listen on all interfaces so other devices on the LAN can open the UI
+    // (e.g. http://192.168.x.x:5173). API calls stay same-origin and hit the proxy.
+    host: true,
     port: 5173,
     strictPort: false,
     proxy: {
@@ -14,5 +17,9 @@ export default defineConfig({
         secure: false,
       },
     },
+  },
+  preview: {
+    host: true,
+    port: 4173,
   },
 });
