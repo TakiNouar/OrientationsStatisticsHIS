@@ -11,6 +11,8 @@ type Props = {
   onReset: () => void;
   lang: Lang;
   genieLabels?: Record<string, string>;
+  /** Fallback when API matches omit careerPaths (older responses). */
+  careerPathsBySpecialty?: Record<string, CareerPath[]>;
 };
 
 type ResultTab = "scores" | "withoutRiasec" | "careers";
@@ -140,7 +142,14 @@ function CareerCard({ path, lang }: { path: CareerPath; lang: Lang }) {
   );
 }
 
-export function Step3Results({ result, topRiasec, onReset, lang, genieLabels }: Props) {
+export function Step3Results({
+  result,
+  topRiasec,
+  onReset,
+  lang,
+  genieLabels,
+  careerPathsBySpecialty,
+}: Props) {
   const t = strings[lang];
   const streamLabels = STREAM_LABELS_I18N[lang];
   const topCode = topRiasec.map((e) => e.letter).join("");
@@ -158,10 +167,14 @@ export function Step3Results({ result, topRiasec, onReset, lang, genieLabels }: 
       setPhase("unrolled");
       return;
     }
-    // Hold focus on top recommendation a beat longer.
     const id = window.setTimeout(() => setPhase("unrolled"), 1100);
     return () => window.clearTimeout(id);
   }, [result.evaluationId]);
+
+  const pathsFor = (specialtyCode: string, embedded?: CareerPath[]): CareerPath[] => {
+    if (embedded && embedded.length > 0) return embedded;
+    return careerPathsBySpecialty?.[specialtyCode] ?? [];
+  };
 
   const visible = useMemo(() => {
     if (showAll || result.matches.length <= 3) return result.matches;
@@ -187,7 +200,6 @@ export function Step3Results({ result, topRiasec, onReset, lang, genieLabels }: 
   const printLabel = lang === "fr" ? "Imprimer le certificat" : "Print certificate";
   const fileLabel = lang === "fr" ? "Dossier" : "File";
 
-  /* First load: full focus on top recommendation */
   if (phase === "seal" && top) {
     return (
       <div className="flex min-h-[22rem] flex-col items-center justify-center px-2 py-10 text-center">
@@ -430,7 +442,7 @@ export function Step3Results({ result, topRiasec, onReset, lang, genieLabels }: 
         <div className="no-print space-y-6">
           <p className="text-sm leading-relaxed text-ink-muted">{t.careersIntro}</p>
           {result.matches.map((match) => {
-            const paths = match.careerPaths ?? [];
+            const paths = pathsFor(match.specialtyCode, match.careerPaths);
             return (
               <section key={match.specialtyId} className="space-y-3">
                 <div className="flex flex-wrap items-center gap-2 border-b border-brass-dim pb-2">
