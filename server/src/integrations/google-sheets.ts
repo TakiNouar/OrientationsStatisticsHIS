@@ -1,13 +1,13 @@
 /**
  * Live mirror of orientation sessions → Google Sheets.
  *
- * DATA ONLY:
- * - Never writes or clears row 1 (header stays as the user set it).
- * - Never applies colors, fonts, banding, or column widths.
- * - values.update / values.clear only change cell values — existing cell
- *   formatting is left intact by the Sheets API.
+ * DATA ONLY for rows 2+:
+ * - values.clear / values.update only — cell formatting is never reset by the API.
+ * - Row 1 titles are written once per server process (first resync), values only,
+ *   so existing header colors/fonts stay. Set GOOGLE_SHEETS_SEED_HEADER=always
+ *   to rewrite titles on every resync, or =never to skip title writes entirely.
  *
- * Expected columns (row 1 is yours):
+ * Columns:
  *  A Profile # | B Evaluation ID | C Submitted at | D Student name | E BAC stream
  *  F Technical option | G–I RIASEC #1–#3 full names | J Overall mark | K Preferred specialty
  *  L–N match #1 | O–Q match #2 | R–T match #3
@@ -21,9 +21,35 @@ import type { CalculationResult, StudentProfile } from "../types.js";
 
 const DATA_RANGE = "A2:Z";
 
+/** Official header labels (row 1). Written as values only — does not change cell styles. */
+const HEADER_ROW = [
+  "Profile #",
+  "Evaluation ID",
+  "Submitted at",
+  "Student name",
+  "BAC stream",
+  "Technical option",
+  "RIASEC #1",
+  "RIASEC #2",
+  "RIASEC #3",
+  "Overall mark",
+  "Preferred specialty",
+  "Specialty #1",
+  "Score #1",
+  "Match label #1",
+  "Specialty #2",
+  "Score #2",
+  "Match label #2",
+  "Specialty #3",
+  "Score #3",
+  "Match label #3",
+] as const;
+
 let sheetsClient: sheets_v4.Sheets | null = null;
 let resyncTimer: ReturnType<typeof setInterval> | null = null;
 let resyncInFlight = false;
+/** One-time title write per process (unless SEED_HEADER=always|never). */
+let headerTitlesWritten = false;
 
 const isConfigured = (): boolean =>
   Boolean((process.env.GOOGLE_SHEETS_ID ?? "").trim());
@@ -33,6 +59,14 @@ const spreadsheetId = (): string => (process.env.GOOGLE_SHEETS_ID ?? "").trim();
 const tabName = (): string => {
   const raw = (process.env.GOOGLE_SHEETS_TAB ?? "Sessions").trim();
   return raw || "Sessions";
+};
+
+/** never | once (default) | always */
+const headerSeedMode = (): "never" | "once" | "always" => {
+  const v = (process.env.GOOGLE_SHEETS_SEED_HEADER ?? "once").trim().toLowerCase();
+  if (v === "never" || v === "0" || v === "false") return "never";
+  if (v === "always" || v === "1" || v === "true") return "always";
+  return "once";
 };
 
 async function getSheetsClient(): Promise<sheets_v4.Sheets | null> {
@@ -70,6 +104,25 @@ async function getSheetsClient(): Promise<sheets_v4.Sheets | null> {
     });
     return null;
   }
+}
+
+/**
+ * Write header titles to row 1 as values only.
+ * Does not call any formatting APIs — existing colors/fonts on those cells remain.
+ */
+async function writeHeaderTitles(sheets: sheets_v4.Sheets): Promise<void> {
+  const tab = tabName();
+  await sheets.spreadsheets.values.update({
+    spreadsheetId: spreadsheetId(),
+    range: `${tab}!A1`,
+    valueInputOption: "RAW",
+    requestBody: { values: [Array.from(HEADER_ROW)] },
+  });
+  logger.info("google_sheets_header_titles_written", {
+    tab,
+    columns: HEADER_ROW.length,
+    note: "values only; cell styles preserved",
+  });
 }
 
 function matchSlot(
@@ -123,6 +176,12 @@ export async function fullResyncToSheet(): Promise<void> {
     const sheets = await getSheetsClient();
     if (!sheets) return;
 
+    const mode = headerSeedMode();
+    if (mode === "always" || (mode === "once" && !headerTitlesWritten)) {
+      await writeHeaderTitles(sheets);
+      headerTitlesWritten = true;
+    }
+
     const sessions = listAllSessionsForSheet();
     const rows = sessions.map((session, index) => buildDataRow(session, index + 1));
     const tab = tabName();
@@ -146,6 +205,7 @@ export async function fullResyncToSheet(): Promise<void> {
       spreadsheetId: spreadsheetId(),
       tab,
       mode: "data_only",
+      headerMode: mode,
     });
   } catch (error) {
     logger.error("google_sheets_resync_failed", {
