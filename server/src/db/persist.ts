@@ -54,7 +54,7 @@ export const persistEvaluation = (
       studentProfile.bacStream,
       studentProfile.academicPerformance.overallBacMark,
       studentProfile.preferredSpecialtyCode ?? null,
-      studentProfile.technicalOption ?? null,
+      studentProfile.technicalOption ? String(studentProfile.technicalOption) : null,
     );
 
     const gradeEntries = Object.entries(studentProfile.academicPerformance.grades) as [
@@ -78,22 +78,26 @@ export const persistEvaluation = (
       JSON.stringify(studentProfile.topRiasec),
     );
 
-    const noRiasecBySpec = new Map(
-      (result.matchesWithoutRiasec ?? []).map((m) => [m.specialtyId, m]),
+    const evaluatedAt = new Date().toISOString();
+    const byCode = new Map(result.matches.map((m) => [m.specialtyCode, m]));
+    const noRiasecByCode = new Map(
+      (result.matchesWithoutRiasec ?? []).map((m) => [m.specialtyCode, m]),
     );
+
+    // Persist top matches (and no-RIASEC ranks when present)
     for (const match of result.matches) {
-      const alt = noRiasecBySpec.get(match.specialtyId);
+      const noR = noRiasecByCode.get(match.specialtyCode);
       stmts.insertEvaluation.run(
-        `${result.evaluationId}_${match.specialtyId}`,
+        crypto.randomUUID(),
         studentId,
         match.specialtyId,
         match.academicScore,
-        match.psychometricScore,
+        match.riasecScore,
         match.finalScore,
         match.rank,
-        alt?.finalScore ?? null,
-        alt?.rank ?? null,
-        result.timestamp,
+        noR?.finalScore ?? null,
+        noR?.rank ?? null,
+        evaluatedAt,
       );
     }
   });
