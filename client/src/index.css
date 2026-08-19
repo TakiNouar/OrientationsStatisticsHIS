@@ -218,7 +218,6 @@ html.dark {
   background: color-mix(in srgb, var(--color-surface) 88%, transparent);
 }
 
-/* —— Luxe form & interaction polish —— */
 .intended-field-error {
   border-bottom-color: var(--color-burgundy) !important;
 }
@@ -266,4 +265,57 @@ select.intended-field {
   background-size: 5px 5px, 5px 5px;
   background-repeat: no-repeat;
   padding-right: 1.5rem;
+}
+
+/* —— Spatial scale (8pt grid) ——
+ * 1=4px 2=8px 3=12px 4=16px 5=20px 6=24px 8=32px 10=40px 12=48px
+ * Prefer gap-2/3/4/6/8 and p-4/5/6/8; avoid one-off odd values.
+ */
+:root {
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --ease-luxe: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.intended-tab {
+  margin-bottom: -1px;
+}
+
+.intended-skeleton {
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--color-brass-dim) 25%, var(--color-surface)) 0%,
+    color-mix(in srgb, var(--color-brass-dim) 40%, var(--color-surface)) 50%,
+    color-mix(in srgb, var(--color-brass-dim) 25%, var(--color-surface)) 100%
+  );
+  background-size: 200% 100%;
+  animation: intended-shimmer 1.2s ease-in-out infinite;
+}
+
+@keyframes intended-shimmer {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: -100% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .intended-skeleton {
+    animation: none;
+  }
+}
+
+.intended-empty {
+  border: 1px dashed var(--color-brass-dim);
+  background: color-mix(in srgb, var(--color-surface) 70%, transparent);
+  padding: var(--space-8) var(--space-4);
+  text-align: center;
+  font-size: 0.875rem;
+  color: var(--color-ink-muted);
 }
