@@ -162,7 +162,9 @@ export function AnalyticsPage({ config, lang, onBack }: Props) {
   if (selectedStudentId) {
     return (
       <div className="space-y-4">
-        {profileLoading && <p className="text-sm text-ink-muted">{t.loading}</p>}
+        {profileLoading && (
+          <div className="analytics-card intended-skeleton h-64" aria-busy="true" aria-label={t.loading} />
+        )}
         {profileError && <p className="text-sm text-burgundy">{profileError}</p>}
         {profile && (
           <StudentProfileView
@@ -283,7 +285,17 @@ export function AnalyticsPage({ config, lang, onBack }: Props) {
         <div className="border border-burgundy/40 bg-burgundy/5 px-3 py-2 text-sm text-burgundy">{error}</div>
       )}
 
-      {loading && <p className="text-sm text-ink-muted">{t.loading}</p>}
+      {loading && (
+        <div className="space-y-4" aria-busy="true" aria-label={t.loading}>
+          <div className="grid gap-3 sm:grid-cols-3">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="analytics-card intended-skeleton h-24 p-4" />
+            ))}
+          </div>
+          <div className="analytics-card intended-skeleton h-40" />
+          <div className="analytics-card intended-skeleton h-48" />
+        </div>
+      )}
 
       {summary && !loading && (
         <div className="grid gap-3 sm:grid-cols-3">
@@ -372,7 +384,7 @@ export function AnalyticsPage({ config, lang, onBack }: Props) {
             </tbody>
           </table>
           {(recent.sessions ?? []).length === 0 && (
-            <p className="p-4 text-sm text-ink-muted">{t.noSessions}</p>
+            <p className="intended-empty m-4">{t.noSessions}</p>
           )}
         </div>
       )}
