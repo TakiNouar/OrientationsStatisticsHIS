@@ -17,8 +17,6 @@ const LABEL_COLORS: Record<MatchLabel, string> = {
   WEAK_MATCH: "#6E1F2A",
 };
 
-const BUCKET_COLORS = ["#8C8168", "#D9C68C", "#C7A346", "#A9852F", "#6E1F2A"];
-
 function Card({
   children,
   className = "",
@@ -160,53 +158,6 @@ function AreaVolumeChart({
   );
 }
 
-function ScoreHistogram({
-  title,
-  items,
-}: {
-  title: string;
-  items: Array<{ key: string; label: string; count: number }>;
-}) {
-  const max = Math.max(1, ...items.map((i) => i.count));
-  const total = items.reduce((s, i) => s + i.count, 0);
-
-  return (
-    <Card delay={2}>
-      <SectionTitle title={title} subtitle={total > 0 ? `${total}` : undefined} />
-      {total === 0 ? (
-        <p className="intended-empty">—</p>
-      ) : (
-        <div className="flex h-40 min-w-0 items-end gap-1.5 overflow-hidden px-0.5 sm:h-44 sm:gap-2">
-          {items.map((item, idx) => {
-            const pct = (item.count / max) * 100;
-            const color = BUCKET_COLORS[idx] ?? "#A9852F";
-            return (
-              <div key={item.key} className="group flex min-w-0 flex-1 flex-col items-center gap-1">
-                <span className="font-mono text-[10px] font-medium tabular-nums text-ink sm:text-[11px]">
-                  {item.count}
-                </span>
-                <div className="relative flex h-28 w-full items-end justify-center sm:h-32">
-                  <div
-                    className="w-[75%] max-w-[40px] rounded-sm transition-all duration-500 group-hover:brightness-110"
-                    style={{
-                      height: `${Math.max(6, pct)}%`,
-                      background: color,
-                    }}
-                    title={item.label}
-                  />
-                </div>
-                <span className="analytics-truncate w-full text-center font-mono text-[8px] text-ink-muted sm:text-[9px]">
-                  {item.key}
-                </span>
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </Card>
-  );
-}
-
 function MatchDonut({
   title,
   items,
@@ -239,7 +190,7 @@ function MatchDonut({
   });
 
   return (
-    <Card delay={3}>
+    <Card delay={2}>
       <SectionTitle title={title} />
       {total === 0 ? (
         <p className="intended-empty">—</p>
@@ -323,7 +274,7 @@ function StreamSpecialtyMatrix({
   const lookup = new Map(cells.map((c) => [`${c.bacStream}|${c.specialtyCode}`, c.count]));
 
   return (
-    <Card delay={4}>
+    <Card delay={3}>
       <SectionTitle title={title} subtitle="Rank-1" />
       {cells.length === 0 ? (
         <p className="intended-empty">{emptyLabel}</p>
@@ -402,7 +353,6 @@ export function AnalyticsDashboardPanel({ dashboard, lang, totalSessions }: Prop
 
   const dq = dashboard.dataQuality ?? {};
   const volume = dashboard.volumeByDay ?? [];
-  const buckets = dashboard.scoreBuckets ?? [];
   const labels = dashboard.byMatchLabel ?? [];
   const matrix = dashboard.streamSpecialtyMatrix ?? [];
 
@@ -466,70 +416,9 @@ export function AnalyticsDashboardPanel({ dashboard, lang, totalSessions }: Prop
         ))}
       </div>
 
-      <div className="grid min-w-0 gap-4 lg:grid-cols-2">
-        <AreaVolumeChart title={t.volumeByDay} points={volume} emptyLabel={t.noChartData} />
-        <ScoreHistogram
-          title={t.scoreBuckets}
-          items={buckets.map((b) => ({
-            key: b.key,
-            label: b.label,
-            count: b.count,
-          }))}
-        />
-      </div>
+      <AreaVolumeChart title={t.volumeByDay} points={volume} emptyLabel={t.noChartData} />
 
-      <div className="grid min-w-0 gap-4 lg:grid-cols-2">
-        <MatchDonut title={t.byMatchLabel} items={labels} lang={lang} />
-        <Card delay={3}>
-          <SectionTitle title={t.dataQuality} />
-          <div className="grid grid-cols-2 gap-3">
-            <div className="min-w-0 border border-burgundy/30 bg-burgundy/5 p-3">
-              <p className="analytics-truncate font-mono text-[10px] font-medium uppercase tracking-wide text-burgundy">
-                {t.lowScores}
-              </p>
-              <p className="mt-1 font-mono text-2xl font-medium tabular-nums text-ink">
-                {dq.lowScoreSessions ?? 0}
-              </p>
-            </div>
-            <div className="min-w-0 border border-brass-dim bg-brass/5 p-3">
-              <p className="analytics-truncate font-mono text-[10px] font-medium uppercase tracking-wide text-brass">
-                {t.highScores}
-              </p>
-              <p className="mt-1 font-mono text-2xl font-medium tabular-nums text-ink">
-                {dq.highScoreSessions ?? 0}
-              </p>
-            </div>
-          </div>
-          {(dq.sessionsMissingRiasec ?? 0) > 0 && (
-            <p className="mt-3 break-words border border-burgundy/30 bg-burgundy/5 px-3 py-2 text-xs text-burgundy">
-              {t.missingRiasec}: {dq.sessionsMissingRiasec}
-            </p>
-          )}
-          {(dq.neverRankedSpecialtyCodes?.length ?? 0) > 0 && (
-            <div className="mt-4 min-w-0">
-              <p className="font-mono text-[10px] font-medium uppercase tracking-wide text-ink-muted">
-                {t.neverRanked}
-              </p>
-              <ul className="mt-2 flex max-w-full flex-wrap gap-1.5">
-                {(dq.neverRankedSpecialtyCodes ?? []).map((s) => {
-                  const code = typeof s === "string" ? s : (s as { code: string }).code;
-                  const title =
-                    typeof s === "string" ? s : ((s as { title?: string }).title ?? code);
-                  return (
-                    <li
-                      key={code}
-                      className="max-w-full rounded-sm border border-brass-dim bg-surface px-2 py-0.5 font-mono text-[10px] text-ink"
-                      title={title}
-                    >
-                      <span className="analytics-truncate inline-block max-w-[10rem]">{code}</span>
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
-          )}
-        </Card>
-      </div>
+      <MatchDonut title={t.byMatchLabel} items={labels} lang={lang} />
 
       <StreamSpecialtyMatrix
         title={t.streamSpecialtyMatrix}
