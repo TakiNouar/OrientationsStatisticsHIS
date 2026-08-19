@@ -4,6 +4,9 @@
  */
 import { createTables } from "./schema.js";
 import { upsertSpecialties, upsertCareerPaths } from "./seed.js";
+import { db, careerSeedPath, seedPath } from "./connection.js";
+import { logger } from "../logger.js";
+import fs from "node:fs";
 
 export { db } from "./connection.js";
 export { getActiveSpecialties } from "./specialties.js";
@@ -34,4 +37,28 @@ export const initDatabase = (): void => {
   createTables();
   upsertSpecialties();
   upsertCareerPaths();
+
+  const specialtyCount = (
+    db.prepare(`SELECT COUNT(*) AS n FROM his_specialties WHERE is_active = 1`).get() as { n: number }
+  ).n;
+  const careerCount = (
+    db.prepare(`SELECT COUNT(*) AS n FROM career_paths WHERE is_active = 1`).get() as { n: number }
+  ).n;
+
+  logger.info("database_ready", {
+    specialties: specialtyCount,
+    careerPaths: careerCount,
+    specialtySeedExists: fs.existsSync(seedPath),
+    careerSeedExists: fs.existsSync(careerSeedPath),
+    specialtySeedPath: seedPath,
+    careerSeedPath,
+  });
+
+  if (careerCount === 0) {
+    logger.error("career_paths_empty", {
+      hint: "career-paths.seed.json missing or failed to load — Careers tab will be empty",
+      careerSeedPath,
+      exists: fs.existsSync(careerSeedPath),
+    });
+  }
 };
