@@ -114,11 +114,32 @@ html.dark {
   background: var(--color-surface);
   color: var(--color-ink);
   box-shadow: 0 1px 0 color-mix(in srgb, var(--color-brass) 12%, transparent);
+  transition:
+    box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 0.25s ease;
+}
+
+.analytics-card:hover {
+  box-shadow:
+    0 1px 0 color-mix(in srgb, var(--color-brass) 18%, transparent),
+    0 12px 28px -16px color-mix(in srgb, var(--color-ink) 18%, transparent);
 }
 
 .analytics-kpi-glow {
   background: var(--color-brass);
   opacity: 0.15;
+}
+
+.dash-kpi {
+  position: relative;
+}
+
+.dash-table th {
+  white-space: nowrap;
+}
+
+.dash-table tbody tr {
+  transition: background-color 0.15s ease;
 }
 
 .analytics-truncate {
@@ -212,6 +233,7 @@ html.dark {
   background: color-mix(in srgb, var(--color-surface) 86%, transparent);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
+  transition: background-color 0.25s ease, border-color 0.25s ease;
 }
 
 .dark .intended-header {
@@ -238,22 +260,6 @@ html.dark {
   transform: translateY(1px);
 }
 
-.intended-header {
-  transition: background-color 0.25s ease, border-color 0.25s ease;
-}
-
-.analytics-card {
-  transition:
-    box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1),
-    border-color 0.25s ease;
-}
-
-.analytics-card:hover {
-  box-shadow:
-    0 1px 0 color-mix(in srgb, var(--color-brass) 18%, transparent),
-    0 12px 28px -16px color-mix(in srgb, var(--color-ink) 18%, transparent);
-}
-
 select.intended-field {
   cursor: pointer;
   appearance: none;
@@ -267,10 +273,6 @@ select.intended-field {
   padding-right: 1.5rem;
 }
 
-/* —— Spatial scale (8pt grid) ——
- * 1=4px 2=8px 3=12px 4=16px 5=20px 6=24px 8=32px 10=40px 12=48px
- * Prefer gap-2/3/4/6/8 and p-4/5/6/8; avoid one-off odd values.
- */
 :root {
   --space-1: 0.25rem;
   --space-2: 0.5rem;
