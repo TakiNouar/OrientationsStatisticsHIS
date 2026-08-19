@@ -58,7 +58,9 @@ const defaultOrigins = [
   "http://localhost:5174",
   "http://127.0.0.1:5174",
 ];
-const allowedOrigins = (process.env.CORS_ORIGINS ?? defaultOrigins.join(","))
+const allowedOrigins = (
+  process.env.CORS_ORIGINS ?? process.env.ALLOWED_ORIGINS ?? defaultOrigins.join(",")
+)
   .split(",")
   .map((s) => s.trim())
   .filter(Boolean);
