@@ -206,6 +206,7 @@ export default function App() {
                   onReset={wizard.reset}
                   lang={lang}
                   genieLabels={config.technicalMathOptionLabels}
+                  careerPathsBySpecialty={config.careerPathsBySpecialty}
                 />
               )}
 

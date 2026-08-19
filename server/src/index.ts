@@ -44,6 +44,8 @@ import {
   STREAM_LABELS,
   SUBJECT_LABELS,
   type StudentProfile,
+  type CalculationResult,
+  type SpecialtyMatchBreakdown,
 } from "./types.js";
 
 const PORT = Number(process.env.PORT ?? 3001);
@@ -105,6 +107,23 @@ function parseAnalyticsFilters(req: express.Request): AnalyticsFilters {
   };
 }
 
+/** Attach seeded career paths onto each match by specialty code. */
+function withCareerPaths(result: CalculationResult): CalculationResult {
+  const byCode = getCareerPathsBySpecialty();
+  const attach = (matches: SpecialtyMatchBreakdown[]): SpecialtyMatchBreakdown[] =>
+    matches.map((m) => ({
+      ...m,
+      careerPaths: byCode[m.specialtyCode] ?? [],
+    }));
+  return {
+    ...result,
+    matches: attach(result.matches),
+    matchesWithoutRiasec: result.matchesWithoutRiasec
+      ? attach(result.matchesWithoutRiasec)
+      : result.matchesWithoutRiasec,
+  };
+}
+
 app.get("/api/v1/health", (_req, res) => {
   res.json({
     status: "ok",
@@ -147,7 +166,6 @@ app.get("/api/v1/config", (_req, res) => {
   }
 });
 
-/** Map flat Zod input → nested StudentProfile the engine/persist expect. */
 function toStudentProfile(input: CalculateRecommendationInput): StudentProfile {
   return {
     fullName: input.fullName,
@@ -174,7 +192,8 @@ app.post("/api/v1/recommendations", (req, res) => {
     }
     const profile = toStudentProfile(parsed.data);
     const specialties = getActiveSpecialties();
-    const result = calculateRecommendations(profile, specialties);
+    const raw = calculateRecommendations(profile, specialties);
+    const result = withCareerPaths(raw);
     persistEvaluation(profile, result);
     const evaluationId = result.evaluationId;
     void syncEvaluationToSheet(evaluationId).catch((err) => {
