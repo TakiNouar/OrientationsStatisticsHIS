@@ -49,10 +49,10 @@ export type MatchLabel =
 
 export const MATCH_LABEL_TEXT: Record<MatchLabel, string> = {
   STRONG_MATCH: "Strong match",
-  STRONG_MATCH_CONVERSATION: "Strong match — worth a conversation",
-  POSSIBLE_FIT: "Possible fit / ambiguous",
-  PROFILE_DEVELOPING: "Interested, profile still developing",
-  WEAK_MATCH: "Weak match — explore other options",
+  STRONG_MATCH_CONVERSATION: "Strong match — conversation recommended",
+  POSSIBLE_FIT: "Possible fit",
+  PROFILE_DEVELOPING: "Profile developing",
+  WEAK_MATCH: "Weak match",
 };
 
 export const TECHNICAL_MATH_OPTION_LABELS: Record<TechnicalMathOption, string> = {
@@ -70,14 +70,9 @@ export type StreamGradeSlots = {
 };
 
 export const STREAM_GRADE_SLOTS: Record<BacStream, StreamGradeSlots> = {
-  MATHEMATICS: {
-    main1: "MATH",
-    main2: "PHYSICS",
-    opposite: "ARABIC",
-    english: "ENGLISH",
-  },
+  MATHEMATICS: { main1: "MATH", main2: "PHYSICS", opposite: "ARABIC", english: "ENGLISH" },
   EXPERIMENTAL_SCIENCES: {
-    main1: "MATH",
+    main1: "NATURAL_SCIENCES",
     main2: "PHYSICS",
     opposite: "ARABIC",
     english: "ENGLISH",
@@ -95,14 +90,14 @@ export const STREAM_GRADE_SLOTS: Record<BacStream, StreamGradeSlots> = {
     english: "ENGLISH",
   },
   FOREIGN_LANGUAGES: {
-    main1: "ARABIC",
-    main2: "FRENCH",
+    main1: "FRENCH",
+    main2: "ENGLISH",
     opposite: "MATH",
-    english: "ENGLISH",
+    english: "ARABIC",
   },
   LITERATURE_PHILOSOPHY: {
-    main1: "ARABIC",
-    main2: "PHILOSOPHY",
+    main1: "PHILOSOPHY",
+    main2: "ARABIC",
     opposite: "MATH",
     english: "ENGLISH",
   },
@@ -114,6 +109,36 @@ export const ACADEMIC_SLOT_WEIGHTS = {
   opposite: 0.2,
   english: 0.1,
 } as const;
+
+/** Final score blend (must match engine.ts). */
+export const FORMULA_WEIGHTS = {
+  academic: 0.5,
+  riasec: 0.25,
+  technical: 0.2,
+  preference: 0.05,
+} as const;
+
+export const STREAM_LABELS: Record<BacStream, string> = {
+  MATHEMATICS: "Mathematics",
+  EXPERIMENTAL_SCIENCES: "Experimental sciences",
+  TECHNICAL_MATHEMATICS: "Technical mathematics",
+  MANAGEMENT_ECONOMY: "Management & economy",
+  FOREIGN_LANGUAGES: "Foreign languages",
+  LITERATURE_PHILOSOPHY: "Literature & philosophy",
+};
+
+export const SUBJECT_LABELS: Record<SubjectCode, string> = {
+  MATH: "Mathematics",
+  PHYSICS: "Physics",
+  NATURAL_SCIENCES: "Natural sciences",
+  PHILOSOPHY: "Philosophy",
+  ARABIC: "Arabic",
+  FRENCH: "French",
+  ENGLISH: "English",
+  ACCOUNTING_FINANCE: "Accounting & finance",
+  ECONOMICS: "Economics",
+  HISTORY_GEOGRAPHY: "History & geography",
+};
 
 export const AFFINITY_MIN = 0.6;
 export const AFFINITY_MAX = 1.8;
@@ -128,11 +153,11 @@ export const MARKS_BLEND = 0.55;
 
 export const STREAM_SUBJECT_MAP: Record<BacStream, SubjectCode[]> = {
   MATHEMATICS: ["MATH", "PHYSICS", "ARABIC", "ENGLISH"],
-  EXPERIMENTAL_SCIENCES: ["MATH", "PHYSICS", "ARABIC", "ENGLISH"],
+  EXPERIMENTAL_SCIENCES: ["NATURAL_SCIENCES", "PHYSICS", "MATH", "ARABIC", "ENGLISH"],
   TECHNICAL_MATHEMATICS: ["MATH", "PHYSICS", "ARABIC", "ENGLISH"],
-  MANAGEMENT_ECONOMY: ["ACCOUNTING_FINANCE", "ECONOMICS", "MATH", "ENGLISH"],
-  FOREIGN_LANGUAGES: ["ARABIC", "FRENCH", "MATH", "ENGLISH"],
-  LITERATURE_PHILOSOPHY: ["ARABIC", "PHILOSOPHY", "MATH", "ENGLISH"],
+  MANAGEMENT_ECONOMY: ["ACCOUNTING_FINANCE", "ECONOMICS", "MATH", "ARABIC", "ENGLISH"],
+  FOREIGN_LANGUAGES: ["FRENCH", "ENGLISH", "ARABIC", "PHILOSOPHY"],
+  LITERATURE_PHILOSOPHY: ["PHILOSOPHY", "ARABIC", "FRENCH", "HISTORY_GEOGRAPHY", "ENGLISH"],
 };
 
 export type RiasecVector = {
@@ -150,15 +175,15 @@ export type TopRiasecProfile = [TopRiasecEntry, TopRiasecEntry, TopRiasecEntry];
 export type HollandCode = [RiasecLetter, RiasecLetter, RiasecLetter];
 
 export type SubjectWeightMap = {
-  weights: Partial<Record<SubjectCode, number>>;
+  [K in SubjectCode]?: number;
 };
 
 export type RiasecBenchmark = {
   vector: RiasecVector;
+  hollandCode: HollandCode;
 };
 
 export interface StudentProfile {
-  studentId?: string;
   fullName: string;
   bacStream: BacStream;
   technicalOption?: TechnicalMathOption;
@@ -178,9 +203,9 @@ export interface HisSpecialtyConfig {
   description: string;
   isTechnical: boolean;
   hollandCode: HollandCode;
-  subjectWeights: SubjectWeightMap;
   riasecBenchmark: RiasecBenchmark;
-  isActive: boolean;
+  subjectWeights: SubjectWeightMap;
+  active: boolean;
 }
 
 export interface SpecialtyMatchBreakdown {
@@ -192,14 +217,14 @@ export interface SpecialtyMatchBreakdown {
   isTechnical: boolean;
   hollandCode: HollandCode;
   academicScore: number;
+  riasecScore: number;
   psychometricScore: number;
   technicalScore: number;
   preferenceScore: number;
   finalScore: number;
-  finalScoreNoRiasec?: number;
   rank: number;
   matchLabel: MatchLabel;
-  careerPaths?: CareerPath[];
+  matchLabelText: string;
   details: {
     rawAcademicPercentage: number;
     vectorCosineSimilarity: number;
@@ -221,34 +246,32 @@ export interface SpecialtyMatchBreakdown {
     technicalStreamBase: number;
     technicalMarksComponent: number;
   };
+  careerPaths?: CareerPath[];
 }
 
 export interface CalculationResult {
-  evaluationId: string;
+  evaluationId?: string;
   timestamp: string;
-  studentName: string;
-  studentId?: string;
-  fullName?: string;
+  fullName: string;
   bacStream: BacStream;
-  technicalOption?: TechnicalMathOption;
+  technicalStream: boolean;
   preferredSpecialtyCode?: string;
-  overallBacMark?: number;
-  isTechnicalStream: boolean;
-  technicalStream?: boolean;
+  technicalOption?: TechnicalMathOption;
+  hollandCode: string;
   weights: {
     academic: number;
     riasec: number;
     technical: number;
     preference: number;
   };
-  weightsWithoutRiasec: {
+  weightsWithoutRiasec?: {
     academic: number;
     riasec: number;
     technical: number;
     preference: number;
   };
   matches: SpecialtyMatchBreakdown[];
-  matchesWithoutRiasec: SpecialtyMatchBreakdown[];
+  matchesWithoutRiasec?: SpecialtyMatchBreakdown[];
 }
 
 export type CareerPath = {
@@ -271,16 +294,9 @@ export type SeedSpecialty = {
   department: string;
   description: string;
   isTechnical: boolean;
-  hollandCode: [RiasecLetter, RiasecLetter, RiasecLetter];
-  weights: Partial<Record<SubjectCode, number>>;
-  riasecBenchmark: {
-    R: number;
-    I: number;
-    A: number;
-    S: number;
-    E: number;
-    C: number;
-  };
+  hollandCode: HollandCode;
+  subjectWeights: SubjectWeightMap;
+  active?: boolean;
 };
 
 export const RIASEC_LETTER_TO_KEY: Record<RiasecLetter, keyof RiasecVector> = {
@@ -320,7 +336,6 @@ export const topRiasecToVector = (top: TopRiasecProfile): RiasecVector => {
 export const isTechnicalBacStream = (stream: BacStream): boolean =>
   (TECHNICAL_BAC_STREAMS as readonly string[]).includes(stream);
 
-/** Specialty-dependent academic slots (model A, choice 2). */
 export const resolveAcademicSlots = (
   bacStream: BacStream,
   specialtyIsTechnical: boolean,
