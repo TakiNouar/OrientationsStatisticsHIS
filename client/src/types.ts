@@ -145,6 +145,34 @@ export interface ConfigResponse {
   careerPathsBySpecialty: Record<string, CareerPath[]>;
 }
 
+export interface AnalyticsSummary {
+  totalEvaluations: number;
+  uniqueStudents: number;
+  byBacStream: Array<{ key: string; label: string; count: number }>;
+  byTopSpecialty: Array<{ key: string; label: string; count: number }>;
+  byMatchLabel: Array<{ key: string; label: string; count: number }>;
+  averageFinalScore: number | null;
+}
+
+export interface SessionListRow {
+  studentId: string;
+  fullName: string;
+  evaluatedAt: string;
+  bacStream: string;
+  overallBacMark: number;
+  topSpecialtyCode: string;
+  topSpecialtyTitle: string;
+  department: string;
+  finalScore: number;
+  matchLabel: MatchLabel;
+  academicScore: number;
+  riasecScore: number;
+}
+
+export interface AnalyticsRecentResponse {
+  sessions: SessionListRow[];
+}
+
 export interface StudentMatchRow {
   specialtyId: string;
   specialtyCode: string;
@@ -185,34 +213,6 @@ export interface StudentProfileDetail {
     topRiasec: Array<{ letter: RiasecLetter; weight: number }> | null;
   } | null;
   matches: StudentMatchRow[];
-}
-
-export interface AnalyticsSummary {
-  totalEvaluations: number;
-  uniqueStudents: number;
-  byBacStream: Array<{ key: string; label: string; count: number }>;
-  byTopSpecialty: Array<{ key: string; label: string; count: number }>;
-  byMatchLabel: Array<{ key: string; label: string; count: number }>;
-  averageFinalScore: number | null;
-}
-
-export interface AnalyticsSessionRow {
-  studentId: string;
-  fullName: string;
-  evaluatedAt: string;
-  bacStream: string;
-  overallBacMark: number;
-  topSpecialtyCode: string;
-  topSpecialtyTitle: string;
-  department: string;
-  finalScore: number;
-  matchLabel: MatchLabel;
-  academicScore: number;
-  riasecScore: number;
-}
-
-export interface AnalyticsRecentResponse {
-  sessions: AnalyticsSessionRow[];
 }
 
 export interface AnalyticsDashboard {
