@@ -72,6 +72,23 @@ async function getSheetsClient(): Promise<sheets_v4.Sheets | null> {
   }
 }
 
+/** ISO / SQLite timestamp → plain `YYYY-MM-DD HH:mm` (no ms, no Z). */
+function formatSheetDateTime(raw: string): string {
+  const s = (raw ?? "").trim();
+  if (!s) return "";
+  const d = new Date(s);
+  if (Number.isNaN(d.getTime())) {
+    return s.replace("T", " ").replace(/\.\d+Z?$/, "").replace(/Z$/, "").slice(0, 16);
+  }
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const y = d.getFullYear();
+  const m = pad(d.getMonth() + 1);
+  const day = pad(d.getDate());
+  const h = pad(d.getHours());
+  const min = pad(d.getMinutes());
+  return `${y}-${m}-${day} ${h}:${min}`;
+}
+
 function matchSlot(
   matches: SheetSessionRow["matches"],
   index: number,
@@ -90,7 +107,7 @@ function buildDataRow(session: SheetSessionRow, profileNumber: number): (string 
   return [
     profileNumber,
     session.evaluationId,
-    session.submittedAt,
+    formatSheetDateTime(session.submittedAt),
     session.fullName,
     session.bacStream,
     session.technicalOption,
