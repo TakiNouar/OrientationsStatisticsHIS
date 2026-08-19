@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { CalculationResult, CareerPath, MatchLabel, TopRiasecProfile } from "../types";
 import { LABEL_STYLES } from "../types";
 import type { Lang } from "../i18n/strings";
@@ -14,6 +14,7 @@ type Props = {
 };
 
 type ResultTab = "scores" | "withoutRiasec" | "careers";
+type RevealPhase = "seal" | "unrolled";
 
 function ScoreBar({
   academic,
@@ -59,11 +60,18 @@ function LabelBadge({ label, text }: { label: MatchLabel; text: string }) {
   );
 }
 
-/** Circular brass seal — top recommendation signature. */
-function MatchSeal({ code, score }: { code: string; score: number }) {
+function MatchSeal({
+  code,
+  score,
+  showScore = true,
+}: {
+  code: string;
+  score: number;
+  showScore?: boolean;
+}) {
   const rim = (code || "HIS").slice(0, 12).toUpperCase();
   return (
-    <div className="seal-in relative mx-auto flex h-36 w-36 items-center justify-center" aria-hidden>
+    <div className="seal-press relative mx-auto flex h-36 w-36 items-center justify-center" aria-hidden>
       <svg viewBox="0 0 120 120" className="absolute inset-0 h-full w-full text-brass">
         <circle cx="60" cy="60" r="56" fill="none" stroke="currentColor" strokeWidth="1.5" />
         <circle cx="60" cy="60" r="50" fill="none" stroke="currentColor" strokeWidth="0.75" />
@@ -71,18 +79,44 @@ function MatchSeal({ code, score }: { code: string; score: number }) {
       </svg>
       <div className="relative z-10 flex flex-col items-center px-2 text-center">
         <span className="font-mono text-[10px] tracking-[0.2em] text-brass">{rim}</span>
-        <span className="mt-1 font-mono text-3xl font-medium tabular-nums text-ink">
-          {score.toFixed(1)}
-        </span>
-        <span className="font-mono text-[10px] text-ink-muted">%</span>
+        {showScore && (
+          <>
+            <span className="mt-1 font-mono text-3xl font-medium tabular-nums text-ink">
+              {score.toFixed(1)}
+            </span>
+            <span className="font-mono text-[10px] text-ink-muted">%</span>
+          </>
+        )}
       </div>
     </div>
   );
 }
 
-function fmt(value: number | undefined | null, digits = 1, fallback = "—"): string {
+/** Student RIASEC monogram — personal seal, distinct from specialty MatchSeal. */
+function RiasecMonogram({ code }: { code: string }) {
+  const letters = (code || "···").slice(0, 3).toUpperCase();
+  return (
+    <div className="relative inline-flex h-14 w-14 items-center justify-center" aria-label={`RIASEC ${letters}`}>
+      <svg viewBox="0 0 64 64" className="absolute inset-0 h-full w-full text-brass">
+        <circle cx="32" cy="32" r="30" fill="none" stroke="currentColor" strokeWidth="1.25" />
+        <circle cx="32" cy="32" r="25" fill="none" stroke="currentColor" strokeWidth="0.6" opacity="0.6" />
+      </svg>
+      <span className="relative z-10 font-mono text-sm font-semibold tracking-[0.18em] text-brass">
+        {letters}
+      </span>
+    </div>
+  );
+}
+
+function fmt(value: number | undefined | null, digits = 1, fallback = "\u2014"): string {
   if (typeof value !== "number" || Number.isNaN(value)) return fallback;
   return value.toFixed(digits);
+}
+
+function formatFileNumber(evaluationId: string | undefined, timestamp: string): string {
+  const date = (timestamp || "").slice(0, 10).replace(/-/g, "");
+  const short = (evaluationId || "XXXX").replace(/-/g, "").slice(0, 6).toUpperCase();
+  return `HIS-${date || "00000000"}-${short}`;
 }
 
 function levelLabel(lang: Lang, level: string): string {
@@ -111,7 +145,7 @@ function CareerCard({ path, lang }: { path: CareerPath; lang: Lang }) {
       <p className="mt-1 text-xs text-ink-muted">
         {t.careerSector}: {sector}
       </p>
-      <p className="mt-2 text-sm text-ink-muted">{description}</p>
+      {description && <p className="career-dropcap mt-2 text-sm text-ink-muted">{description}</p>}
       {examples.length > 0 && (
         <div className="mt-2">
           <p className="text-[11px] font-semibold uppercase tracking-wide text-ink-muted">
@@ -136,6 +170,19 @@ export function Step3Results({ result, topRiasec, onReset, lang, genieLabels }: 
   const [showDetails, setShowDetails] = useState(false);
   const [showAll, setShowAll] = useState(false);
   const [tab, setTab] = useState<ResultTab>("scores");
+  const [phase, setPhase] = useState<RevealPhase>("seal");
+
+  useEffect(() => {
+    const reduce =
+      typeof window !== "undefined" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reduce) {
+      setPhase("unrolled");
+      return;
+    }
+    const id = window.setTimeout(() => setPhase("unrolled"), 480);
+    return () => window.clearTimeout(id);
+  }, [result.evaluationId]);
 
   const visible = useMemo(() => {
     if (showAll || result.matches.length <= 3) return result.matches;
@@ -154,6 +201,8 @@ export function Step3Results({ result, topRiasec, onReset, lang, genieLabels }: 
       : result.technicalOption;
 
   const exportUrl = exportEvaluationsUrl();
+  const fileNumber = formatFileNumber(result.evaluationId, result.timestamp);
+  const studentName = result.studentName ?? result.fullName ?? "";
 
   const scoreLabels = {
     academic: t.academic,
@@ -163,25 +212,81 @@ export function Step3Results({ result, topRiasec, onReset, lang, genieLabels }: 
   };
 
   const showAllLabel = lang === "fr" ? "Voir tout" : "Show all";
-  const showLessLabel = lang === "fr" ? "Réduire" : "Show less";
+  const showLessLabel = lang === "fr" ? "R\u00e9duire" : "Show less";
+  const printLabel = lang === "fr" ? "Imprimer le certificat" : "Print certificate";
+  const fileLabel = lang === "fr" ? "Dossier" : "File";
+
+  /* Beat 1: seal only */
+  if (phase === "seal" && top) {
+    return (
+      <div className="flex min-h-[18rem] flex-col items-center justify-center py-12">
+        <MatchSeal code={top.specialtyCode} score={top.finalScore} showScore={false} />
+        <p className="mt-6 font-mono text-[10px] uppercase tracking-[0.2em] text-ink-muted">
+          {lang === "fr" ? "Sceau appliqu\u00e9" : "Seal applied"}
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
-      <div className="flex flex-wrap items-start justify-between gap-3">
+      {/* Printable certificate (hidden on screen) */}
+      <div className="certificate-print print-only">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-brass">
+          HIS \u00b7 Higher Institute of Science
+        </p>
+        <h1 className="mt-2 font-display text-2xl font-semibold text-ink">
+          {lang === "fr" ? "Certificat d'orientation" : "Certificate of Orientation"}
+        </h1>
+        <p className="mt-1 font-mono text-xs text-ink-muted">
+          {fileLabel} {fileNumber}
+        </p>
+        <p className="mt-6 font-display text-xl text-ink">{studentName}</p>
+        <p className="text-sm text-ink-muted">
+          {streamLabels[result.bacStream]}
+          {genieLabel ? ` \u00b7 ${genieLabel}` : ""}
+          {" \u00b7 "}RIASEC {topCode}
+        </p>
+        {top && (
+          <div className="mt-8 text-center">
+            <MatchSeal code={top.specialtyCode} score={top.finalScore} />
+            <h2 className="mt-4 font-display text-xl font-semibold text-ink">{top.specialtyTitle}</h2>
+            <p className="mt-1 text-sm text-ink-muted">{matchLabelText(lang, top.matchLabel)}</p>
+          </div>
+        )}
+        <ol className="mt-8 space-y-2 text-sm">
+          {result.matches.slice(0, 3).map((m) => (
+            <li key={m.specialtyId} className="flex justify-between border-b border-brass-dim py-2">
+              <span>
+                #{m.rank} {m.specialtyTitle}
+              </span>
+              <span className="font-mono">{fmt(m.finalScore, 1)}%</span>
+            </li>
+          ))}
+        </ol>
+        <p className="mt-10 text-center text-xs text-ink-muted">{t.disclaimer}</p>
+      </div>
+
+      <div className="no-print flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="font-display text-2xl font-semibold tracking-tight text-ink">{t.results}</h2>
-          <p className="mt-1 font-display text-lg text-ink">{result.studentName}</p>
-          <p className="mt-0.5 text-sm text-ink-muted">
-            {streamLabels[result.bacStream]}
-            {genieLabel ? ` · ${genieLabel}` : ""}
-            {" · "}RIASEC <span className="font-mono">{topCode}</span>
-          </p>
+          <p className="mt-1 font-display text-lg text-ink">{studentName}</p>
+          <div className="mt-2 flex flex-wrap items-center gap-3">
+            <p className="text-sm text-ink-muted">
+              {streamLabels[result.bacStream]}
+              {genieLabel ? ` \u00b7 ${genieLabel}` : ""}
+            </p>
+            <RiasecMonogram code={topCode} />
+          </div>
           <p className="mt-2 font-mono text-[11px] text-ink-muted">
-            {t.weightsLine}: {t.academic} {(result.weights.academic * 100).toFixed(0)}% · {t.riasec}{" "}
-            {(result.weights.riasec * 100).toFixed(0)}% · {t.technical}{" "}
+            {fileLabel} {fileNumber}
+          </p>
+          <p className="mt-1 font-mono text-[11px] text-ink-muted">
+            {t.weightsLine}: {t.academic} {(result.weights.academic * 100).toFixed(0)}% \u00b7 {t.riasec}{" "}
+            {(result.weights.riasec * 100).toFixed(0)}% \u00b7 {t.technical}{" "}
             {(result.weights.technical * 100).toFixed(0)}%
             {result.weights.preference != null
-              ? ` · ${t.preference} ${(result.weights.preference * 100).toFixed(0)}%`
+              ? ` \u00b7 ${t.preference} ${(result.weights.preference * 100).toFixed(0)}%`
               : ""}
           </p>
         </div>
@@ -189,13 +294,20 @@ export function Step3Results({ result, topRiasec, onReset, lang, genieLabels }: 
           <button type="button" onClick={onReset} className="intended-btn-ghost">
             {t.newEvaluation}
           </button>
-          <a href={exportUrl} className="text-xs text-brass underline-offset-2 hover:underline">
+          <button
+            type="button"
+            className="text-xs text-brass underline-offset-2 hover:underline"
+            onClick={() => window.print()}
+          >
+            {printLabel}
+          </button>
+          <a href={exportUrl} className="text-xs text-ink-muted underline-offset-2 hover:underline">
             {t.exportCsv}
           </a>
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-6 border-b border-brass-dim">
+      <div className="no-print flex flex-wrap gap-6 border-b border-brass-dim">
         {(
           [
             ["scores", t.tabScores],
@@ -219,9 +331,9 @@ export function Step3Results({ result, topRiasec, onReset, lang, genieLabels }: 
       </div>
 
       {tab === "scores" && (
-        <>
+        <div className="no-print space-y-6">
           {top && (
-            <div className="border border-brass-dim bg-surface px-4 py-6 text-center">
+            <div className="card-lift seal-expand border border-brass-dim bg-surface px-4 py-6 text-center">
               <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-brass">
                 {t.topRecommendation}
               </p>
@@ -236,7 +348,7 @@ export function Step3Results({ result, topRiasec, onReset, lang, genieLabels }: 
             </div>
           )}
 
-          <div className="flex justify-end">
+          <div className="analytics-rise analytics-rise-delay-1 flex justify-end">
             <button
               type="button"
               onClick={() => setShowDetails((v) => !v)}
@@ -247,10 +359,10 @@ export function Step3Results({ result, topRiasec, onReset, lang, genieLabels }: 
           </div>
 
           <div className="space-y-0">
-            {visible.map((match) => (
+            {visible.map((match, idx) => (
               <article
                 key={match.specialtyId}
-                className="border-b border-brass-dim py-4 last:border-0"
+                className={`card-lift analytics-rise border-b border-brass-dim py-4 last:border-0 analytics-rise-delay-${Math.min(idx + 2, 5)}`}
               >
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
@@ -265,8 +377,8 @@ export function Step3Results({ result, topRiasec, onReset, lang, genieLabels }: 
                       />
                     </div>
                     <p className="mt-1 font-mono text-xs text-ink-muted">
-                      {match.specialtyCode} · {match.department} · {match.hollandCode.join("-")}
-                      {match.isTechnical ? ` · ${t.technicalSpecialty}` : ""}
+                      {match.specialtyCode} \u00b7 {match.department} \u00b7 {match.hollandCode.join("-")}
+                      {match.isTechnical ? ` \u00b7 ${t.technicalSpecialty}` : ""}
                     </p>
                   </div>
                   <div className="text-right">
@@ -342,17 +454,17 @@ export function Step3Results({ result, topRiasec, onReset, lang, genieLabels }: 
               </button>
             </div>
           )}
-        </>
+        </div>
       )}
 
       {tab === "withoutRiasec" && (
-        <>
+        <div className="no-print space-y-4">
           <p className="text-sm text-ink-muted">{t.withoutRiasecIntro}</p>
           {result.weightsWithoutRiasec && (
             <p className="font-mono text-[11px] text-ink-muted">
               {t.weightsLine}: {t.academic}{" "}
-              {(result.weightsWithoutRiasec.academic * 100).toFixed(0)}% · {t.technical}{" "}
-              {(result.weightsWithoutRiasec.technical * 100).toFixed(1)}% · {t.preference}{" "}
+              {(result.weightsWithoutRiasec.academic * 100).toFixed(0)}% \u00b7 {t.technical}{" "}
+              {(result.weightsWithoutRiasec.technical * 100).toFixed(1)}% \u00b7 {t.preference}{" "}
               {(result.weightsWithoutRiasec.preference * 100).toFixed(1)}%
             </p>
           )}
@@ -360,7 +472,7 @@ export function Step3Results({ result, topRiasec, onReset, lang, genieLabels }: 
             {withoutVisible.map((match) => (
               <article
                 key={`nr-${match.specialtyId}`}
-                className="border-b border-brass-dim py-4 last:border-0"
+                className="card-lift border-b border-brass-dim py-4 last:border-0"
               >
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
@@ -375,8 +487,8 @@ export function Step3Results({ result, topRiasec, onReset, lang, genieLabels }: 
                       />
                     </div>
                     <p className="mt-1 font-mono text-xs text-ink-muted">
-                      {match.specialtyCode} · {match.department}
-                      {match.hollandCode ? ` · ${match.hollandCode.join("-")}` : ""}
+                      {match.specialtyCode} \u00b7 {match.department}
+                      {match.hollandCode ? ` \u00b7 ${match.hollandCode.join("-")}` : ""}
                     </p>
                   </div>
                   <div className="text-right">
@@ -405,13 +517,13 @@ export function Step3Results({ result, topRiasec, onReset, lang, genieLabels }: 
             </div>
           )}
           {(result.matchesWithoutRiasec ?? []).length === 0 && (
-            <p className="text-sm text-ink-muted">—</p>
+            <p className="text-sm text-ink-muted">\u2014</p>
           )}
-        </>
+        </div>
       )}
 
       {tab === "careers" && (
-        <div className="space-y-6">
+        <div className="no-print space-y-6">
           <p className="text-sm text-ink-muted">{t.careersIntro}</p>
           {result.matches.map((match) => {
             const paths = match.careerPaths ?? [];
@@ -439,7 +551,7 @@ export function Step3Results({ result, topRiasec, onReset, lang, genieLabels }: 
         </div>
       )}
 
-      <p className="text-center text-xs text-ink-muted">{t.disclaimer}</p>
+      <p className="no-print text-center text-xs text-ink-muted">{t.disclaimer}</p>
     </div>
   );
 }
