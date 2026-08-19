@@ -84,61 +84,31 @@ export const getAnalyticsSummary = (filters: AnalyticsFilters = {}): AnalyticsSu
 
   const totalRow = db
     .prepare(
-      `
-      SELECT COUNT(*) AS c
-      FROM match_evaluations me
-      JOIN students s ON s.id = me.student_id
-      ${where}
-    `,
+      `SELECT COUNT(*) AS c FROM match_evaluations me JOIN students s ON s.id = me.student_id ${where}`,
     )
     .get(params) as { c: number };
 
   const uniqueRow = db
     .prepare(
-      `
-      SELECT COUNT(DISTINCT me.student_id) AS c
-      FROM match_evaluations me
-      JOIN students s ON s.id = me.student_id
-      ${where}
-    `,
+      `SELECT COUNT(DISTINCT me.student_id) AS c FROM match_evaluations me JOIN students s ON s.id = me.student_id ${where}`,
     )
     .get(params) as { c: number };
 
   const byStream = db
     .prepare(
-      `
-      SELECT s.bac_stream AS key, COUNT(*) AS count
-      FROM match_evaluations me
-      JOIN students s ON s.id = me.student_id
-      ${where ? where + " AND me.rank_position = 1" : "WHERE me.rank_position = 1"}
-      GROUP BY s.bac_stream
-      ORDER BY count DESC
-    `,
+      `SELECT s.bac_stream AS key, COUNT(*) AS count FROM match_evaluations me JOIN students s ON s.id = me.student_id ${where ? where + " AND me.rank_position = 1" : "WHERE me.rank_position = 1"} GROUP BY s.bac_stream ORDER BY count DESC`,
     )
     .all(params) as Array<{ key: string; count: number }>;
 
   const bySpec = db
     .prepare(
-      `
-      SELECT hs.code AS key, hs.title AS label, COUNT(*) AS count
-      FROM match_evaluations me
-      JOIN students s ON s.id = me.student_id
-      JOIN his_specialties hs ON hs.id = me.specialty_id
-      ${where ? where + " AND me.rank_position = 1" : "WHERE me.rank_position = 1"}
-      GROUP BY hs.code
-      ORDER BY count DESC
-    `,
+      `SELECT hs.code AS key, hs.title AS label, COUNT(*) AS count FROM match_evaluations me JOIN students s ON s.id = me.student_id JOIN his_specialties hs ON hs.id = me.specialty_id ${where ? where + " AND me.rank_position = 1" : "WHERE me.rank_position = 1"} GROUP BY hs.code ORDER BY count DESC`,
     )
     .all(params) as Array<{ key: string; label: string; count: number }>;
 
   const scoreRows = db
     .prepare(
-      `
-      SELECT me.final_score AS final_score
-      FROM match_evaluations me
-      JOIN students s ON s.id = me.student_id
-      ${where ? where + " AND me.rank_position = 1" : "WHERE me.rank_position = 1"}
-    `,
+      `SELECT me.final_score AS final_score FROM match_evaluations me JOIN students s ON s.id = me.student_id ${where ? where + " AND me.rank_position = 1" : "WHERE me.rank_position = 1"}`,
     )
     .all(params) as Array<{ final_score: number }>;
 
@@ -189,26 +159,7 @@ export const getRecentSessions = (
 
   const rows = db
     .prepare(
-      `
-      SELECT
-        s.id AS student_id,
-        s.full_name AS full_name,
-        me.evaluated_at,
-        s.bac_stream,
-        s.overall_bac_mark,
-        hs.code AS specialty_code,
-        hs.title AS specialty_title,
-        hs.department,
-        me.final_score,
-        me.academic_score,
-        me.riasec_score
-      FROM match_evaluations me
-      JOIN students s ON s.id = me.student_id
-      JOIN his_specialties hs ON hs.id = me.specialty_id
-      ${rankClause}
-      ORDER BY me.evaluated_at DESC
-      LIMIT ${safeLimit}
-    `,
+      `SELECT s.id AS student_id, s.full_name AS full_name, me.evaluated_at, s.bac_stream, s.overall_bac_mark, hs.code AS specialty_code, hs.title AS specialty_title, hs.department, me.final_score, me.academic_score, me.riasec_score FROM match_evaluations me JOIN students s ON s.id = me.student_id JOIN his_specialties hs ON hs.id = me.specialty_id ${rankClause} ORDER BY me.evaluated_at DESC LIMIT ${safeLimit}`,
     )
     .all(params) as Array<{
     student_id: string;
@@ -246,8 +197,7 @@ export const getRecentEvaluationsAnonymized = getRecentSessions;
 export const getStudentProfile = (studentId: string): StudentProfileDetail | null => {
   const student = db
     .prepare(
-      `SELECT id, full_name, bac_stream, overall_bac_mark, preferred_specialty_code, created_at
-       FROM students WHERE id = ?`,
+      `SELECT id, full_name, bac_stream, overall_bac_mark, preferred_specialty_code, created_at FROM students WHERE id = ?`,
     )
     .get(studentId) as
     | {
@@ -276,9 +226,7 @@ export const getStudentProfile = (studentId: string): StudentProfileDetail | nul
 
   const riasecRow = db
     .prepare(
-      `SELECT realistic_score, investigative_score, artistic_score, social_score,
-              enterprising_score, conventional_score, top_riasec_json
-       FROM riasec_profiles WHERE student_id = ?`,
+      `SELECT realistic_score, investigative_score, artistic_score, social_score, enterprising_score, conventional_score, top_riasec_json FROM riasec_profiles WHERE student_id = ?`,
     )
     .get(studentId) as
     | {
@@ -306,27 +254,7 @@ export const getStudentProfile = (studentId: string): StudentProfileDetail | nul
 
   const matches = db
     .prepare(
-      `
-      SELECT
-        hs.id AS specialty_id,
-        hs.code AS specialty_code,
-        hs.title AS specialty_title,
-        hs.department,
-        COALESCE(hs.description, '') AS description,
-        hs.is_technical AS is_technical,
-        hs.holland_code_json AS holland_code_json,
-        me.final_score,
-        me.academic_score,
-        me.riasec_score,
-        me.rank_position,
-        me.final_score_no_riasec AS final_score_no_riasec,
-        me.rank_position_no_riasec AS rank_position_no_riasec,
-        me.evaluated_at AS evaluated_at
-      FROM match_evaluations me
-      JOIN his_specialties hs ON hs.id = me.specialty_id
-      WHERE me.student_id = ?
-      ORDER BY me.rank_position ASC
-    `,
+      `SELECT hs.id AS specialty_id, hs.code AS specialty_code, hs.title AS specialty_title, hs.department, COALESCE(hs.description, '') AS description, hs.is_technical AS is_technical, hs.holland_code_json AS holland_code_json, me.final_score, me.academic_score, me.riasec_score, me.rank_position, me.final_score_no_riasec AS final_score_no_riasec, me.rank_position_no_riasec AS rank_position_no_riasec, me.evaluated_at AS evaluated_at FROM match_evaluations me JOIN his_specialties hs ON hs.id = me.specialty_id WHERE me.student_id = ? ORDER BY me.rank_position ASC`,
     )
     .all(studentId) as Array<{
     specialty_id: string;
@@ -421,31 +349,7 @@ export type SheetSessionRow = {
 export const listAllSessionsForSheet = (): SheetSessionRow[] => {
   const students = db
     .prepare(
-      `
-      SELECT
-        s.id AS student_id,
-        s.full_name AS full_name,
-        s.bac_stream AS bac_stream,
-        s.overall_bac_mark AS overall_bac_mark,
-        COALESCE(s.preferred_specialty_code, '') AS preferred_specialty_code,
-        s.technical_option AS technical_option,
-        (
-          SELECT rp.top_riasec_json
-          FROM riasec_profiles rp
-          WHERE rp.student_id = s.id
-          LIMIT 1
-        ) AS top_riasec_json,
-        (
-          SELECT me.evaluated_at
-          FROM match_evaluations me
-          WHERE me.student_id = s.id
-          ORDER BY me.rank_position ASC
-          LIMIT 1
-        ) AS evaluated_at
-      FROM students s
-      WHERE EXISTS (SELECT 1 FROM match_evaluations me WHERE me.student_id = s.id)
-      ORDER BY evaluated_at ASC
-    `,
+      `SELECT s.id AS student_id, s.full_name AS full_name, s.bac_stream AS bac_stream, s.overall_bac_mark AS overall_bac_mark, COALESCE(s.preferred_specialty_code, '') AS preferred_specialty_code, s.technical_option AS technical_option, (SELECT rp.top_riasec_json FROM riasec_profiles rp WHERE rp.student_id = s.id LIMIT 1) AS top_riasec_json, (SELECT me.evaluated_at FROM match_evaluations me WHERE me.student_id = s.id ORDER BY me.rank_position ASC LIMIT 1) AS evaluated_at FROM students s WHERE EXISTS (SELECT 1 FROM match_evaluations me WHERE me.student_id = s.id) ORDER BY evaluated_at ASC`,
     )
     .all() as Array<{
     student_id: string;
@@ -459,17 +363,7 @@ export const listAllSessionsForSheet = (): SheetSessionRow[] => {
   }>;
 
   const matchStmt = db.prepare(
-    `
-    SELECT
-      hs.code AS code,
-      me.final_score AS final_score,
-      me.rank_position AS rank_position
-    FROM match_evaluations me
-    JOIN his_specialties hs ON hs.id = me.specialty_id
-    WHERE me.student_id = ?
-    ORDER BY me.rank_position ASC
-    LIMIT 3
-  `,
+    `SELECT hs.code AS code, me.final_score AS final_score, me.rank_position AS rank_position FROM match_evaluations me JOIN his_specialties hs ON hs.id = me.specialty_id WHERE me.student_id = ? ORDER BY me.rank_position ASC LIMIT 3`,
   );
 
   return students.map((s) => {
