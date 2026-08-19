@@ -175,12 +175,12 @@ export type TopRiasecProfile = [TopRiasecEntry, TopRiasecEntry, TopRiasecEntry];
 export type HollandCode = [RiasecLetter, RiasecLetter, RiasecLetter];
 
 export type SubjectWeightMap = {
-  [K in SubjectCode]?: number;
+  weights: Partial<Record<SubjectCode, number>>;
 };
 
 export type RiasecBenchmark = {
   vector: RiasecVector;
-  hollandCode: HollandCode;
+  hollandCode?: HollandCode;
 };
 
 export interface StudentProfile {
@@ -188,6 +188,7 @@ export interface StudentProfile {
   bacStream: BacStream;
   technicalOption?: TechnicalMathOption;
   preferredSpecialtyCode?: string;
+  studentId?: string;
   academicPerformance: {
     overallBacMark: number;
     grades: Partial<Record<SubjectCode, number>>;
@@ -205,7 +206,7 @@ export interface HisSpecialtyConfig {
   hollandCode: HollandCode;
   riasecBenchmark: RiasecBenchmark;
   subjectWeights: SubjectWeightMap;
-  active: boolean;
+  isActive: boolean;
 }
 
 export interface SpecialtyMatchBreakdown {
@@ -217,14 +218,12 @@ export interface SpecialtyMatchBreakdown {
   isTechnical: boolean;
   hollandCode: HollandCode;
   academicScore: number;
-  riasecScore: number;
   psychometricScore: number;
   technicalScore: number;
   preferenceScore: number;
   finalScore: number;
   rank: number;
   matchLabel: MatchLabel;
-  matchLabelText: string;
   details: {
     rawAcademicPercentage: number;
     vectorCosineSimilarity: number;
@@ -252,12 +251,15 @@ export interface SpecialtyMatchBreakdown {
 export interface CalculationResult {
   evaluationId?: string;
   timestamp: string;
+  studentName?: string;
+  studentId?: string;
   fullName: string;
   bacStream: BacStream;
   technicalStream: boolean;
+  isTechnicalStream?: boolean;
   preferredSpecialtyCode?: string;
   technicalOption?: TechnicalMathOption;
-  hollandCode: string;
+  overallBacMark?: number;
   weights: {
     academic: number;
     riasec: number;
@@ -295,7 +297,8 @@ export type SeedSpecialty = {
   description: string;
   isTechnical: boolean;
   hollandCode: HollandCode;
-  subjectWeights: SubjectWeightMap;
+  weights: Partial<Record<SubjectCode, number>>;
+  riasecBenchmark: { R: number; I: number; A: number; S: number; E: number; C: number };
   active?: boolean;
 };
 
