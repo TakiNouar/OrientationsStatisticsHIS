@@ -88,7 +88,6 @@ export default function App() {
     );
   }
 
-  /** Active nav: brass text only — no filled chip fighting the header border. */
   const navBtn = (active: boolean) =>
     [
       "rounded-sm px-3 py-1.5 text-xs font-medium tracking-wide transition-colors",
@@ -136,7 +135,7 @@ export default function App() {
               </button>
               <button
                 type="button"
-                className="rounded-sm px-2 py-1.5 text-sm text-ink-muted transition-colors hover:text-ink"
+                className="theme-icon-spin rounded-sm px-2 py-1.5 text-sm text-ink-muted transition-colors hover:text-ink"
                 onClick={onCycleTheme}
                 aria-label={`Theme: ${themeMode}. Click to change.`}
                 title={themeMode === "system" ? "System" : themeMode === "dark" ? "Dark" : "Light"}
@@ -154,14 +153,14 @@ export default function App() {
         ) : (
           <div className="analytics-rise space-y-6">
             <p className="text-center text-[11px] leading-relaxed tracking-wide text-ink-muted/80">{t.disclaimer}</p>
-            <div className="analytics-card p-6 sm:p-8">
+            <div className="orientation-card p-6 sm:p-8">
               <StepIndicator step={wizard.step} lang={lang} onGoToStep={wizard.goToStep} />
 
               {wizard.error && (
-                <div className="mb-4 border border-burgundy/40 bg-burgundy/5 px-3 py-2 text-sm text-burgundy">
+                <div className="mb-6 border border-burgundy/35 bg-burgundy/5 px-3 py-2.5 text-sm text-burgundy">
                   <p className="font-medium">{wizard.error}</p>
                   {Object.keys(wizard.fieldErrors).length > 0 && (
-                    <ul className="mt-1 list-inside list-disc text-xs">
+                    <ul className="mt-1.5 list-inside list-disc text-xs opacity-90">
                       {Object.values(wizard.fieldErrors)
                         .filter(Boolean)
                         .map((msg, i) => (

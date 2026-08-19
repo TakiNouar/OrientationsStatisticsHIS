@@ -29,14 +29,16 @@ export function resolveDark(mode: ThemeMode): boolean {
   return window.matchMedia("(prefers-color-scheme: dark)").matches;
 }
 
-/** Apply `dark` class on <html> for Tailwind class strategy. */
+/** Apply `dark` class + color-scheme on <html> for Tailwind + native controls. */
 export function applyThemeClass(mode: ThemeMode): void {
   const root = document.documentElement;
-  if (resolveDark(mode)) {
+  const dark = resolveDark(mode);
+  if (dark) {
     root.classList.add("dark");
   } else {
     root.classList.remove("dark");
   }
+  root.style.colorScheme = dark ? "dark" : "light";
 }
 
 /** Load initial theme for App (maps system → current resolved light/dark). */

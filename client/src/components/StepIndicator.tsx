@@ -22,7 +22,7 @@ export function StepIndicator({ step, lang, onGoToStep }: Props) {
 
   return (
     <nav aria-label={stepOfLabel} className="mb-8">
-      <ol className="flex flex-wrap items-end justify-center gap-6 sm:gap-10">
+      <ol className="flex flex-wrap items-end justify-center gap-8 sm:gap-12">
         {labels.map((label, index) => {
           const n = (index + 1) as 1 | 2 | 3;
           const active = n === step;
@@ -36,25 +36,29 @@ export function StepIndicator({ step, lang, onGoToStep }: Props) {
                 disabled={!canJump}
                 onClick={() => canJump && onGoToStep?.(n)}
                 className={[
-                  "flex flex-col items-center gap-1 border-b-2 pb-1.5 transition-colors",
-                  active
-                    ? "border-brass text-ink"
-                    : done
-                      ? "border-transparent text-ink"
-                      : "border-transparent text-brass-dim",
+                  "flex flex-col items-center gap-1 pb-1.5 transition-colors",
+                  active ? "border-b-2 border-brass text-ink" : "border-b-2 border-transparent",
+                  done && !active ? "text-ink-muted" : "",
+                  !done && !active ? "text-ink-muted/70" : "",
                   canJump ? "cursor-pointer hover:text-brass" : "cursor-default",
                 ].join(" ")}
                 aria-current={active ? "step" : undefined}
               >
-                <span className="font-mono text-xs tracking-widest text-brass">{ROMAN[index]}</span>
+                <span
+                  className={`font-mono text-[10px] tracking-[0.18em] ${
+                    active ? "text-brass" : "text-ink-muted"
+                  }`}
+                >
+                  {ROMAN[index]}
+                </span>
                 <span className={`text-sm ${active ? "font-semibold" : "font-medium"}`}>{label}</span>
               </button>
             </li>
           );
         })}
       </ol>
-      <p className="mt-3 text-center font-mono text-[11px] text-ink-muted">{stepOfLabel}</p>
-      <hr className="intended-rule mt-4" />
+      <p className="mt-3 text-center font-mono text-[11px] tracking-wide text-ink-muted">{stepOfLabel}</p>
+      <hr className="intended-rule mt-5" />
     </nav>
   );
 }

@@ -6,16 +6,17 @@
   --font-mono: "IBM Plex Mono", ui-monospace, monospace;
 
   --color-ink: #12141c;
-  --color-parchment: #f7f3e8;
-  --color-surface: #ffffff;
-  --color-brass: #a9852f;
-  --color-brass-dim: #d9c68c;
+  --color-parchment: #f3efe4;
+  --color-surface: #faf8f3;
+  --color-brass: #9a7a2a;
+  --color-brass-dim: #c4b07a;
   --color-burgundy: #6e1f2a;
   --color-ink-muted: #5c5a54;
 }
 
 html {
   font-family: var(--font-body);
+  color-scheme: light;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   transition:
@@ -33,13 +34,15 @@ body {
     color 0.35s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+/* Dark: readable borders (brass-dim was too close to surface) */
 html.dark {
-  --color-ink: #f5f2ea;
-  --color-parchment: #14161f;
-  --color-surface: #1b1e2a;
-  --color-brass: #c7a346;
-  --color-brass-dim: #5c4d24;
-  --color-burgundy: #8e3140;
+  color-scheme: dark;
+  --color-ink: #f0ebe3;
+  --color-parchment: #12141c;
+  --color-surface: #1c1f2b;
+  --color-brass: #c9a84a;
+  --color-brass-dim: #6e5c32;
+  --color-burgundy: #c45a6a;
   --color-ink-muted: #a8a49a;
 }
 
@@ -159,21 +162,21 @@ html.dark {
   }
 }
 
+/* Page ground — softer mesh on orientation */
 .analytics-mesh {
   background-color: var(--color-parchment);
   background-image: radial-gradient(
-    color-mix(in srgb, var(--color-brass) 8%, transparent) 0.6px,
-    transparent 0.6px
+    color-mix(in srgb, var(--color-brass) 6%, transparent) 0.55px,
+    transparent 0.55px
   );
-  background-size: 12px 12px;
+  background-size: 14px 14px;
   transition: background-color 0.35s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.dark .analytics-mesh {
-  background-color: var(--color-parchment);
+html.dark .analytics-mesh {
   background-image: radial-gradient(
-    color-mix(in srgb, var(--color-brass) 12%, transparent) 0.6px,
-    transparent 0.6px
+    color-mix(in srgb, var(--color-brass) 10%, transparent) 0.55px,
+    transparent 0.55px
   );
 }
 
@@ -182,25 +185,44 @@ html.dark {
   border: 1px solid var(--color-brass-dim);
   background: var(--color-surface);
   color: var(--color-ink);
-  box-shadow: 0 1px 0 color-mix(in srgb, var(--color-brass) 12%, transparent);
+  box-shadow: 0 1px 0 color-mix(in srgb, var(--color-brass) 10%, transparent);
   transition:
     box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1),
-    border-color 0.25s ease,
-    transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    border-color 0.25s ease;
 }
 
+/* Dashboard cards may lift; orientation form must not */
+.analytics-card.card-interactive:hover,
 .card-lift:hover {
   transform: translateY(-2px);
   box-shadow:
-    0 1px 0 color-mix(in srgb, var(--color-brass) 20%, transparent),
-    0 14px 32px -18px color-mix(in srgb, var(--color-ink) 22%, transparent),
-    0 6px 12px -8px color-mix(in srgb, var(--color-brass) 18%, transparent);
+    0 1px 0 color-mix(in srgb, var(--color-brass) 18%, transparent),
+    0 14px 32px -18px color-mix(in srgb, var(--color-ink) 18%, transparent);
 }
 
-.analytics-card:hover {
-  box-shadow:
-    0 1px 0 color-mix(in srgb, var(--color-brass) 18%, transparent),
-    0 12px 28px -16px color-mix(in srgb, var(--color-ink) 18%, transparent);
+.orientation-card {
+  border-radius: 0;
+  border: 1px solid var(--color-brass-dim);
+  background: var(--color-surface);
+  color: var(--color-ink);
+  box-shadow: 0 1px 0 color-mix(in srgb, var(--color-brass) 8%, transparent);
+}
+
+.orientation-card:hover {
+  transform: none;
+  box-shadow: 0 1px 0 color-mix(in srgb, var(--color-brass) 8%, transparent);
+}
+
+/* Inset panel: parchment plane inside surface card */
+.orientation-inset {
+  border: 1px solid color-mix(in srgb, var(--color-brass-dim) 85%, transparent);
+  background: color-mix(in srgb, var(--color-parchment) 88%, var(--color-surface));
+  padding: 1.25rem 1.25rem;
+}
+
+html.dark .orientation-inset {
+  background: color-mix(in srgb, var(--color-parchment) 55%, var(--color-surface));
+  border-color: color-mix(in srgb, var(--color-brass-dim) 70%, transparent);
 }
 
 .dash-kpi {
@@ -212,7 +234,7 @@ html.dark {
 }
 
 .dash-table tbody tr {
-  transition: background-color 0.15s ease, transform 0.2s ease;
+  transition: background-color 0.15s ease;
 }
 
 .dash-table tbody tr:hover {
@@ -225,51 +247,90 @@ html.dark {
   white-space: nowrap;
 }
 
+/* —— Form fields: soft fill + underline, readable in both themes —— */
 .intended-field {
   width: 100%;
-  background: transparent;
-  border: none;
+  box-sizing: border-box;
+  background: color-mix(in srgb, var(--color-parchment) 55%, var(--color-surface));
+  border: 1px solid transparent;
   border-bottom: 1px solid var(--color-brass-dim);
   border-radius: 0;
-  padding: 0.5rem 0;
+  padding: 0.55rem 0.65rem;
   font-family: var(--font-body);
   font-size: 0.9375rem;
+  line-height: 1.4;
   color: var(--color-ink);
   outline: none;
+  transition:
+    border-color 0.2s ease,
+    background-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+html.dark .intended-field {
+  background: color-mix(in srgb, var(--color-parchment) 40%, var(--color-surface));
+}
+
+.intended-field:hover:not(:disabled) {
+  border-bottom-color: color-mix(in srgb, var(--color-brass) 55%, var(--color-brass-dim));
 }
 
 .intended-field:focus {
   border-bottom-width: 2px;
   border-bottom-color: var(--color-brass);
+  background: var(--color-surface);
+  box-shadow: 0 1px 0 color-mix(in srgb, var(--color-brass) 25%, transparent);
 }
 
 .intended-field:disabled {
   opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* Native options — kill white-on-white in dark dropdowns */
+.intended-field option,
+select.intended-field option {
+  background-color: var(--color-surface);
+  color: var(--color-ink);
+}
+
+/* Autofill */
+.intended-field:-webkit-autofill,
+.intended-field:-webkit-autofill:hover,
+.intended-field:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--color-ink);
+  box-shadow: 0 0 0 1000px var(--color-surface) inset;
+  transition: background-color 9999s ease-in-out 0s;
 }
 
 .intended-label {
   display: block;
-  margin-bottom: 0.25rem;
+  margin-bottom: 0.35rem;
   font-size: 0.6875rem;
   font-weight: 600;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.07em;
   text-transform: uppercase;
   color: var(--color-ink-muted);
 }
 
 .intended-btn-primary {
-  border: none;
+  border: 1px solid color-mix(in srgb, var(--color-brass) 80%, #000);
   background: var(--color-brass);
-  color: #fff;
-  padding: 0.625rem 1.25rem;
+  color: #1a160c;
+  padding: 0.65rem 1.35rem;
   font-size: 0.8125rem;
   font-weight: 600;
   letter-spacing: 0.04em;
   cursor: pointer;
 }
 
+html.dark .intended-btn-primary {
+  color: #12100a;
+  border-color: color-mix(in srgb, var(--color-brass) 70%, #000);
+}
+
 .intended-btn-primary:hover:not(:disabled) {
-  filter: brightness(1.05);
+  filter: brightness(1.06);
 }
 
 .intended-btn-primary:disabled {
@@ -281,7 +342,7 @@ html.dark {
   border: 1px solid var(--color-brass-dim);
   background: transparent;
   color: var(--color-ink);
-  padding: 0.625rem 1.25rem;
+  padding: 0.65rem 1.25rem;
   font-size: 0.8125rem;
   font-weight: 500;
   cursor: pointer;
@@ -290,6 +351,7 @@ html.dark {
 .intended-btn-ghost:hover:not(:disabled) {
   border-color: var(--color-brass);
   color: var(--color-brass);
+  background: color-mix(in srgb, var(--color-brass) 6%, transparent);
 }
 
 .intended-btn-ghost:disabled {
@@ -297,7 +359,6 @@ html.dark {
   cursor: not-allowed;
 }
 
-/* P1: keyboard focus rings — brass accent only */
 .intended-btn-primary:focus-visible,
 .intended-btn-ghost:focus-visible {
   outline: 2px solid var(--color-brass);
@@ -317,19 +378,20 @@ a:focus-visible {
 }
 
 .intended-header {
-  border-bottom: 1px solid color-mix(in srgb, var(--color-brass-dim) 70%, transparent);
-  background: color-mix(in srgb, var(--color-surface) 86%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--color-brass-dim) 75%, transparent);
+  background: color-mix(in srgb, var(--color-surface) 90%, transparent);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   transition: background-color 0.35s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.35s ease;
 }
 
-.dark .intended-header {
-  background: color-mix(in srgb, var(--color-surface) 88%, transparent);
+html.dark .intended-header {
+  background: color-mix(in srgb, var(--color-surface) 92%, transparent);
 }
 
 .intended-field-error {
   border-bottom-color: var(--color-burgundy) !important;
+  border-bottom-width: 2px !important;
 }
 
 .intended-field,
@@ -338,9 +400,11 @@ a:focus-visible {
   transition:
     border-color 0.2s cubic-bezier(0.16, 1, 0.3, 1),
     color 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+    background-color 0.2s ease,
     filter 0.2s cubic-bezier(0.16, 1, 0.3, 1),
     opacity 0.2s ease,
-    transform 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+    transform 0.15s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.2s ease;
 }
 
 .intended-btn-primary:active:not(:disabled),
@@ -354,11 +418,11 @@ select.intended-field {
   background-image: linear-gradient(45deg, transparent 50%, var(--color-brass) 50%),
     linear-gradient(135deg, var(--color-brass) 50%, transparent 50%);
   background-position:
-    calc(100% - 12px) calc(50% - 2px),
-    calc(100% - 7px) calc(50% - 2px);
+    calc(100% - 14px) calc(50% - 2px),
+    calc(100% - 9px) calc(50% - 2px);
   background-size: 5px 5px, 5px 5px;
   background-repeat: no-repeat;
-  padding-right: 1.5rem;
+  padding-right: 1.75rem;
 }
 
 :root {

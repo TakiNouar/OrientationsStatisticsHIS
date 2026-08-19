@@ -24,7 +24,6 @@ type Props = {
 };
 
 const inputClass = "intended-field mt-1";
-const okBorder = "";
 const errBorder = "intended-field-error";
 const labelClass = "intended-label";
 const helpClass = "mt-1.5 text-xs leading-relaxed text-ink-muted";
@@ -61,125 +60,122 @@ export function Step1AcademicForm({
   };
 
   return (
-    <div className={`space-y-6 text-left font-body ${disabled ? "pointer-events-none opacity-60" : ""}`}>
+    <div className={`space-y-8 text-left font-body ${disabled ? "pointer-events-none opacity-60" : ""}`}>
       <div>
-        <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-brass">
-          {t.stepAcademic}
-        </p>
-        <h2 className="mt-1 font-display text-xl font-semibold tracking-tight text-ink">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-brass">{t.stepAcademic}</p>
+        <h2 className="mt-1.5 font-display text-xl font-semibold tracking-tight text-ink sm:text-2xl">
           {t.academicTitle}
         </h2>
-        <p className="mt-1.5 text-sm text-ink-muted">{t.academicHelp}</p>
+        <p className="mt-2 max-w-prose text-sm leading-relaxed text-ink-muted">{t.academicHelp}</p>
       </div>
 
-      <label className="block">
-        <span className={labelClass}>{t.fullName}</span>
-        <input
-          type="text"
-          value={form.fullName}
-          onChange={(e) => onFullName(e.target.value)}
-          className={`${inputClass} ${fieldErrors.fullName ? errBorder : okBorder}`}
-          autoComplete="name"
-          disabled={disabled}
-        />
-        {fieldErrors.fullName && <p className={errText}>{fieldErrors.fullName}</p>}
-      </label>
-
-      <label className="block">
-        <span className={labelClass}>{t.preferredSpecialty}</span>
-        <select
-          value={form.preferredSpecialtyCode}
-          onChange={(e) => onPreferredSpecialty(e.target.value)}
-          className={`${inputClass} ${fieldErrors.preferredSpecialtyCode ? errBorder : okBorder}`}
-          disabled={disabled}
-        >
-          <option value="">{t.selectPreferredSpecialty}</option>
-          {config.specialties.map((s) => (
-            <option key={s.code} value={s.code}>
-              {s.title}
-            </option>
-          ))}
-        </select>
-        {fieldErrors.preferredSpecialtyCode && (
-          <p className={errText}>{fieldErrors.preferredSpecialtyCode}</p>
-        )}
-        <p className={helpClass}>{t.preferredSpecialtyHelp}</p>
-      </label>
-
-      <label className="block">
-        <span className={labelClass}>{t.bacStream}</span>
-        <select
-          value={form.bacStream}
-          onChange={(e) => onBacStream(e.target.value as BacStream)}
-          className={`${inputClass} ${fieldErrors.bacStream ? errBorder : okBorder}`}
-          disabled={disabled}
-        >
-          <option value="">{t.selectStream}</option>
-          {config.bacStreams.map((s) => (
-            <option key={s} value={s}>
-              {streamLabels[s]}
-            </option>
-          ))}
-        </select>
-        {fieldErrors.bacStream && <p className={errText}>{fieldErrors.bacStream}</p>}
-      </label>
-
-      {form.bacStream === "TECHNICAL_MATHEMATICS" && (
+      {/* Identity */}
+      <div className="space-y-5">
         <label className="block">
-          <span className={labelClass}>{t.genieOption}</span>
+          <span className={labelClass}>{t.fullName}</span>
+          <input
+            type="text"
+            value={form.fullName}
+            onChange={(e) => onFullName(e.target.value)}
+            className={`${inputClass} ${fieldErrors.fullName ? errBorder : ""}`}
+            autoComplete="name"
+            disabled={disabled}
+          />
+          {fieldErrors.fullName && <p className={errText}>{fieldErrors.fullName}</p>}
+        </label>
+
+        <label className="block">
+          <span className={labelClass}>{t.preferredSpecialty}</span>
           <select
-            value={form.technicalOption}
-            onChange={(e) => onTechnicalOption(e.target.value as TechnicalMathOption | "")}
-            className={`${inputClass} ${fieldErrors.technicalOption ? errBorder : okBorder}`}
+            value={form.preferredSpecialtyCode}
+            onChange={(e) => onPreferredSpecialty(e.target.value)}
+            className={`${inputClass} ${fieldErrors.preferredSpecialtyCode ? errBorder : ""}`}
             disabled={disabled}
           >
-            <option value="">{t.selectGenie}</option>
-            {config.technicalMathOptions.map((o) => (
-              <option key={o} value={o}>
-                {config.technicalMathOptionLabels[o]}
+            <option value="">{t.selectPreferredSpecialty}</option>
+            {config.specialties.map((s) => (
+              <option key={s.code} value={s.code}>
+                {s.title}
               </option>
             ))}
           </select>
-          {fieldErrors.technicalOption && (
-            <p className={errText}>{fieldErrors.technicalOption}</p>
+          {fieldErrors.preferredSpecialtyCode && (
+            <p className={errText}>{fieldErrors.preferredSpecialtyCode}</p>
           )}
+          <p className={helpClass}>{t.preferredSpecialtyHelp}</p>
         </label>
-      )}
+      </div>
 
-      <label className="block">
-        <span className={labelClass}>{t.overallMark}</span>
-        <input
-          type="number"
-          min={0}
-          max={20}
-          step={0.01}
-          value={form.overallBacMark}
-          onChange={(e) => onOverallBacMark(e.target.value)}
-          className={`${inputClass} ${fieldErrors.overallBacMark ? errBorder : okBorder}`}
-          disabled={disabled}
-        />
-        {fieldErrors.overallBacMark && (
-          <p className={errText}>{fieldErrors.overallBacMark}</p>
+      {/* Stream + overall */}
+      <div className="space-y-5">
+        <label className="block">
+          <span className={labelClass}>{t.bacStream}</span>
+          <select
+            value={form.bacStream}
+            onChange={(e) => onBacStream(e.target.value as BacStream)}
+            className={`${inputClass} ${fieldErrors.bacStream ? errBorder : ""}`}
+            disabled={disabled}
+          >
+            <option value="">{t.selectStream}</option>
+            {config.bacStreams.map((s) => (
+              <option key={s} value={s}>
+                {streamLabels[s]}
+              </option>
+            ))}
+          </select>
+          {fieldErrors.bacStream && <p className={errText}>{fieldErrors.bacStream}</p>}
+        </label>
+
+        {form.bacStream === "TECHNICAL_MATHEMATICS" && (
+          <label className="block">
+            <span className={labelClass}>{t.genieOption}</span>
+            <select
+              value={form.technicalOption}
+              onChange={(e) => onTechnicalOption(e.target.value as TechnicalMathOption | "")}
+              className={`${inputClass} ${fieldErrors.technicalOption ? errBorder : ""}`}
+              disabled={disabled}
+            >
+              <option value="">{t.selectGenie}</option>
+              {config.technicalMathOptions.map((o) => (
+                <option key={o} value={o}>
+                  {config.technicalMathOptionLabels[o]}
+                </option>
+              ))}
+            </select>
+            {fieldErrors.technicalOption && <p className={errText}>{fieldErrors.technicalOption}</p>}
+          </label>
         )}
-      </label>
 
+        <label className="block max-w-xs">
+          <span className={labelClass}>{t.overallMark}</span>
+          <input
+            type="number"
+            min={0}
+            max={20}
+            step={0.01}
+            value={form.overallBacMark}
+            onChange={(e) => onOverallBacMark(e.target.value)}
+            className={`${inputClass} ${fieldErrors.overallBacMark ? errBorder : ""}`}
+            disabled={disabled}
+          />
+          {fieldErrors.overallBacMark && <p className={errText}>{fieldErrors.overallBacMark}</p>}
+        </label>
+      </div>
+
+      {/* Grades inset */}
       {slots && (
-        <div className="border border-brass-dim/80 bg-surface/40 p-5">
-          <h3 className="mb-3 font-display text-sm font-semibold text-ink">
-            {t.gradesTitle}
-          </h3>
-          <div className="grid gap-3 sm:grid-cols-2">
+        <div className="orientation-inset">
+          <h3 className="mb-4 font-display text-sm font-semibold tracking-tight text-ink">{t.gradesTitle}</h3>
+          <div className="grid gap-4 sm:grid-cols-2">
             {slotOrder.map((slotKey) => {
               const subject = slots[slotKey];
               const err = fieldErrors[`grade_${subject}`];
               return (
                 <label key={slotKey} className="block">
-                  <span className="text-xs font-medium uppercase tracking-wide text-ink-muted">
+                  <span className="text-[10px] font-semibold uppercase tracking-[0.1em] text-ink-muted">
                     {slotLabel[slotKey]}
                   </span>
-                  <span className="mt-0.5 block text-sm text-ink">
-                    {subjectLabels[subject] ?? subject}
-                  </span>
+                  <span className="mt-0.5 block text-sm text-ink">{subjectLabels[subject] ?? subject}</span>
                   <input
                     type="number"
                     min={0}
@@ -187,7 +183,7 @@ export function Step1AcademicForm({
                     step={0.01}
                     value={form.grades[subject] ?? ""}
                     onChange={(e) => onGrade(subject, e.target.value)}
-                    className={`${inputClass} ${err ? errBorder : okBorder}`}
+                    className={`${inputClass} ${err ? errBorder : ""}`}
                     disabled={disabled}
                   />
                   {err && <p className={errText}>{err}</p>}
