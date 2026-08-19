@@ -7,23 +7,10 @@
  * - values.update / values.clear only change cell values — existing cell
  *   formatting is left intact by the Sheets API.
  *
- * No-op when GOOGLE_SHEETS_ID is unset. Never throws to the request path.
- *
- * Expected column layout (row 1 is yours to maintain):
- *  A  Profile #
- *  B  Evaluation ID
- *  C  Submitted at
- *  D  Student name
- *  E  BAC stream
- *  F  Technical option
- *  G  RIASEC #1 (full name)
- *  H  RIASEC #2 (full name)
- *  I  RIASEC #3 (full name)
- *  J  Overall mark
- *  K  Preferred specialty
- *  L–N  Specialty / Score / Label #1
- *  O–Q  Specialty / Score / Label #2
- *  R–T  Specialty / Score / Label #3
+ * Expected columns (row 1 is yours):
+ *  A Profile # | B Evaluation ID | C Submitted at | D Student name | E BAC stream
+ *  F Technical option | G–I RIASEC #1–#3 full names | J Overall mark | K Preferred specialty
+ *  L–N match #1 | O–Q match #2 | R–T match #3
  */
 import { google } from "googleapis";
 import type { sheets_v4 } from "googleapis";
@@ -32,7 +19,6 @@ import type { SheetSessionRow } from "../db.js";
 import { logger } from "../logger.js";
 import type { CalculationResult, StudentProfile } from "../types.js";
 
-/** Clear values from row 2 down only; styles remain. */
 const DATA_RANGE = "A2:Z";
 
 let sheetsClient: sheets_v4.Sheets | null = null;
@@ -95,12 +81,12 @@ function matchSlot(
   return [m.code, m.score / 100, m.label];
 }
 
-/** Build one data row. Column order must match the header map in the file comment. */
 function buildDataRow(session: SheetSessionRow, profileNumber: number): (string | number)[] {
   const [c1, s1, l1] = matchSlot(session.matches, 0);
   const [c2, s2, l2] = matchSlot(session.matches, 1);
   const [c3, s3, l3] = matchSlot(session.matches, 2);
-  const [r1, r2, r3] = session.riasecFullNames;
+  const names = session.riasecFullNames ?? ["—", "—", "—"];
+  const [r1, r2, r3] = names;
   return [
     profileNumber,
     session.evaluationId,
@@ -125,10 +111,6 @@ function buildDataRow(session: SheetSessionRow, profileNumber: number): (string 
   ];
 }
 
-/**
- * Rebuild data rows only (from row 2).
- * Does not touch row 1. Does not call any formatting APIs.
- */
 export async function fullResyncToSheet(): Promise<void> {
   if (!isConfigured()) return;
   if (resyncInFlight) {
