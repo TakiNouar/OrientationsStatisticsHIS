@@ -1,6 +1,12 @@
 import { db } from "./connection.js";
 import type { MatchLabel, RiasecLetter } from "../types.js";
-import { labelFromFinalScore, MATCH_LABEL_TEXT, RIASEC_LABELS } from "../types.js";
+import {
+  labelFromFinalScore,
+  MATCH_LABEL_TEXT,
+  RIASEC_LABELS,
+  TECHNICAL_MATH_OPTION_LABELS,
+  type TechnicalMathOption,
+} from "../types.js";
 import { buildEvaluationWhere, type AnalyticsFilters } from "./filters.js";
 
 export type { AnalyticsFilters };
@@ -484,14 +490,18 @@ export const listAllSessionsForSheet = (): SheetSessionRow[] => {
       }
     }
 
+    const techRaw = s.technical_option ? String(s.technical_option).trim() : "";
+    const technicalOption = techRaw
+      ? TECHNICAL_MATH_OPTION_LABELS[techRaw as TechnicalMathOption] ??
+        techRaw.replaceAll("_", " ")
+      : "—";
+
     return {
       evaluationId: s.student_id,
       submittedAt: s.evaluated_at ?? "",
       fullName: s.full_name,
       bacStream: s.bac_stream.replaceAll("_", " "),
-      technicalOption: s.technical_option
-        ? String(s.technical_option).replaceAll("_", " ")
-        : "—",
+      technicalOption,
       riasecFullNames,
       overallMark: Number(s.overall_bac_mark),
       preferredSpecialtyCode: s.preferred_specialty_code || "—",
