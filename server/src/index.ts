@@ -29,7 +29,7 @@ import {
   syncEvaluationToSheet,
 } from "./integrations/google-sheets.js";
 import { logger } from "./logger.js";
-import { CalculateRecommendationSchema } from "./schema.js";
+import { CalculateRecommendationSchema, type CalculateRecommendationInput } from "./schema.js";
 import {
   STREAM_SUBJECT_MAP,
   STREAM_GRADE_SLOTS,
@@ -43,6 +43,7 @@ import {
   FORMULA_WEIGHTS,
   STREAM_LABELS,
   SUBJECT_LABELS,
+  type StudentProfile,
 } from "./types.js";
 
 const PORT = Number(process.env.PORT ?? 3001);
@@ -146,6 +147,21 @@ app.get("/api/v1/config", (_req, res) => {
   }
 });
 
+/** Map flat Zod input → nested StudentProfile the engine/persist expect. */
+function toStudentProfile(input: CalculateRecommendationInput): StudentProfile {
+  return {
+    fullName: input.fullName,
+    bacStream: input.bacStream,
+    technicalOption: input.technicalOption,
+    preferredSpecialtyCode: input.preferredSpecialtyCode,
+    academicPerformance: {
+      overallBacMark: input.overallBacMark,
+      grades: input.grades as StudentProfile["academicPerformance"]["grades"],
+    },
+    topRiasec: input.topRiasec,
+  };
+}
+
 app.post("/api/v1/recommendations", (req, res) => {
   try {
     const parsed = CalculateRecommendationSchema.safeParse(req.body);
@@ -156,8 +172,11 @@ app.post("/api/v1/recommendations", (req, res) => {
       });
       return;
     }
-    const result = calculateRecommendations(parsed.data);
-    const evaluationId = persistEvaluation(parsed.data, result);
+    const profile = toStudentProfile(parsed.data);
+    const specialties = getActiveSpecialties();
+    const result = calculateRecommendations(profile, specialties);
+    persistEvaluation(profile, result);
+    const evaluationId = result.evaluationId;
     void syncEvaluationToSheet(evaluationId).catch((err) => {
       logger.error("google_sheets_sync_failed", {
         evaluationId,
