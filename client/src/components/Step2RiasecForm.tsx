@@ -17,7 +17,6 @@ const inputClass = "intended-field mt-1";
 const okBorder = "";
 const errBorder = "intended-field-error";
 const labelClass = "intended-label";
-const helpClass = "mt-1.5 text-xs leading-relaxed text-ink-muted";
 const errText = "mt-1.5 text-xs font-medium text-burgundy";
 
 export function Step2RiasecForm({
@@ -50,7 +49,7 @@ export function Step2RiasecForm({
       </div>
 
       <p className="font-mono text-sm text-ink-muted">
-        {t.hollandPreview}:{" "}
+        {t.codePreview}:{" "}
         <span className="font-semibold tracking-widest text-brass">{codePreview || "···"}</span>
       </p>
 
@@ -125,7 +124,7 @@ export function Step2RiasecForm({
       )}
 
       <div className="border border-brass-dim/80 bg-surface/40 px-4 py-3.5 text-sm leading-relaxed text-ink-muted">
-        {t.riasecWeightsHint}
+        {t.riasecScoringHelp}
       </div>
     </div>
   );

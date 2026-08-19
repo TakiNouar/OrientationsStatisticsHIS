@@ -35,20 +35,34 @@ const emptyForm = (): WizardFormState => ({
   topRiasec: [null, null, null],
 });
 
+/** Subjects shown on Step 1 (four academic slots). */
+function subjectsFromSlots(
+  config: ConfigResponse,
+  bacStream: BacStream,
+): SubjectCode[] {
+  const slots = config.streamGradeSlots?.[bacStream];
+  if (!slots) return [];
+  return [slots.main1, slots.main2, slots.opposite, slots.english];
+}
+
 export function useRecommendationWizard(config: ConfigResponse | null, lang: Lang) {
   const [step, setStep] = useState<WizardStep>(1);
   const [form, setForm] = useState<WizardFormState>(emptyForm);
   const [result, setResult] = useState<CalculationResult | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [fieldErrors, setFieldErrors] = useState<Partial<Record<string, string>>>({});
+  const [fieldErrors, setFieldErrors] = useState<Partial<Record<string, string>>>({{}});
   const [loading, setLoading] = useState(false);
 
-  const t = strings[lang];
-  const subjectLabels = SUBJECT_LABELS_I18N[lang];
+  const t = strings[lang] ?? strings.fr;
+  const subjectLabels = SUBJECT_LABELS_I18N[lang] ?? SUBJECT_LABELS_I18N.fr;
 
   const requiredSubjects = useMemo(() => {
     if (!config || !form.bacStream) return [] as SubjectCode[];
-    return config.streamSubjects[form.bacStream] ?? [];
+    // Prefer the four UI slots so validation matches what the user can enter.
+    const fromSlots = subjectsFromSlots(config, form.bacStream);
+    if (fromSlots.length > 0) return fromSlots;
+    // Fallback if slots missing from older config payloads.
+    return (config.streamSubjectMap?.[form.bacStream] ?? []) as SubjectCode[];
   }, [config, form.bacStream]);
 
   const setFullName = (fullName: string) => setForm((prev) => ({ ...prev, fullName }));
@@ -117,59 +131,27 @@ export function useRecommendationWizard(config: ConfigResponse | null, lang: Lan
     const entries = form.topRiasec;
     for (let i = 0; i < 3; i++) {
       const e = entries[i];
-      if (!e) {
-        errors[`riasec_${i}`] = t.errRiasecSlot ?? "Required";
+      if (!e || !e.letter) {
+        errors[`riasec_letter_${i}`] = t.errRiasecSlot;
         continue;
       }
-      if (!e.letter || e.weight < 1 || e.weight > 100) {
-        errors[`riasec_${i}`] = t.errRiasecWeight ?? "Invalid weight";
+      if (!Number.isFinite(e.weight) || e.weight < 1 || e.weight > 100) {
+        errors[`riasec_weight_${i}`] = t.errRiasecWeight;
       }
     }
-    const letters = entries.filter(Boolean).map((e) => e!.letter);
-    if (new Set(letters).size !== letters.length) {
-      errors.riasec_dup = t.errRiasecDup ?? "Duplicate letters";
+    const letters = entries.filter((e): e is TopRiasecEntry => Boolean(e?.letter)).map((e) => e.letter);
+    if (letters.length === 3 && new Set(letters).size !== 3) {
+      errors.riasec = t.errRiasecDup;
     }
     return errors;
   }, [form.topRiasec, t]);
-
-  const goNext = () => {
-    if (step === 1) {
-      const errs = validateStep1();
-      if (Object.keys(errs).length > 0) {
-        setFieldErrors(errs);
-        setError(t.fixErrors);
-        return;
-      }
-      setFieldErrors({});
-      setError(null);
-      setStep(2);
-      return;
-    }
-    if (step === 2) {
-      void submit();
-    }
-  };
-
-  const goBack = () => {
-    if (step <= 1) return;
-    setError(null);
-    setFieldErrors({});
-    setStep((s) => (s === 3 ? 2 : 1) as WizardStep);
-  };
-
-  const goToStep = (target: 1 | 2 | 3) => {
-    if (target >= step) return;
-    setError(null);
-    setFieldErrors({});
-    setStep(target);
-  };
 
   const submit = async () => {
     if (!form.bacStream) return;
     const errs = validateStep2();
     if (Object.keys(errs).length > 0) {
       setFieldErrors(errs);
-      setError(t.fixErrors);
+      setError(t.formErrors);
       return;
     }
 
@@ -206,6 +188,38 @@ export function useRecommendationWizard(config: ConfigResponse | null, lang: Lan
     }
   };
 
+  const goNext = () => {
+    if (step === 1) {
+      const errs = validateStep1();
+      if (Object.keys(errs).length > 0) {
+        setFieldErrors(errs);
+        setError(t.formErrors);
+        return;
+      }
+      setFieldErrors({});
+      setError(null);
+      setStep(2);
+      return;
+    }
+    if (step === 2) {
+      void submit();
+    }
+  };
+
+  const goBack = () => {
+    if (step <= 1) return;
+    setError(null);
+    setFieldErrors({});
+    setStep((s) => (s === 3 ? 2 : 1) as WizardStep);
+  };
+
+  const goToStep = (target: 1 | 2 | 3) => {
+    if (target >= step) return;
+    setError(null);
+    setFieldErrors({});
+    setStep(target);
+  };
+
   const reset = () => {
     setForm(emptyForm());
     setResult(null);
@@ -218,9 +232,9 @@ export function useRecommendationWizard(config: ConfigResponse | null, lang: Lan
     .filter((e): e is TopRiasecEntry => e !== null)
     .map((e) => e.letter);
 
-  const availableLetters = (config?.riasecLetters ?? (["R", "I", "A", "S", "E", "C"] as RiasecLetter[])).filter(
-    (l) => !selectedLetters.includes(l),
-  );
+  /** Full RIASEC alphabet for selects; Step2 disables letters used in other slots. */
+  const availableLetters = (config?.riasecLetters ??
+    (["R", "I", "A", "S", "E", "C"] as RiasecLetter[])) as RiasecLetter[];
 
   return {
     step,
@@ -228,18 +242,26 @@ export function useRecommendationWizard(config: ConfigResponse | null, lang: Lan
     result,
     error,
     fieldErrors,
+    /** Preferred App name */
+    submitting: loading,
     loading,
     requiredSubjects,
     selectedLetters,
     availableLetters,
     setFullName,
     setPreferredSpecialtyCode,
+    /** Preferred App name */
+    setPreferredSpecialty: setPreferredSpecialtyCode,
     setBacStream,
     setTechnicalOption,
     setOverallBacMark,
     setGrade,
     setTopRiasecSlot,
+    /** Preferred App name */
+    setRiasecSlot: setTopRiasecSlot,
     goNext,
+    /** Preferred App name */
+    next: goNext,
     goBack,
     goToStep,
     reset,

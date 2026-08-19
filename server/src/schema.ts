@@ -2,10 +2,11 @@ import { z } from "zod";
 import {
   BAC_STREAMS,
   RIASEC_LETTERS,
-  STREAM_SUBJECT_MAP,
+  STREAM_GRADE_SLOTS,
   SUBJECT_CODES,
   TECHNICAL_MATH_OPTIONS,
   type BacStream,
+  type SubjectCode,
 } from "./types.js";
 
 export const BacStreamSchema = z.enum(BAC_STREAMS);
@@ -20,6 +21,12 @@ const TopRiasecEntrySchema = z.object({
   weight: z.coerce.number().min(1).max(100),
 });
 
+/** Four academic slots shown in the wizard (matches STREAM_GRADE_SLOTS). */
+function requiredSubjectsForStream(stream: BacStream): SubjectCode[] {
+  const slots = STREAM_GRADE_SLOTS[stream];
+  return [slots.main1, slots.main2, slots.opposite, slots.english];
+}
+
 export const CalculateRecommendationSchema = z
   .object({
     fullName: z.string().trim().min(2).max(250),
@@ -32,7 +39,7 @@ export const CalculateRecommendationSchema = z
   })
   .superRefine((value, ctx) => {
     const stream = value.bacStream as BacStream;
-    const requiredSubjects = STREAM_SUBJECT_MAP[stream];
+    const requiredSubjects = requiredSubjectsForStream(stream);
     const presentSubjects = new Set(Object.keys(value.grades));
     const allowedSubjects = new Set<string>(SUBJECT_CODES);
 

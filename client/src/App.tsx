@@ -30,7 +30,7 @@ export default function App() {
   const [configLoading, setConfigLoading] = useState(true);
 
   const t = strings[lang];
-  const wizard = useRecommendationWizard(config);
+  const wizard = useRecommendationWizard(config, lang);
 
   useEffect(() => {
     let cancelled = false;
@@ -191,7 +191,7 @@ export default function App() {
                 <Step2RiasecForm
                   config={config}
                   form={wizard.form}
-                  availableLetters={config.riasecLetters}
+                  availableLetters={wizard.availableLetters}
                   lang={lang}
                   fieldErrors={wizard.fieldErrors}
                   disabled={wizard.submitting}
