@@ -18,6 +18,9 @@ html {
   font-family: var(--font-body);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  transition:
+    background-color 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+    color 0.35s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 body {
@@ -25,6 +28,9 @@ body {
   min-height: 100vh;
   color: var(--color-ink);
   background-color: var(--color-parchment);
+  transition:
+    background-color 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+    color 0.35s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 html.dark {
@@ -64,6 +70,43 @@ html.dark {
   }
 }
 
+@keyframes seal-press {
+  0% {
+    opacity: 0;
+    transform: scale(0.88);
+  }
+  55% {
+    opacity: 1;
+    transform: scale(1.03);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes seal-expand {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes theme-icon-spin {
+  from {
+    transform: rotate(-40deg);
+    opacity: 0.4;
+  }
+  to {
+    transform: rotate(0deg);
+    opacity: 1;
+  }
+}
+
 .analytics-rise {
   animation: analytics-rise 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
@@ -72,13 +115,29 @@ html.dark {
   animation-delay: 0.05s;
 }
 .analytics-rise-delay-2 {
-  animation-delay: 0.1s;
+  animation-delay: 0.12s;
 }
 .analytics-rise-delay-3 {
-  animation-delay: 0.15s;
+  animation-delay: 0.2s;
 }
 .analytics-rise-delay-4 {
-  animation-delay: 0.2s;
+  animation-delay: 0.28s;
+}
+.analytics-rise-delay-5 {
+  animation-delay: 0.36s;
+}
+
+.seal-press {
+  animation: seal-press 0.55s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.seal-expand {
+  animation: seal-expand 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.theme-icon-spin {
+  display: inline-block;
+  animation: theme-icon-spin 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -86,8 +145,17 @@ html.dark {
   .analytics-rise-delay-1,
   .analytics-rise-delay-2,
   .analytics-rise-delay-3,
-  .analytics-rise-delay-4 {
+  .analytics-rise-delay-4,
+  .analytics-rise-delay-5,
+  .seal-press,
+  .seal-expand,
+  .theme-icon-spin {
     animation: none;
+  }
+
+  html,
+  body {
+    transition: none;
   }
 }
 
@@ -98,6 +166,7 @@ html.dark {
     transparent 0.6px
   );
   background-size: 12px 12px;
+  transition: background-color 0.35s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .dark .analytics-mesh {
@@ -116,18 +185,22 @@ html.dark {
   box-shadow: 0 1px 0 color-mix(in srgb, var(--color-brass) 12%, transparent);
   transition:
     box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1),
-    border-color 0.25s ease;
+    border-color 0.25s ease,
+    transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.card-lift:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 1px 0 color-mix(in srgb, var(--color-brass) 20%, transparent),
+    0 14px 32px -18px color-mix(in srgb, var(--color-ink) 22%, transparent),
+    0 6px 12px -8px color-mix(in srgb, var(--color-brass) 18%, transparent);
 }
 
 .analytics-card:hover {
   box-shadow:
     0 1px 0 color-mix(in srgb, var(--color-brass) 18%, transparent),
     0 12px 28px -16px color-mix(in srgb, var(--color-ink) 18%, transparent);
-}
-
-.analytics-kpi-glow {
-  background: var(--color-brass);
-  opacity: 0.15;
 }
 
 .dash-kpi {
@@ -139,7 +212,11 @@ html.dark {
 }
 
 .dash-table tbody tr {
-  transition: background-color 0.15s ease;
+  transition: background-color 0.15s ease, transform 0.2s ease;
+}
+
+.dash-table tbody tr:hover {
+  background: color-mix(in srgb, var(--color-brass) 6%, transparent);
 }
 
 .analytics-truncate {
@@ -189,7 +266,6 @@ html.dark {
   font-weight: 600;
   letter-spacing: 0.04em;
   cursor: pointer;
-  transition: filter 0.15s ease, opacity 0.15s ease;
 }
 
 .intended-btn-primary:hover:not(:disabled) {
@@ -209,7 +285,6 @@ html.dark {
   font-size: 0.8125rem;
   font-weight: 500;
   cursor: pointer;
-  transition: border-color 0.15s ease, color 0.15s ease;
 }
 
 .intended-btn-ghost:hover:not(:disabled) {
@@ -233,7 +308,7 @@ html.dark {
   background: color-mix(in srgb, var(--color-surface) 86%, transparent);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  transition: background-color 0.25s ease, border-color 0.25s ease;
+  transition: background-color 0.35s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.35s ease;
 }
 
 .dark .intended-header {
@@ -283,10 +358,6 @@ select.intended-field {
   --ease-luxe: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.intended-tab {
-  margin-bottom: -1px;
-}
-
 .intended-skeleton {
   background: linear-gradient(
     90deg,
@@ -295,7 +366,7 @@ select.intended-field {
     color-mix(in srgb, var(--color-brass-dim) 25%, var(--color-surface)) 100%
   );
   background-size: 200% 100%;
-  animation: intended-shimmer 1.2s ease-in-out infinite;
+  animation: intended-shimmer 1.4s ease-in-out infinite;
 }
 
 @keyframes intended-shimmer {
@@ -320,4 +391,53 @@ select.intended-field {
   text-align: center;
   font-size: 0.875rem;
   color: var(--color-ink-muted);
+}
+
+/* Editorial drop cap for career descriptions */
+.career-dropcap::first-letter {
+  float: left;
+  font-family: var(--font-display);
+  font-size: 2.4em;
+  line-height: 0.85;
+  padding-right: 0.12em;
+  padding-top: 0.05em;
+  color: var(--color-brass);
+  font-weight: 600;
+}
+
+/* Screen-only / print helpers */
+.print-only {
+  display: none;
+}
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+
+  .certificate-print,
+  .certificate-print * {
+    visibility: visible;
+  }
+
+  .certificate-print {
+    display: block !important;
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    padding: 2cm;
+    color: #12141c !important;
+    background: #fff !important;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  header,
+  .intended-header,
+  nav {
+    display: none !important;
+  }
 }
