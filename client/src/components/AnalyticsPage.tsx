@@ -38,7 +38,7 @@ type Props = {
 type Filters = {
   from: string;
   to: string;
-  bacStream: string;
+  bacStream: BacStream | "";
   specialtyCode: string;
 };
 
@@ -49,13 +49,18 @@ const emptyFilters = (): Filters => ({
   specialtyCode: "",
 });
 
-function buildQuery(filters: Filters): Record<string, string> {
-  const q: Record<string, string> = {};
-  if (filters.from) q.from = filters.from;
-  if (filters.to) q.to = filters.to;
-  if (filters.bacStream) q.bacStream = filters.bacStream;
-  if (filters.specialtyCode) q.specialtyCode = filters.specialtyCode;
-  return q;
+function ensureAdminToken(lang: Lang): boolean {
+  const t = strings[lang];
+  if (getStoredAdminToken().length >= 4) return true;
+  const entered = window.prompt(t.adminTokenPrompt);
+  if (entered == null) return false;
+  const token = entered.trim();
+  if (token.length < 4) {
+    window.alert(t.adminTokenInvalid);
+    return false;
+  }
+  setStoredAdminToken(token);
+  return true;
 }
 
 export function AnalyticsPage({ config, lang, onBack }: Props) {
@@ -64,8 +69,8 @@ export function AnalyticsPage({ config, lang, onBack }: Props) {
   const [filters, setFilters] = useState<Filters>(emptyFilters);
   const [applied, setApplied] = useState<Filters>(emptyFilters);
   const [summary, setSummary] = useState<AnalyticsSummary | null>(null);
-  const [recent, setRecent] = useState<AnalyticsRecentResponse | null>(null);
   const [dashboard, setDashboard] = useState<AnalyticsDashboard | null>(null);
+  const [recent, setRecent] = useState<AnalyticsRecentResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
@@ -73,34 +78,38 @@ export function AnalyticsPage({ config, lang, onBack }: Props) {
   const [profileLoading, setProfileLoading] = useState(false);
   const [profileError, setProfileError] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [adminToken, setAdminToken] = useState(() => getStoredAdminToken());
 
-  const loadList = useCallback(async (f: Filters) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const q = buildQuery(f);
-      const [s, r, d] = await Promise.all([
-        fetchAnalyticsSummary(q),
-        fetchAnalyticsRecent(q),
-        fetchAnalyticsDashboard(q),
-      ]);
-      setSummary(s);
-      setRecent(r);
-      setDashboard(d);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : t.loadError);
-      setSummary(null);
-      setRecent(null);
-      setDashboard(null);
-    } finally {
-      setLoading(false);
-    }
-  }, [t.loadError]);
+  const load = useCallback(
+    async (f: Filters) => {
+      setLoading(true);
+      setError(null);
+      const params = {
+        from: f.from || undefined,
+        to: f.to || undefined,
+        bacStream: f.bacStream || undefined,
+        specialtyCode: f.specialtyCode || undefined,
+      };
+      try {
+        const [s, d, r] = await Promise.all([
+          fetchAnalyticsSummary(params),
+          fetchAnalyticsDashboard(params),
+          fetchAnalyticsRecent(params),
+        ]);
+        setSummary(s);
+        setDashboard(d);
+        setRecent(r);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : t.analyticsError);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [t.analyticsError],
+  );
 
   useEffect(() => {
-    void loadList(applied);
-  }, [applied, loadList]);
+    void load(applied);
+  }, [applied, load]);
 
   useEffect(() => {
     if (!selectedStudentId) {
@@ -129,26 +138,26 @@ export function AnalyticsPage({ config, lang, onBack }: Props) {
     };
   }, [selectedStudentId, t.profileError]);
 
-  const handleDelete = async (studentId: string, fullName: string) => {
-    const ok = window.confirm(t.confirmDelete.replace("{name}", fullName));
-    if (!ok) return;
-    const token = adminToken || getStoredAdminToken();
-    if (!token) {
-      const entered = window.prompt(t.adminTokenRequired);
-      if (!entered) return;
-      setStoredAdminToken(entered);
-      setAdminToken(entered);
-    }
+  const handleDelete = async (studentId: string, name: string) => {
+    if (!window.confirm(`${t.deleteConfirm} ${name}?`)) return;
+    if (!ensureAdminToken(lang)) return;
     setDeletingId(studentId);
+    setError(null);
     try {
       await deleteStudentProfile(studentId);
       if (selectedStudentId === studentId) {
         setSelectedStudentId(null);
         setProfile(null);
       }
-      await loadList(applied);
+      await load(applied);
     } catch (e) {
-      window.alert(e instanceof Error ? e.message : t.deleteFailed);
+      const msg = e instanceof Error ? e.message : t.deleteFailed;
+      if (/401|403|token|admin/i.test(msg)) {
+        setStoredAdminToken("");
+        setError(t.adminTokenRejected);
+      } else {
+        setError(msg);
+      }
     } finally {
       setDeletingId(null);
     }
@@ -157,7 +166,7 @@ export function AnalyticsPage({ config, lang, onBack }: Props) {
   if (selectedStudentId) {
     return (
       <div className="space-y-4">
-        {profileLoading && <p className="text-sm text-ink-muted">{t.loadingProfile}</p>}
+        {profileLoading && <p className="text-sm text-ink-muted">{t.loading}</p>}
         {profileError && <p className="text-sm text-burgundy">{profileError}</p>}
         {profile && (
           <StudentProfileView
@@ -184,14 +193,17 @@ export function AnalyticsPage({ config, lang, onBack }: Props) {
           >
             ← {t.backToWizard}
           </button>
-          <h2 className="font-display text-2xl font-semibold tracking-tight text-ink">
-            {t.analyticsTitle}
-          </h2>
+          <h2 className="font-display text-2xl font-semibold tracking-tight text-ink">{t.analyticsTitle}</h2>
           <p className="mt-1 text-sm text-ink-muted">{t.analyticsSubtitle}</p>
         </div>
         <a
-          href={exportEvaluationsUrl(buildQuery(applied))}
           className="text-xs font-medium text-brass underline-offset-2 hover:underline"
+          href={exportEvaluationsUrl({
+            from: applied.from || undefined,
+            to: applied.to || undefined,
+            bacStream: applied.bacStream || undefined,
+            specialtyCode: applied.specialtyCode || undefined,
+          })}
         >
           {t.exportCsv}
         </a>
@@ -205,7 +217,7 @@ export function AnalyticsPage({ config, lang, onBack }: Props) {
               type="date"
               className="intended-field"
               value={filters.from}
-              onChange={(e) => setFilters((f) => ({ ...f, from: e.target.value }))}
+              onChange={(e) => setFilters((prev) => ({ ...prev, from: e.target.value }))}
             />
           </label>
           <label className="block text-xs">
@@ -214,7 +226,7 @@ export function AnalyticsPage({ config, lang, onBack }: Props) {
               type="date"
               className="intended-field"
               value={filters.to}
-              onChange={(e) => setFilters((f) => ({ ...f, to: e.target.value }))}
+              onChange={(e) => setFilters((prev) => ({ ...prev, to: e.target.value }))}
             />
           </label>
           <label className="block text-xs">
@@ -222,12 +234,17 @@ export function AnalyticsPage({ config, lang, onBack }: Props) {
             <select
               className="intended-field"
               value={filters.bacStream}
-              onChange={(e) => setFilters((f) => ({ ...f, bacStream: e.target.value }))}
+              onChange={(e) =>
+                setFilters((prev) => ({
+                  ...prev,
+                  bacStream: e.target.value as BacStream | "",
+                }))
+              }
             >
-              <option value="">{t.filterAll}</option>
+              <option value="">{t.allStreams}</option>
               {config.bacStreams.map((s) => (
                 <option key={s} value={s}>
-                  {streamLabels[s as BacStream] ?? s}
+                  {streamLabels[s]}
                 </option>
               ))}
             </select>
@@ -237,9 +254,9 @@ export function AnalyticsPage({ config, lang, onBack }: Props) {
             <select
               className="intended-field"
               value={filters.specialtyCode}
-              onChange={(e) => setFilters((f) => ({ ...f, specialtyCode: e.target.value }))}
+              onChange={(e) => setFilters((prev) => ({ ...prev, specialtyCode: e.target.value }))}
             >
-              <option value="">{t.filterAll}</option>
+              <option value="">{t.allSpecialties}</option>
               {config.specialties.map((s) => (
                 <option key={s.code} value={s.code}>
                   {s.title}
@@ -248,12 +265,8 @@ export function AnalyticsPage({ config, lang, onBack }: Props) {
             </select>
           </label>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            className="intended-btn-primary"
-            onClick={() => setApplied({ ...filters })}
-          >
+        <div className="flex gap-2">
+          <button type="button" className="intended-btn-primary" onClick={() => setApplied(filters)}>
             {t.applyFilters}
           </button>
           <button
@@ -270,88 +283,73 @@ export function AnalyticsPage({ config, lang, onBack }: Props) {
         </div>
       </div>
 
-      {loading && <p className="text-sm text-ink-muted">{t.loadingAnalytics}</p>}
-      {error && <p className="text-sm text-burgundy">{error}</p>}
+      {error && (
+        <div className="border border-burgundy/40 bg-burgundy/5 px-3 py-2 text-sm text-burgundy">{error}</div>
+      )}
 
-      {summary && (
+      {loading && <p className="text-sm text-ink-muted">{t.loading}</p>}
+
+      {summary && !loading && (
         <div className="grid gap-3 sm:grid-cols-3">
           <div className="analytics-card p-4">
-            <p className="text-[10px] font-semibold uppercase tracking-wide text-ink-muted">
-              {t.kpiEvaluations}
-            </p>
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-ink-muted">{t.totalEvaluations}</p>
             <p className="mt-1 font-mono text-3xl tabular-nums text-ink">{summary.totalEvaluations}</p>
           </div>
           <div className="analytics-card p-4">
-            <p className="text-[10px] font-semibold uppercase tracking-wide text-ink-muted">
-              {t.kpiStudents}
-            </p>
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-ink-muted">{t.uniqueStudents}</p>
             <p className="mt-1 font-mono text-3xl tabular-nums text-ink">{summary.uniqueStudents}</p>
           </div>
           <div className="analytics-card p-4">
-            <p className="text-[10px] font-semibold uppercase tracking-wide text-ink-muted">
-              {t.kpiAvgScore}
-            </p>
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-ink-muted">{t.avgScore}</p>
             <p className="mt-1 font-mono text-3xl tabular-nums text-ink">
-              {summary.averageFinalScore != null ? summary.averageFinalScore.toFixed(1) : "—"}
+              {summary.averageFinalScore != null ? `${summary.averageFinalScore.toFixed(1)}%` : "—"}
             </p>
           </div>
         </div>
       )}
 
-      {dashboard && <AnalyticsDashboardPanel data={dashboard} lang={lang} />}
+      {dashboard && !loading && <AnalyticsDashboardPanel data={dashboard} lang={lang} />}
 
-      {recent && (
+      {recent && !loading && (
         <div className="analytics-card overflow-x-auto">
           <table className="min-w-full text-left text-sm">
             <thead>
-              <tr className="border-b border-brass-dim text-[10px] uppercase tracking-wide text-ink-muted">
-                <th className="px-3 py-2 font-semibold">{t.colStudent}</th>
-                <th className="px-3 py-2 font-semibold">{t.colDate}</th>
-                <th className="px-3 py-2 font-semibold">{t.colStream}</th>
-                <th className="px-3 py-2 font-semibold">{t.colTopSpecialty}</th>
-                <th className="px-3 py-2 font-semibold">{t.colScore}</th>
-                <th className="px-3 py-2 font-semibold" />
+              <tr className="border-b border-brass-dim text-[11px] uppercase tracking-wide text-ink-muted">
+                <th className="px-3 py-2">{t.colName}</th>
+                <th className="px-3 py-2">{t.colDate}</th>
+                <th className="px-3 py-2">{t.colStream}</th>
+                <th className="px-3 py-2">{t.colSpecialty}</th>
+                <th className="px-3 py-2">{t.colScore}</th>
+                <th className="px-3 py-2" />
               </tr>
             </thead>
             <tbody>
-              {(recent.sessions ?? []).map((row) => (
-                <tr
-                  key={row.studentId}
-                  className="border-b border-brass-dim/50 hover:bg-brass/5"
-                >
-                  <td className="px-3 py-3">
+              {recent.sessions.map((row) => (
+                <tr key={row.studentId} className="border-b border-brass-dim/60 hover:bg-brass/5">
+                  <td className="px-3 py-2">
                     <button
                       type="button"
-                      className="text-left font-medium text-ink hover:text-brass"
+                      className="font-medium text-ink hover:text-brass"
                       onClick={() => setSelectedStudentId(row.studentId)}
                     >
                       {row.fullName}
                     </button>
                   </td>
-                  <td className="cursor-pointer whitespace-nowrap px-3 py-3 font-mono tabular-nums text-ink-muted"
+                  <td className="cursor-pointer whitespace-nowrap px-3 py-2 font-mono text-xs text-ink-muted"
                     onClick={() => setSelectedStudentId(row.studentId)}
                   >
-                    {row.evaluatedAt?.slice(0, 16).replace("T", " ")}
+                    {row.evaluatedAt.slice(0, 16).replace("T", " ")}
                   </td>
-                  <td
-                    className="cursor-pointer px-3 py-3 text-ink-muted"
-                    onClick={() => setSelectedStudentId(row.studentId)}
-                  >
+                  <td className="cursor-pointer px-3 py-2 text-ink-muted" onClick={() => setSelectedStudentId(row.studentId)}>
                     {streamLabels[row.bacStream as BacStream] ?? row.bacStream}
                   </td>
-                  <td
-                    className="cursor-pointer px-3 py-3 text-ink"
-                    onClick={() => setSelectedStudentId(row.studentId)}
-                  >
+                  <td className="cursor-pointer px-3 py-2" onClick={() => setSelectedStudentId(row.studentId)}>
                     {row.topSpecialtyTitle}
                   </td>
-                  <td
-                    className="cursor-pointer px-3 py-3 font-mono tabular-nums text-ink"
-                    onClick={() => setSelectedStudentId(row.studentId)}
-                  >
-                    {Number(row.finalScore).toFixed(1)}%
+                  <td className="cursor-pointer px-3 py-2 font-mono tabular-nums" onClick={() => setSelectedStudentId(row.studentId)}>
+                    {row.finalScore.toFixed(1)}%
                   </td>
-                  <td className="px-3 py-3 text-right">
+                  <td className="px-3 py-2 text-right">
                     <button
                       type="button"
                       className="text-xs text-burgundy hover:underline disabled:opacity-50"
@@ -365,7 +363,7 @@ export function AnalyticsPage({ config, lang, onBack }: Props) {
               ))}
             </tbody>
           </table>
-          {(recent.sessions ?? []).length === 0 && (
+          {recent.sessions.length === 0 && (
             <p className="p-4 text-sm text-ink-muted">{t.noSessions}</p>
           )}
         </div>
