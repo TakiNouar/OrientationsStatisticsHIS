@@ -4,6 +4,7 @@ import { LABEL_STYLES } from "../types";
 import type { Lang } from "../i18n/strings";
 import { STREAM_LABELS_I18N, matchLabelText, strings } from "../i18n/strings";
 import { exportEvaluationsUrl } from "../lib/api";
+import { careerPathsBySpecialtyFromCatalog } from "../data/careerPathsCatalog";
 
 type Props = {
   result: CalculationResult;
@@ -11,12 +12,14 @@ type Props = {
   onReset: () => void;
   lang: Lang;
   genieLabels?: Record<string, string>;
-  /** Fallback when API matches omit careerPaths (older responses). */
+  /** From API config — may be empty if DB not seeded. */
   careerPathsBySpecialty?: Record<string, CareerPath[]>;
 };
 
 type ResultTab = "scores" | "withoutRiasec" | "careers";
 type RevealPhase = "seal" | "unrolled";
+
+const STATIC_CATALOG = careerPathsBySpecialtyFromCatalog();
 
 function ScoreBar({
   academic,
@@ -119,7 +122,7 @@ function CareerCard({ path, lang }: { path: CareerPath; lang: Lang }) {
   const title = lang === "fr" ? path.titleFr : path.titleEn;
   const sector = lang === "fr" ? path.sectorFr : path.sectorEn;
   const description = lang === "fr" ? path.descriptionFr : path.descriptionEn;
-  const examples = lang === "fr" ? path.examplesFr : path.examplesEn;
+  const examples = (lang === "fr" ? path.examplesFr : path.examplesEn) ?? [];
   return (
     <div className="border-l-2 border-brass bg-surface py-2 pl-4">
       <div className="flex flex-wrap items-center gap-2">
@@ -171,9 +174,12 @@ export function Step3Results({
     return () => window.clearTimeout(id);
   }, [result.evaluationId]);
 
+  /** Priority: match payload → config map → static catalog */
   const pathsFor = (specialtyCode: string, embedded?: CareerPath[]): CareerPath[] => {
     if (embedded && embedded.length > 0) return embedded;
-    return careerPathsBySpecialty?.[specialtyCode] ?? [];
+    const fromConfig = careerPathsBySpecialty?.[specialtyCode];
+    if (fromConfig && fromConfig.length > 0) return fromConfig;
+    return STATIC_CATALOG[specialtyCode] ?? [];
   };
 
   const visible = useMemo(() => {
