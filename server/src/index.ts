@@ -1,39 +1,49 @@
 import "dotenv/config";
 import cors from "cors";
 import express from "express";
-import { z } from "zod";
-import { calculateRecommendations } from "./engine.js";
-import { initDatabase, insertStudentEvaluation, listSpecialties } from "./db/index.js";
+import rateLimit from "express-rate-limit";
+import helmet from "helmet";
+import { ZodError } from "zod";
 import {
+  getActiveSpecialties,
+  getCareerPathsBySpecialty,
+  exportEvaluationsAsCsv,
   getAnalyticsSummary,
   getRecentSessions,
   getStudentProfile,
-} from "./db/analytics.js";
-import { deleteStudentById } from "./db/student-delete.js";
-import { requireAdminToken } from "./admin-auth.js";
-import { getAnalyticsDashboard } from "./analytics-dashboard.js";
-import { exportEvaluationsCsv } from "./db/export-csv.js";
+  initDatabase,
+  persistEvaluation,
+} from "./db.js";
+import type { AnalyticsFilters, ExportFilters } from "./db.js";
 import {
-  BAC_STREAMS,
-  SUBJECT_CODES,
-  STREAM_LABELS,
-  SUBJECT_LABELS,
+  deleteStudent,
+  getEvaluationIdsForStudent,
+  getStudentFullName,
+} from "./student-delete.js";
+import { getAnalyticsDashboard } from "./analytics-dashboard.js";
+import { isAdminAuthConfigured, requireAdminToken } from "./admin-auth.js";
+import { calculateRecommendations } from "./engine.js";
+import {
+  removeStudentRowsFromSheet,
+  startSheetsPeriodicResync,
+  syncEvaluationToSheet,
+} from "./integrations/google-sheets.js";
+import { logger } from "./logger.js";
+import { CalculateRecommendationSchema } from "./schema.js";
+import {
   STREAM_SUBJECT_MAP,
   STREAM_GRADE_SLOTS,
+  SUBJECT_CODES,
+  BAC_STREAMS,
   TECHNICAL_MATH_OPTIONS,
   TECHNICAL_MATH_OPTION_LABELS,
+  ACADEMIC_SLOT_WEIGHTS,
   RIASEC_LETTERS,
   RIASEC_LABELS,
   FORMULA_WEIGHTS,
-  recommendationInputSchema,
+  STREAM_LABELS,
+  SUBJECT_LABELS,
 } from "./types.js";
-import { logger } from "./logger.js";
-import {
-  isSheetsConfigured,
-  scheduleSheetsResync,
-  startSheetsPeriodicResync,
-} from "./integrations/google-sheets.js";
-import { CAREER_PATHS_BY_SPECIALTY } from "./data/career-paths.js";
 
 const PORT = Number(process.env.PORT ?? 3001);
 const HOST = process.env.HOST ?? "127.0.0.1";
@@ -53,6 +63,13 @@ const allowedOrigins = (process.env.CORS_ORIGINS ?? defaultOrigins.join(","))
 initDatabase();
 
 const app = express();
+
+app.use(
+  helmet({
+    contentSecurityPolicy: false,
+  }),
+);
+
 app.use(
   cors({
     origin: (origin, cb) => {
@@ -62,13 +79,22 @@ app.use(
     credentials: true,
   }),
 );
+
 app.use(express.json({ limit: "1mb" }));
+
+const limiter = rateLimit({
+  windowMs: 60_000,
+  max: isDev ? 300 : 100,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+app.use("/api/", limiter);
 
 function routeParam(value: string | string[] | undefined): string {
   return Array.isArray(value) ? value[0] ?? "" : value ?? "";
 }
 
-function parseAnalyticsFilters(req: express.Request) {
+function parseAnalyticsFilters(req: express.Request): AnalyticsFilters {
   return {
     from: typeof req.query.from === "string" ? req.query.from : undefined,
     to: typeof req.query.to === "string" ? req.query.to : undefined,
@@ -88,7 +114,7 @@ app.get("/api/v1/health", (_req, res) => {
 
 app.get("/api/v1/config", (_req, res) => {
   try {
-    const specialties = listSpecialties().map((s) => ({
+    const specialties = getActiveSpecialties().map((s) => ({
       id: s.id,
       code: s.code,
       title: s.title,
@@ -108,8 +134,9 @@ app.get("/api/v1/config", (_req, res) => {
       riasecLetters: RIASEC_LETTERS,
       riasecLabels: RIASEC_LABELS,
       formulaWeights: FORMULA_WEIGHTS,
+      academicSlotWeights: ACADEMIC_SLOT_WEIGHTS,
       specialties,
-      careerPathsBySpecialty: CAREER_PATHS_BY_SPECIALTY,
+      careerPathsBySpecialty: getCareerPathsBySpecialty(),
     });
   } catch (error) {
     logger.error("config_failed", {
@@ -121,7 +148,7 @@ app.get("/api/v1/config", (_req, res) => {
 
 app.post("/api/v1/recommendations", (req, res) => {
   try {
-    const parsed = recommendationInputSchema.safeParse(req.body);
+    const parsed = CalculateRecommendationSchema.safeParse(req.body);
     if (!parsed.success) {
       res.status(400).json({
         message: "Validation failed.",
@@ -130,12 +157,19 @@ app.post("/api/v1/recommendations", (req, res) => {
       return;
     }
     const result = calculateRecommendations(parsed.data);
-    const evaluationId = insertStudentEvaluation(parsed.data, result);
-    if (isSheetsConfigured()) {
-      scheduleSheetsResync();
-    }
+    const evaluationId = persistEvaluation(parsed.data, result);
+    void syncEvaluationToSheet(evaluationId).catch((err) => {
+      logger.error("google_sheets_sync_failed", {
+        evaluationId,
+        err: err instanceof Error ? err.message : String(err),
+      });
+    });
     res.json({ ...result, evaluationId });
   } catch (error) {
+    if (error instanceof ZodError) {
+      res.status(400).json({ message: "Validation failed.", issues: error.issues });
+      return;
+    }
     logger.error("recommendations_failed", {
       err: error instanceof Error ? error.message : String(error),
     });
@@ -201,15 +235,20 @@ app.get("/api/v1/analytics/students/:studentId", (req, res) => {
 app.delete("/api/v1/analytics/students/:studentId", requireAdminToken, (req, res) => {
   try {
     const studentId = routeParam(req.params.studentId);
-    const deleted = deleteStudentById(studentId);
+    const name = getStudentFullName(studentId);
+    const evalIds = getEvaluationIdsForStudent(studentId);
+    const deleted = deleteStudent(studentId);
     if (!deleted) {
       res.status(404).json({ message: "Student not found." });
       return;
     }
-    if (isSheetsConfigured()) {
-      scheduleSheetsResync();
-    }
-    res.json({ ok: true, studentId });
+    void removeStudentRowsFromSheet(evalIds).catch((err) => {
+      logger.error("google_sheets_delete_sync_failed", {
+        studentId,
+        err: err instanceof Error ? err.message : String(err),
+      });
+    });
+    res.json({ ok: true, studentId, fullName: name });
   } catch (error) {
     logger.error("student_delete_failed", {
       err: error instanceof Error ? error.message : String(error),
@@ -220,8 +259,8 @@ app.delete("/api/v1/analytics/students/:studentId", requireAdminToken, (req, res
 
 app.get("/api/v1/export/evaluations.csv", (req, res) => {
   try {
-    const filters = parseAnalyticsFilters(req);
-    const csv = exportEvaluationsCsv(filters);
+    const filters = parseAnalyticsFilters(req) as ExportFilters;
+    const csv = exportEvaluationsAsCsv(filters);
     res.setHeader("Content-Type", "text/csv; charset=utf-8");
     res.setHeader("Content-Disposition", 'attachment; filename="evaluations.csv"');
     res.send(csv);
@@ -238,11 +277,9 @@ app.listen(PORT, HOST, () => {
     host: HOST,
     port: PORT,
     isDev,
-    adminAuthRequired: Boolean(process.env.ADMIN_TOKEN),
+    adminAuthRequired: isAdminAuthConfigured(),
     allowedOrigins,
     health: `http://${HOST}:${PORT}/api/v1/health`,
   });
-  if (isSheetsConfigured()) {
-    startSheetsPeriodicResync();
-  }
+  startSheetsPeriodicResync();
 });
