@@ -50,7 +50,7 @@ export function useRecommendationWizard(config: ConfigResponse | null, lang: Lan
   const [form, setForm] = useState<WizardFormState>(emptyForm);
   const [result, setResult] = useState<CalculationResult | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [fieldErrors, setFieldErrors] = useState<Partial<Record<string, string>>>({{}});
+  const [fieldErrors, setFieldErrors] = useState<Partial<Record<string, string>>>({});
   const [loading, setLoading] = useState(false);
 
   const t = strings[lang] ?? strings.fr;
