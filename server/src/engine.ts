@@ -146,7 +146,7 @@ const mapWeightToMultiplier = (subjectW: number, minW: number, maxW: number): nu
 export const AFFINITY_MISSING_POLICY = "specialty_average_mapped_multiplier" as const;
 
 const subjectMultiplier = (specialty: HisSpecialtyConfig, subject: SubjectCode): number => {
-  const weights = specialty.subjectWeights.weights;
+  const weights = specialty.subjectWeights?.weights ?? {};
   const values = Object.values(weights).filter((v): v is number => typeof v === "number");
   const minW = values.length ? Math.min(...values) : 1;
   const maxW = values.length ? Math.max(...values) : 1;
@@ -200,12 +200,13 @@ const genieBiasPoints = (studentProfile: StudentProfile, specialtyCode: string):
 
 export const calculateRecommendations = (
   studentProfile: StudentProfile,
-  specialties: HisSpecialtyConfig[],
+  specialties: HisSpecialtyConfig[] = [],
 ): CalculationResult => {
   const studentVector = topRiasecToVector(studentProfile.topRiasec);
   const technicalStream = isTechnicalBacStream(studentProfile.bacStream);
-  const matches: SpecialtyMatchBreakdown[] = specialties
-    .filter((s) => s.isActive)
+  const list = Array.isArray(specialties) ? specialties : [];
+  const matches: SpecialtyMatchBreakdown[] = list
+    .filter((s) => s?.isActive)
     .map((specialty) => {
       const academic = calculateAcademicScore(studentProfile, specialty);
       const cosine = cosineSimilarity(studentVector, specialty.riasecBenchmark.vector);
