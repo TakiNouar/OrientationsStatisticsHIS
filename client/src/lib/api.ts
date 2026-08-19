@@ -96,13 +96,13 @@ export async function fetchConfig(): Promise<ConfigResponse> {
 
   try {
     return await attempt();
-  } catch (firstError) {
-    await new Promise((r) => setTimeout(r, 600));
+  } catch (first) {
     try {
+      await new Promise((r) => setTimeout(r, 400));
       return await attempt();
     } catch {
-      throw firstError instanceof Error
-        ? firstError
+      throw first instanceof Error
+        ? first
         : new Error("Failed to load config from server.");
     }
   }
@@ -111,37 +111,21 @@ export async function fetchConfig(): Promise<ConfigResponse> {
 export async function calculateRecommendations(
   input: RecommendationInput,
 ): Promise<CalculationResult> {
-  const response = await fetchWithTimeout(apiUrl("/api/v1/recommendations/calculate"), {
+  const response = await fetchWithTimeout(apiUrl("/api/v1/recommendations"), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(input),
   });
-
   if (!response.ok) {
     let message = `Calculation failed (${response.status})`;
     try {
-      const body = (await response.json()) as {
-        message?: string;
-        issues?: Array<{ path?: (string | number)[]; message?: string }>;
-      };
-      if (body.message) {
-        message = body.message;
-      }
-      if (body.issues && body.issues.length > 0) {
-        const details = body.issues
-          .map((issue) => {
-            const path = issue.path?.join(".") || "payload";
-            return `${path}: ${issue.message ?? "invalid"}`;
-          })
-          .join(" | ");
-        message = `${message} — ${details}`;
-      }
+      const body = (await response.json()) as { message?: string };
+      if (body.message) message = body.message;
     } catch {
-      // ignore parse errors
+      /* ignore */
     }
     throw new Error(message);
   }
-
   return response.json() as Promise<CalculationResult>;
 }
 
@@ -182,7 +166,12 @@ export async function fetchAnalyticsRecent(params?: {
     apiUrl(`/api/v1/analytics/recent${analyticsQueryString(params)}`),
   );
   if (!response.ok) throw new Error(`Failed to load recent sessions (${response.status})`);
-  return response.json() as Promise<AnalyticsRecentResponse>;
+  const data = (await response.json()) as AnalyticsRecentResponse & {
+    rows?: AnalyticsRecentResponse["sessions"];
+  };
+  return {
+    sessions: data.sessions ?? data.rows ?? [],
+  };
 }
 
 export async function fetchStudentProfile(studentId: string): Promise<StudentProfileDetail> {
@@ -198,23 +187,16 @@ export async function fetchStudentProfile(studentId: string): Promise<StudentPro
 export async function deleteStudentProfile(studentId: string): Promise<void> {
   const response = await fetchWithTimeout(
     apiUrl(`/api/v1/analytics/students/${encodeURIComponent(studentId)}`),
-    { method: "DELETE", headers: { ...adminHeaders() } },
+    {
+      method: "DELETE",
+      headers: { ...adminHeaders() },
+    },
   );
-  if (response.status === 401) {
-    setStoredAdminToken("");
-    throw new Error("ADMIN_TOKEN_REQUIRED");
+  if (response.status === 401 || response.status === 403) {
+    throw new Error("Admin token rejected.");
   }
   if (response.status === 404) throw new Error("Student not found.");
-  if (!response.ok) {
-    let message = `Failed to delete profile (${response.status})`;
-    try {
-      const body = (await response.json()) as { message?: string };
-      if (body.message) message = body.message;
-    } catch {
-      // ignore
-    }
-    throw new Error(message);
-  }
+  if (!response.ok) throw new Error(`Failed to delete student (${response.status})`);
 }
 
 export function exportEvaluationsUrl(params?: {
@@ -222,13 +204,6 @@ export function exportEvaluationsUrl(params?: {
   to?: string;
   bacStream?: string;
   specialtyCode?: string;
-  anonymized?: boolean;
 }): string {
-  const q = new URLSearchParams({ format: "csv" });
-  if (params?.from) q.set("from", params.from);
-  if (params?.to) q.set("to", params.to);
-  if (params?.bacStream) q.set("bacStream", params.bacStream);
-  if (params?.specialtyCode) q.set("specialtyCode", params.specialtyCode);
-  if (params?.anonymized) q.set("anonymized", "1");
-  return apiUrl(`/api/v1/export/evaluations?${q.toString()}`);
+  return apiUrl(`/api/v1/export/evaluations.csv${analyticsQueryString(params)}`);
 }

@@ -18,14 +18,10 @@ import type {
   BacStream,
   ConfigResponse,
   StudentProfileDetail,
-  SubjectCode,
 } from "../types";
-import { LABEL_STYLES } from "../types";
 import type { Lang } from "../i18n/strings";
 import {
   STREAM_LABELS_I18N,
-  SUBJECT_LABELS_I18N,
-  matchLabelText,
   strings,
 } from "../i18n/strings";
 
@@ -324,7 +320,7 @@ export function AnalyticsPage({ config, lang, onBack }: Props) {
               </tr>
             </thead>
             <tbody>
-              {recent.sessions.map((row) => (
+              {(recent.sessions ?? []).map((row) => (
                 <tr key={row.studentId} className="border-b border-brass-dim/60 hover:bg-brass/5">
                   <td className="px-3 py-2">
                     <button
@@ -335,18 +331,28 @@ export function AnalyticsPage({ config, lang, onBack }: Props) {
                       {row.fullName}
                     </button>
                   </td>
-                  <td className="cursor-pointer whitespace-nowrap px-3 py-2 font-mono text-xs text-ink-muted"
+                  <td
+                    className="cursor-pointer whitespace-nowrap px-3 py-2 font-mono text-xs text-ink-muted"
                     onClick={() => setSelectedStudentId(row.studentId)}
                   >
                     {row.evaluatedAt.slice(0, 16).replace("T", " ")}
                   </td>
-                  <td className="cursor-pointer px-3 py-2 text-ink-muted" onClick={() => setSelectedStudentId(row.studentId)}>
+                  <td
+                    className="cursor-pointer px-3 py-2 text-ink-muted"
+                    onClick={() => setSelectedStudentId(row.studentId)}
+                  >
                     {streamLabels[row.bacStream as BacStream] ?? row.bacStream}
                   </td>
-                  <td className="cursor-pointer px-3 py-2" onClick={() => setSelectedStudentId(row.studentId)}>
+                  <td
+                    className="cursor-pointer px-3 py-2"
+                    onClick={() => setSelectedStudentId(row.studentId)}
+                  >
                     {row.topSpecialtyTitle}
                   </td>
-                  <td className="cursor-pointer px-3 py-2 font-mono tabular-nums" onClick={() => setSelectedStudentId(row.studentId)}>
+                  <td
+                    className="cursor-pointer px-3 py-2 font-mono tabular-nums"
+                    onClick={() => setSelectedStudentId(row.studentId)}
+                  >
                     {row.finalScore.toFixed(1)}%
                   </td>
                   <td className="px-3 py-2 text-right">
@@ -363,7 +369,7 @@ export function AnalyticsPage({ config, lang, onBack }: Props) {
               ))}
             </tbody>
           </table>
-          {recent.sessions.length === 0 && (
+          {(recent.sessions ?? []).length === 0 && (
             <p className="p-4 text-sm text-ink-muted">{t.noSessions}</p>
           )}
         </div>
