@@ -24,6 +24,7 @@ export default function App() {
     return "fr";
   });
   const [themeMode, setThemeMode] = useState<ThemeMode>(() => loadThemeMode());
+  const [themeTick, setThemeTick] = useState(0);
   const [route, setRoute] = useState<Route>("wizard");
   const [config, setConfig] = useState<ConfigResponse | null>(null);
   const [configError, setConfigError] = useState<string | null>(null);
@@ -66,24 +67,29 @@ export default function App() {
 
   const onCycleTheme = useCallback(() => {
     setThemeMode((m) => cycleThemeMode(m));
+    setThemeTick((n) => n + 1);
   }, []);
 
   if (configLoading) {
     return (
-      <div className="analytics-mesh flex min-h-screen flex-col items-center justify-center gap-3 p-6 font-body text-ink">
-        <div className="intended-skeleton h-8 w-48" />
-        <p className="font-mono text-xs uppercase tracking-wide text-ink-muted">{t.loading}</p>
+      <div className="analytics-mesh flex min-h-screen flex-col items-center justify-center gap-4 p-6 font-body text-ink">
+        <div className="analytics-card intended-skeleton h-24 w-full max-w-sm" />
+        <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-ink-muted">{t.loading}</p>
       </div>
     );
   }
 
   if (!config) {
     return (
-      <div className="analytics-mesh flex min-h-screen flex-col items-center justify-center gap-3 p-6 font-body text-ink">
-        <p className="text-burgundy">{configError ?? t.configError}</p>
-        <button type="button" className="intended-btn-primary" onClick={() => window.location.reload()}>
-          {t.retry}
-        </button>
+      <div className="analytics-mesh flex min-h-screen flex-col items-center justify-center gap-4 p-6 font-body text-ink">
+        <div className="analytics-card max-w-md space-y-3 p-6 text-center">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-brass">HIS</p>
+          <p className="font-display text-lg text-ink">{t.configError}</p>
+          <p className="text-sm text-ink-muted">{configError}</p>
+          <button type="button" className="intended-btn-primary" onClick={() => window.location.reload()}>
+            {t.retry}
+          </button>
+        </div>
       </div>
     );
   }
@@ -140,7 +146,9 @@ export default function App() {
                 aria-label={`Theme: ${themeMode}. Click to change.`}
                 title={themeMode === "system" ? "System" : themeMode === "dark" ? "Dark" : "Light"}
               >
-                {themeMode === "system" ? "◐" : themeMode === "dark" ? "☾" : "☀"}
+                <span key={themeTick} className="theme-icon-spin inline-block">
+                  {themeMode === "system" ? "◐" : themeMode === "dark" ? "☾" : "☀"}
+                </span>
               </button>
             </div>
           </div>
