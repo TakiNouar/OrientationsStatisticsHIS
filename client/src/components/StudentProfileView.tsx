@@ -10,6 +10,7 @@ import type {
 } from "../types";
 import { LABEL_STYLES } from "../types";
 import type { Lang } from "../i18n/strings";
+import { SegmentedTabs } from "./SegmentedTabs";
 import {
   STREAM_LABELS_I18N,
   SUBJECT_LABELS_I18N,
@@ -229,16 +230,9 @@ export function StudentProfileView({
           <h3 className="font-display text-sm font-semibold text-ink">{t.gradesTitle}</h3>
           <ul className="mt-3 space-y-1.5">
             {Object.entries(profile.grades ?? {}).map(([code, value]) => (
-              <li
-                key={code}
-                className="flex justify-between gap-2 text-sm text-ink-muted"
-              >
-                <span className="min-w-0 break-words">
-                  {subjectLabels[code as SubjectCode] ?? code}
-                </span>
-                <span className="shrink-0 font-mono tabular-nums text-ink">
-                  {Number(value).toFixed(2)}
-                </span>
+              <li key={code} className="flex justify-between gap-2 text-sm text-ink-muted">
+                <span className="min-w-0 break-words">{subjectLabels[code as SubjectCode] ?? code}</span>
+                <span className="shrink-0 font-mono tabular-nums text-ink">{Number(value).toFixed(2)}</span>
               </li>
             ))}
           </ul>
@@ -250,10 +244,7 @@ export function StudentProfileView({
         {profile.topRiasec && profile.topRiasec.length > 0 ? (
           <ul className="mt-3 space-y-1.5">
             {profile.topRiasec.map((entry) => (
-              <li
-                key={entry.letter}
-                className="flex justify-between gap-2 text-sm text-ink-muted"
-              >
+              <li key={entry.letter} className="flex justify-between gap-2 text-sm text-ink-muted">
                 <span>
                   <span className="font-mono font-semibold text-ink">{entry.letter}</span>
                   {" · "}
@@ -268,38 +259,21 @@ export function StudentProfileView({
         )}
       </section>
 
-      <div className="flex flex-wrap gap-1 border-b border-brass-dim">
-        {(
-          [
-            ["scores", t.tabScores],
-            ["withoutRiasec", t.tabWithoutRiasec],
-            ["careers", t.tabCareers],
-          ] as const
-        ).map(([id, label]) => (
-          <button
-            key={id}
-            type="button"
-            onClick={() => setTab(id)}
-            className={[
-              "px-3 py-2 text-xs font-medium tracking-wide transition-colors",
-              tab === id
-                ? "border-b-2 border-brass text-brass"
-                : "text-ink-muted hover:text-brass",
-            ].join(" ")}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
+      <SegmentedTabs
+        ariaLabel="Profile"
+        value={tab}
+        onChange={setTab}
+        items={[
+          { id: "scores", label: t.tabScores },
+          { id: "withoutRiasec", label: t.tabWithoutRiasec },
+          { id: "careers", label: t.tabCareers },
+        ]}
+      />
 
       {tab === "scores" && (
         <section className="min-w-0">
           <h3 className="mb-3 font-display text-sm font-semibold text-ink">{t.allMatches}</h3>
-          {renderMatchList(
-            profile.matches ?? [],
-            (m) => m.finalScore,
-            (m) => m.rank,
-          )}
+          {renderMatchList(profile.matches ?? [], (m) => m.finalScore, (m) => m.rank)}
         </section>
       )}
 
