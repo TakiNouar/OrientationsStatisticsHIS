@@ -166,11 +166,11 @@ export function Step3Results({ result, topRiasec, onReset, lang, genieLabels }: 
     return result.matches.slice(0, 3);
   }, [result.matches, showAll]);
 
+  /** Sans RIASEC: top-3 only by default (no bars, no seal). */
   const withoutVisible = useMemo(() => {
     const rows = result.matchesWithoutRiasec ?? [];
-    if (showAll || rows.length <= 3) return rows;
     return rows.slice(0, 3);
-  }, [result.matchesWithoutRiasec, showAll]);
+  }, [result.matchesWithoutRiasec]);
 
   const genieLabel =
     result.technicalOption && genieLabels?.[result.technicalOption]
@@ -229,41 +229,68 @@ export function Step3Results({ result, topRiasec, onReset, lang, genieLabels }: 
         <p className="mt-10 text-center text-xs text-ink-muted">{t.disclaimer}</p>
       </div>
 
-      <div className="no-print flex flex-wrap items-start justify-between gap-3">
-        <div>
+      {/* Meta — one quiet mono weight line under student identity */}
+      <div className="no-print flex flex-wrap items-start justify-between gap-4">
+        <div className="min-w-0 flex-1 space-y-2">
           <h2 className="font-display text-2xl font-semibold tracking-tight text-ink">{t.results}</h2>
-          <p className="mt-1 font-display text-lg text-ink">{studentName}</p>
-          <div className="mt-2 flex flex-wrap items-center gap-3">
+          <p className="font-display text-lg text-ink">{studentName}</p>
+          <div className="flex flex-wrap items-center gap-3">
             <p className="text-sm text-ink-muted">
               {streamLabels[result.bacStream]}
               {genieLabel ? ` · ${genieLabel}` : ""}
             </p>
             <RiasecMonogram code={topCode} />
           </div>
-          <p className="mt-2 font-mono text-[11px] text-ink-muted">{fileLabel} {fileNumber}</p>
-          <p className="mt-1 font-mono text-[11px] text-ink-muted">
-            {t.weightsLine}: {t.academic} {(result.weights.academic * 100).toFixed(0)}% · {t.riasec}{" "}
-            {(result.weights.riasec * 100).toFixed(0)}% · {t.technical} {(result.weights.technical * 100).toFixed(0)}%
-            {result.weights.preference != null ? ` · ${t.preference} ${(result.weights.preference * 100).toFixed(0)}%` : ""}
+          <p className="font-mono text-[11px] tracking-wide text-ink-muted">
+            {fileLabel} {fileNumber}
+            {" · "}
+            {t.academic} {(result.weights.academic * 100).toFixed(0)}%
+            {" · "}
+            {t.riasec} {(result.weights.riasec * 100).toFixed(0)}%
+            {" · "}
+            {t.technical} {(result.weights.technical * 100).toFixed(0)}%
+            {result.weights.preference != null
+              ? ` · ${t.preference} ${(result.weights.preference * 100).toFixed(0)}%`
+              : ""}
           </p>
         </div>
-        <div className="flex flex-col items-end gap-2">
-          <button type="button" onClick={onReset} className="intended-btn-ghost">{t.newEvaluation}</button>
-          <button type="button" className="text-xs text-brass underline-offset-2 hover:underline" onClick={() => window.print()}>
+        <div className="flex flex-col items-end gap-1.5">
+          <button type="button" onClick={onReset} className="intended-btn-ghost">
+            {t.newEvaluation}
+          </button>
+          <button
+            type="button"
+            className="text-[11px] text-ink-muted underline-offset-2 hover:text-brass hover:underline"
+            onClick={() => window.print()}
+          >
             {printLabel}
           </button>
-          <a href={exportUrl} className="text-xs text-ink-muted underline-offset-2 hover:underline">{t.exportCsv}</a>
+          <a
+            href={exportUrl}
+            className="text-[11px] text-ink-muted underline-offset-2 hover:text-brass hover:underline"
+          >
+            {t.exportCsv}
+          </a>
         </div>
       </div>
 
+      {/* Tabs: Scores default; brass underline only on active */}
       <div className="no-print flex flex-wrap gap-6 border-b border-brass-dim">
-        {([["scores", t.tabScores], ["withoutRiasec", t.tabWithoutRiasec], ["careers", t.tabCareers]] as const).map(([id, label]) => (
+        {(
+          [
+            ["scores", t.tabScores],
+            ["withoutRiasec", t.tabWithoutRiasec],
+            ["careers", t.tabCareers],
+          ] as const
+        ).map(([id, label]) => (
           <button
             key={id}
             type="button"
             onClick={() => setTab(id)}
-            className={`border-b-2 px-1 pb-2 text-sm font-medium transition ${
-              tab === id ? "border-brass text-ink" : "border-transparent text-ink-muted hover:text-brass"
+            className={`border-b-2 px-0.5 pb-2.5 text-sm transition ${
+              tab === id
+                ? "border-brass font-semibold text-ink"
+                : "border-transparent font-medium text-ink-muted hover:text-brass"
             }`}
           >
             {label}
@@ -276,7 +303,9 @@ export function Step3Results({ result, topRiasec, onReset, lang, genieLabels }: 
           {top && (
             <div className="card-lift seal-expand border border-brass-dim bg-surface px-4 py-6 text-center">
               <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-brass">{t.topRecommendation}</p>
-              <div className="mt-4"><MatchSeal code={top.specialtyCode} score={top.finalScore} /></div>
+              <div className="mt-4">
+                <MatchSeal code={top.specialtyCode} score={top.finalScore} />
+              </div>
               <h3 className="mt-4 font-display text-xl font-semibold text-ink">{top.specialtyTitle}</h3>
               <div className="mt-2 flex justify-center">
                 <LabelBadge label={top.matchLabel} text={matchLabelText(lang, top.matchLabel)} />
@@ -286,7 +315,11 @@ export function Step3Results({ result, topRiasec, onReset, lang, genieLabels }: 
           )}
 
           <div className="no-print flex justify-end">
-            <button type="button" onClick={() => setShowDetails((v) => !v)} className="text-xs text-ink-muted underline-offset-2 hover:underline">
+            <button
+              type="button"
+              onClick={() => setShowDetails((v) => !v)}
+              className="text-[11px] text-ink-muted underline-offset-2 hover:text-brass hover:underline"
+            >
               {showDetails ? t.hideDetails : t.showDetails}
             </button>
           </div>
@@ -315,7 +348,7 @@ export function Step3Results({ result, topRiasec, onReset, lang, genieLabels }: 
                 <div className="mt-3">
                   <ScoreBar
                     academic={match.academicScore ?? 0}
-                    psychometric={match.psychometricScore ?? 0}
+                    psychometric={match.psychometricScore ?? match.riasecScore ?? 0}
                     technical={match.technicalScore ?? 0}
                     preference={match.preferenceScore ?? 0}
                     labels={scoreLabels}
@@ -330,6 +363,7 @@ export function Step3Results({ result, topRiasec, onReset, lang, genieLabels }: 
                       <li>opposite: {fmt(match.details.slotBreakdown?.opposite)}</li>
                       <li>english: {fmt(match.details.slotBreakdown?.english)}</li>
                     </ul>
+                    <p className="mt-2 text-[11px] text-ink-muted">{t.streamFitNote}</p>
                   </div>
                 )}
               </article>
@@ -348,10 +382,19 @@ export function Step3Results({ result, topRiasec, onReset, lang, genieLabels }: 
 
       {tab === "withoutRiasec" && (
         <div className="no-print space-y-4">
-          <p className="text-sm text-ink-muted">{t.withoutRiasecIntro}</p>
+          <p className="text-sm leading-relaxed text-ink-muted">{t.withoutRiasecIntro}</p>
+          {result.weightsWithoutRiasec && (
+            <p className="font-mono text-[11px] tracking-wide text-ink-muted">
+              {t.academic} {(result.weightsWithoutRiasec.academic * 100).toFixed(0)}%
+              {" · "}
+              {t.technical} {(result.weightsWithoutRiasec.technical * 100).toFixed(0)}%
+              {" · "}
+              {t.preference} {(result.weightsWithoutRiasec.preference * 100).toFixed(0)}%
+            </p>
+          )}
           <div className="space-y-0">
             {withoutVisible.map((match) => (
-              <article key={`nr-${match.specialtyId}`} className="card-lift border-b border-brass-dim py-4 last:border-0">
+              <article key={`nr-${match.specialtyId}`} className="border-b border-brass-dim py-4 last:border-0">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
@@ -359,27 +402,26 @@ export function Step3Results({ result, topRiasec, onReset, lang, genieLabels }: 
                       <h3 className="font-display text-base font-semibold text-ink">{match.specialtyTitle}</h3>
                       <LabelBadge label={match.matchLabel} text={matchLabelText(lang, match.matchLabel)} />
                     </div>
+                    <p className="mt-1 font-mono text-xs text-ink-muted">
+                      {match.specialtyCode} · {match.department}
+                    </p>
                   </div>
-                  <div className="font-mono text-2xl font-medium tabular-nums text-ink">{fmt(match.finalScore, 1)}%</div>
-                </div>
-                <div className="mt-3">
-                  <ScoreBar
-                    academic={match.academicScore ?? 0}
-                    psychometric={0}
-                    technical={match.technicalScore ?? 0}
-                    preference={match.preferenceScore ?? 0}
-                    labels={scoreLabels}
-                  />
+                  <div className="font-mono text-2xl font-medium tabular-nums text-ink">
+                    {fmt(match.finalScore, 1)}%
+                  </div>
                 </div>
               </article>
             ))}
+            {withoutVisible.length === 0 && (
+              <p className="py-6 text-center text-sm text-ink-muted">{t.noMatches}</p>
+            )}
           </div>
         </div>
       )}
 
       {tab === "careers" && (
         <div className="no-print space-y-6">
-          <p className="text-sm text-ink-muted">{t.careersIntro}</p>
+          <p className="text-sm leading-relaxed text-ink-muted">{t.careersIntro}</p>
           {result.matches.map((match) => {
             const paths = match.careerPaths ?? [];
             return (
@@ -403,7 +445,7 @@ export function Step3Results({ result, topRiasec, onReset, lang, genieLabels }: 
         </div>
       )}
 
-      <p className="no-print text-center text-xs text-ink-muted">{t.disclaimer}</p>
+      <p className="no-print text-center text-[11px] text-ink-muted/80">{t.disclaimer}</p>
     </div>
   );
 }

@@ -88,18 +88,19 @@ export default function App() {
     );
   }
 
+  /** Active nav: brass text only — no filled chip fighting the header border. */
   const navBtn = (active: boolean) =>
     [
       "rounded-sm px-3 py-1.5 text-xs font-medium tracking-wide transition-colors",
-      active
-        ? "bg-brass/10 text-brass"
-        : "text-ink-muted hover:bg-brass/5 hover:text-brass",
+      active ? "text-brass" : "text-ink-muted hover:text-brass",
     ].join(" ");
+
+  const shellMax = route === "analytics" ? "max-w-4xl" : "max-w-2xl";
 
   return (
     <div className="analytics-mesh min-h-screen font-body text-ink">
       <header className="intended-header sticky top-0 z-20">
-        <div className="mx-auto flex max-w-2xl items-center justify-between gap-4 px-4 py-3.5 sm:gap-8">
+        <div className={`mx-auto flex ${shellMax} items-center justify-between gap-4 px-4 py-3.5 sm:gap-6`}>
           <div className="min-w-0 flex-1">
             <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-brass">
               HIS · Higher Institute of Science
@@ -111,7 +112,7 @@ export default function App() {
 
           <div className="flex shrink-0 items-center gap-2 sm:gap-3">
             <nav
-              className="flex items-center gap-0.5 border-r border-brass-dim/60 pr-2.5 sm:pr-3.5"
+              className="flex items-center gap-0.5 border-r border-brass-dim/50 pr-2.5 sm:pr-3"
               aria-label="Primary"
             >
               <button type="button" className={navBtn(route === "wizard")} onClick={() => setRoute("wizard")}>
@@ -128,14 +129,14 @@ export default function App() {
             <div className="flex items-center gap-0.5">
               <button
                 type="button"
-                className="rounded-sm px-2 py-1.5 text-[11px] font-medium tracking-wide text-ink-muted transition-colors hover:text-brass"
+                className="rounded-sm px-2 py-1.5 text-[11px] font-medium tracking-wide text-ink-muted transition-colors hover:text-ink"
                 onClick={() => setLang((l) => (l === "fr" ? "en" : "fr"))}
               >
                 {lang === "fr" ? "EN" : "FR"}
               </button>
               <button
                 type="button"
-                className="rounded-sm px-2 py-1.5 text-sm text-ink-muted transition-colors hover:text-brass"
+                className="rounded-sm px-2 py-1.5 text-sm text-ink-muted transition-colors hover:text-ink"
                 onClick={onCycleTheme}
                 aria-label={`Theme: ${themeMode}. Click to change.`}
                 title={themeMode === "system" ? "System" : themeMode === "dark" ? "Dark" : "Light"}
@@ -147,7 +148,7 @@ export default function App() {
         </div>
       </header>
 
-      <main className={`mx-auto px-4 py-8 sm:py-10 ${route === "analytics" ? "max-w-4xl" : "max-w-2xl"}`}>
+      <main className={`mx-auto px-4 py-8 sm:py-10 ${shellMax}`}>
         {route === "analytics" ? (
           <AnalyticsPage config={config} lang={lang} onBack={() => setRoute("wizard")} />
         ) : (

@@ -182,7 +182,7 @@ export function AnalyticsPage({ config, lang, onBack }: Props) {
 
   if (selectedStudentId) {
     return (
-      <div className="space-y-4">
+      <div className="analytics-rise space-y-4">
         {profileLoading && (
           <div className="analytics-card intended-skeleton h-64" aria-busy="true" aria-label={t.loading} />
         )}
@@ -209,8 +209,7 @@ export function AnalyticsPage({ config, lang, onBack }: Props) {
   }
 
   return (
-    <div className="min-w-0 space-y-6 overflow-x-hidden">
-      {/* Header */}
+    <div className="analytics-rise min-w-0 space-y-6 overflow-x-hidden">
       <div className="flex min-w-0 flex-wrap items-start justify-between gap-4">
         <div className="min-w-0">
           <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-brass">HIS · Staff</p>
@@ -220,9 +219,12 @@ export function AnalyticsPage({ config, lang, onBack }: Props) {
           <p className="mt-1 max-w-xl text-sm text-ink-muted">{t.analyticsSubtitle}</p>
           <p className="mt-0.5 font-mono text-[11px] text-ink-muted">{t.analyticsClickHint}</p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-col items-end gap-1.5">
+          <button type="button" onClick={onBack} className="intended-btn-ghost text-xs">
+            {t.backToWizard}
+          </button>
           <a
-            className="intended-btn-ghost inline-flex items-center text-xs"
+            className="text-[11px] text-ink-muted underline-offset-2 hover:text-brass hover:underline"
             href={exportEvaluationsUrl({
               from: applied.from || undefined,
               to: applied.to || undefined,
@@ -232,15 +234,11 @@ export function AnalyticsPage({ config, lang, onBack }: Props) {
           >
             {t.exportCsv}
           </a>
-          <button type="button" onClick={onBack} className="intended-btn-ghost text-xs">
-            {t.backToWizard}
-          </button>
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="analytics-card min-w-0 p-4 sm:p-5">
-        <div className="mb-3 flex items-center justify-between gap-2">
+      <div className="analytics-card min-w-0 p-5 sm:p-6">
+        <div className="mb-4 flex items-center justify-between gap-2">
           <p className="font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-ink-muted">
             Filters
           </p>
@@ -249,7 +247,7 @@ export function AnalyticsPage({ config, lang, onBack }: Props) {
               {activeChips.map((c) => (
                 <span
                   key={c.key}
-                  className="rounded-sm border border-brass/40 bg-brass/10 px-2 py-0.5 font-mono text-[10px] text-ink"
+                  className="rounded-sm border border-brass-dim px-2 py-0.5 font-mono text-[10px] text-ink-muted"
                 >
                   {c.label}
                 </span>
@@ -257,7 +255,7 @@ export function AnalyticsPage({ config, lang, onBack }: Props) {
             </div>
           )}
         </div>
-        <div className="grid min-w-0 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid min-w-0 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <label className="block min-w-0">
             <span className="intended-label">{t.filterFrom}</span>
             <input
@@ -312,7 +310,7 @@ export function AnalyticsPage({ config, lang, onBack }: Props) {
             </select>
           </label>
         </div>
-        <div className="mt-4 flex flex-wrap gap-2">
+        <div className="mt-5 flex flex-wrap gap-2">
           <button type="button" className="intended-btn-primary" onClick={() => setApplied({ ...filters })}>
             {t.applyFilters}
           </button>
@@ -351,29 +349,28 @@ export function AnalyticsPage({ config, lang, onBack }: Props) {
         </div>
       )}
 
-      {/* Summary KPIs */}
       {summary && !loading && (
-        <div className="grid gap-3 sm:grid-cols-3">
-          <div className="analytics-card dash-kpi p-4">
-            <div className="mb-2 h-0.5 w-8 bg-brass" />
+        <div className="grid gap-4 sm:grid-cols-3">
+          <div className="analytics-card dash-kpi p-5">
+            <div className="mb-3 h-px w-10 bg-brass" />
             <p className="font-mono text-[10px] font-medium uppercase tracking-[0.12em] text-ink-muted">
               {t.totalEvaluations}
             </p>
-            <p className="mt-1 font-mono text-3xl tabular-nums text-ink">{summary.totalEvaluations}</p>
+            <p className="mt-2 font-mono text-3xl tabular-nums text-ink sm:text-4xl">{summary.totalEvaluations}</p>
           </div>
-          <div className="analytics-card dash-kpi p-4">
-            <div className="mb-2 h-0.5 w-8 bg-brass" />
+          <div className="analytics-card dash-kpi p-5">
+            <div className="mb-3 h-px w-10 bg-brass" />
             <p className="font-mono text-[10px] font-medium uppercase tracking-[0.12em] text-ink-muted">
               {t.uniqueStudents}
             </p>
-            <p className="mt-1 font-mono text-3xl tabular-nums text-ink">{summary.uniqueStudents}</p>
+            <p className="mt-2 font-mono text-3xl tabular-nums text-ink sm:text-4xl">{summary.uniqueStudents}</p>
           </div>
-          <div className="analytics-card dash-kpi p-4">
-            <div className="mb-2 h-0.5 w-8 bg-brass" />
+          <div className="analytics-card dash-kpi p-5">
+            <div className="mb-3 h-px w-10 bg-brass" />
             <p className="font-mono text-[10px] font-medium uppercase tracking-[0.12em] text-ink-muted">
               {t.avgScore}
             </p>
-            <p className="mt-1 font-mono text-3xl tabular-nums text-ink">
+            <p className="mt-2 font-mono text-3xl tabular-nums text-ink sm:text-4xl">
               {summary.averageFinalScore != null ? `${summary.averageFinalScore.toFixed(1)}%` : "—"}
             </p>
           </div>
@@ -384,10 +381,9 @@ export function AnalyticsPage({ config, lang, onBack }: Props) {
         <AnalyticsDashboardPanel dashboard={dashboard} lang={lang} totalSessions={summary?.totalEvaluations} />
       )}
 
-      {/* Recent sessions */}
       {recent && !loading && (
         <section className="analytics-card min-w-0 overflow-hidden p-0">
-          <div className="border-b border-brass-dim px-4 py-4 sm:px-5">
+          <div className="border-b border-brass-dim px-5 py-4">
             <div className="flex flex-wrap items-end justify-between gap-2">
               <div>
                 <h3 className="font-display text-sm font-semibold tracking-tight text-ink">
@@ -395,9 +391,7 @@ export function AnalyticsPage({ config, lang, onBack }: Props) {
                 </h3>
                 <p className="mt-0.5 font-mono text-[11px] text-ink-muted">{t.analyticsClickHint}</p>
               </div>
-              <span className="font-mono text-[11px] tabular-nums text-ink-muted">
-                {sessions.length}
-              </span>
+              <span className="font-mono text-[11px] tabular-nums text-ink-muted">{sessions.length}</span>
             </div>
           </div>
           <div className="overflow-x-auto">
@@ -453,9 +447,7 @@ export function AnalyticsPage({ config, lang, onBack }: Props) {
                         onClick={() => setSelectedStudentId(row.studentId)}
                       >
                         <div className="flex min-w-0 flex-col gap-1">
-                          <span className="analytics-truncate font-medium text-ink">
-                            {row.topSpecialtyTitle}
-                          </span>
+                          <span className="analytics-truncate font-medium text-ink">{row.topSpecialtyTitle}</span>
                           {row.matchLabel && (
                             <span
                               className={`inline-flex w-fit rounded-sm px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide ${LABEL_STYLES[row.matchLabel as MatchLabel]}`}
