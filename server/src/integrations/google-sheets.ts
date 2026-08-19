@@ -1,8 +1,29 @@
 /**
  * Live mirror of orientation sessions → Google Sheets.
- * Full-table resync from SQLite (never wipes the database).
- * Styling is idempotent: every resync resets formats then reapplies.
+ *
+ * DATA ONLY:
+ * - Never writes or clears row 1 (header stays as the user set it).
+ * - Never applies colors, fonts, banding, or column widths.
+ * - values.update / values.clear only change cell values — existing cell
+ *   formatting is left intact by the Sheets API.
+ *
  * No-op when GOOGLE_SHEETS_ID is unset. Never throws to the request path.
+ *
+ * Expected column layout (row 1 is yours to maintain):
+ *  A  Profile #
+ *  B  Evaluation ID
+ *  C  Submitted at
+ *  D  Student name
+ *  E  BAC stream
+ *  F  Technical option
+ *  G  RIASEC #1 (full name)
+ *  H  RIASEC #2 (full name)
+ *  I  RIASEC #3 (full name)
+ *  J  Overall mark
+ *  K  Preferred specialty
+ *  L–N  Specialty / Score / Label #1
+ *  O–Q  Specialty / Score / Label #2
+ *  R–T  Specialty / Score / Label #3
  */
 import { google } from "googleapis";
 import type { sheets_v4 } from "googleapis";
@@ -11,41 +32,10 @@ import type { SheetSessionRow } from "../db.js";
 import { logger } from "../logger.js";
 import type { CalculationResult, StudentProfile } from "../types.js";
 
-const HEADER_ROW = [
-  "Evaluation ID",
-  "Submitted at",
-  "Student name",
-  "BAC stream",
-  "Technical option",
-  "Overall mark",
-  "Preferred specialty",
-  "Specialty #1",
-  "Score #1",
-  "Match label #1",
-  "Specialty #2",
-  "Score #2",
-  "Match label #2",
-  "Specialty #3",
-  "Score #3",
-  "Match label #3",
-] as const;
-
-const COL_COUNT = HEADER_ROW.length;
-const FORMAT_CEILING = 2000;
-
-const COLUMN_WIDTHS: number[] = [
-  280, 160, 160, 150, 130, 90, 140, 140, 90, 160, 140, 90, 160, 140, 90, 160,
-];
-
-const HEADER_BG = { red: 0.071, green: 0.078, blue: 0.11 };
-const HEADER_FG = { red: 0.961, green: 0.949, blue: 0.918 };
-const BODY_FG = { red: 0.071, green: 0.078, blue: 0.11 };
-const ZEBRA_1 = { red: 0.969, green: 0.953, blue: 0.91 };
-const ZEBRA_2 = { red: 0.937, green: 0.906, blue: 0.824 };
-const BRASS_HL = { red: 0.851, green: 0.776, blue: 0.549 };
+/** Clear values from row 2 down only; styles remain. */
+const DATA_RANGE = "A2:Z";
 
 let sheetsClient: sheets_v4.Sheets | null = null;
-let cachedSheetId: number | null = null;
 let resyncTimer: ReturnType<typeof setInterval> | null = null;
 let resyncInFlight = false;
 
@@ -79,15 +69,14 @@ async function getSheetsClient(): Promise<sheets_v4.Sheets | null> {
     } else if (keyPath) {
       authOptions.keyFile = keyPath;
     } else {
-      logger.warn("google_sheets_auth_missing", {
-        message:
-          "GOOGLE_SHEETS_ID is set but neither GOOGLE_SERVICE_ACCOUNT_JSON nor GOOGLE_SERVICE_ACCOUNT_KEY_PATH is configured.",
+      logger.warn("google_sheets_no_credentials", {
+        hint: "Set GOOGLE_SERVICE_ACCOUNT_KEY_PATH or GOOGLE_SERVICE_ACCOUNT_JSON",
       });
       return null;
     }
 
     const auth = new google.auth.GoogleAuth(authOptions);
-    sheetsClient = google.sheets({ version: "v4", auth: auth as never });
+    sheetsClient = google.sheets({ version: "v4", auth });
     return sheetsClient;
   } catch (error) {
     logger.error("google_sheets_auth_failed", {
@@ -97,48 +86,33 @@ async function getSheetsClient(): Promise<sheets_v4.Sheets | null> {
   }
 }
 
-async function resolveTabSheetId(sheets: sheets_v4.Sheets): Promise<number | null> {
-  if (cachedSheetId != null) return cachedSheetId;
-  const meta = await sheets.spreadsheets.get({
-    spreadsheetId: spreadsheetId(),
-    fields: "sheets.properties",
-  });
-  const wanted = tabName();
-  for (const s of meta.data.sheets ?? []) {
-    const title = s.properties?.title ?? "";
-    if (title === wanted) {
-      const id = s.properties?.sheetId;
-      if (typeof id === "number") {
-        cachedSheetId = id;
-        return id;
-      }
-    }
-  }
-  logger.error("google_sheets_tab_not_found", { tab: wanted });
-  return null;
-}
-
 function matchSlot(
   matches: SheetSessionRow["matches"],
   index: number,
 ): [string, number | "", string] {
   const m = matches[index];
-  if (!m) return ["\u2014", "", "\u2014"];
+  if (!m) return ["—", "", "—"];
   return [m.code, m.score / 100, m.label];
 }
 
-function buildDataRow(session: SheetSessionRow): (string | number)[] {
+/** Build one data row. Column order must match the header map in the file comment. */
+function buildDataRow(session: SheetSessionRow, profileNumber: number): (string | number)[] {
   const [c1, s1, l1] = matchSlot(session.matches, 0);
   const [c2, s2, l2] = matchSlot(session.matches, 1);
   const [c3, s3, l3] = matchSlot(session.matches, 2);
+  const [r1, r2, r3] = session.riasecFullNames;
   return [
+    profileNumber,
     session.evaluationId,
     session.submittedAt,
     session.fullName,
     session.bacStream,
     session.technicalOption,
+    r1,
+    r2,
+    r3,
     session.overallMark,
-    session.preferredSpecialtyCode || "\u2014",
+    session.preferredSpecialtyCode || "—",
     c1,
     s1,
     l1,
@@ -151,231 +125,10 @@ function buildDataRow(session: SheetSessionRow): (string | number)[] {
   ];
 }
 
-async function listBandedRangeIds(
-  sheets: sheets_v4.Sheets,
-  sheetId: number,
-): Promise<number[]> {
-  const meta = await sheets.spreadsheets.get({
-    spreadsheetId: spreadsheetId(),
-    fields: "sheets.properties.sheetId,sheets.bandedRanges",
-  });
-  const ids: number[] = [];
-  for (const s of meta.data.sheets ?? []) {
-    if (s.properties?.sheetId !== sheetId) continue;
-    for (const b of s.bandedRanges ?? []) {
-      if (typeof b.bandedRangeId === "number") ids.push(b.bandedRangeId);
-    }
-  }
-  return ids;
-}
-
 /**
- * Full styling pass \u2014 every resync:
- * delete stale bands \u2192 wipe body formats \u2192 header/body/percent/widths/banding \u2192 preference brass.
+ * Rebuild data rows only (from row 2).
+ * Does not touch row 1. Does not call any formatting APIs.
  */
-async function applyFullSheetStyle(
-  sheets: sheets_v4.Sheets,
-  sheetId: number,
-  sessions: SheetSessionRow[],
-): Promise<void> {
-  const dataRows = sessions.length;
-  const bodyEnd = Math.max(dataRows + 1, 2);
-  const requests: sheets_v4.Schema$Request[] = [];
-
-  try {
-    const bandIds = await listBandedRangeIds(sheets, sheetId);
-    for (const bandedRangeId of bandIds) {
-      requests.push({ deleteBanding: { bandedRangeId } });
-    }
-  } catch (error) {
-    logger.warn("google_sheets_list_bands_failed", {
-      err: error instanceof Error ? error.message : String(error),
-    });
-  }
-
-  requests.push({
-    repeatCell: {
-      range: {
-        sheetId,
-        startRowIndex: 1,
-        endRowIndex: FORMAT_CEILING,
-        startColumnIndex: 0,
-        endColumnIndex: COL_COUNT,
-      },
-      cell: { userEnteredFormat: {} },
-      fields: "userEnteredFormat",
-    },
-  });
-
-  requests.push({
-    updateSheetProperties: {
-      properties: {
-        sheetId,
-        gridProperties: { frozenRowCount: 1 },
-      },
-      fields: "gridProperties.frozenRowCount",
-    },
-  });
-
-  requests.push({
-    repeatCell: {
-      range: {
-        sheetId,
-        startRowIndex: 0,
-        endRowIndex: 1,
-        startColumnIndex: 0,
-        endColumnIndex: COL_COUNT,
-      },
-      cell: {
-        userEnteredFormat: {
-          backgroundColor: HEADER_BG,
-          textFormat: {
-            foregroundColor: HEADER_FG,
-            bold: true,
-            fontFamily: "Google Sans",
-            fontSize: 11,
-          },
-          horizontalAlignment: "CENTER",
-          verticalAlignment: "MIDDLE",
-          wrapStrategy: "WRAP",
-        },
-      },
-      fields:
-        "userEnteredFormat(backgroundColor,textFormat,horizontalAlignment,verticalAlignment,wrapStrategy)",
-    },
-  });
-
-  requests.push({
-    updateDimensionProperties: {
-      range: { sheetId, dimension: "ROWS", startIndex: 0, endIndex: 1 },
-      properties: { pixelSize: 36 },
-      fields: "pixelSize",
-    },
-  });
-
-  if (dataRows > 0) {
-    requests.push({
-      repeatCell: {
-        range: {
-          sheetId,
-          startRowIndex: 1,
-          endRowIndex: bodyEnd,
-          startColumnIndex: 0,
-          endColumnIndex: COL_COUNT,
-        },
-        cell: {
-          userEnteredFormat: {
-            textFormat: {
-              foregroundColor: BODY_FG,
-              fontFamily: "Google Sans",
-              fontSize: 10,
-              bold: false,
-            },
-            verticalAlignment: "MIDDLE",
-          },
-        },
-        fields: "userEnteredFormat(textFormat,verticalAlignment)",
-      },
-    });
-
-    for (const col of [8, 11, 14]) {
-      requests.push({
-        repeatCell: {
-          range: {
-            sheetId,
-            startRowIndex: 1,
-            endRowIndex: bodyEnd,
-            startColumnIndex: col,
-            endColumnIndex: col + 1,
-          },
-          cell: {
-            userEnteredFormat: {
-              numberFormat: { type: "PERCENT", pattern: "0.0%" },
-              textFormat: { foregroundColor: BODY_FG },
-            },
-          },
-          fields: "userEnteredFormat(numberFormat,textFormat)",
-        },
-      });
-    }
-  }
-
-  for (let i = 0; i < COLUMN_WIDTHS.length; i++) {
-    const width = COLUMN_WIDTHS[i] ?? 120;
-    requests.push({
-      updateDimensionProperties: {
-        range: {
-          sheetId,
-          dimension: "COLUMNS",
-          startIndex: i,
-          endIndex: i + 1,
-        },
-        properties: { pixelSize: width },
-        fields: "pixelSize",
-      },
-    });
-  }
-
-  const bandEnd = Math.max(bodyEnd, 50);
-  requests.push({
-    addBanding: {
-      bandedRange: {
-        range: {
-          sheetId,
-          startRowIndex: 0,
-          endRowIndex: bandEnd,
-          startColumnIndex: 0,
-          endColumnIndex: COL_COUNT,
-        },
-        rowProperties: {
-          headerColor: HEADER_BG,
-          firstBandColor: ZEBRA_1,
-          secondBandColor: ZEBRA_2,
-        },
-      },
-    },
-  });
-
-  sessions.forEach((s, i) => {
-    const top = s.matches[0]?.code;
-    if (!top || !s.preferredSpecialtyCode || s.preferredSpecialtyCode === "\u2014") return;
-    if (s.preferredSpecialtyCode !== top) return;
-    const rowIndex = i + 1;
-    requests.push({
-      repeatCell: {
-        range: {
-          sheetId,
-          startRowIndex: rowIndex,
-          endRowIndex: rowIndex + 1,
-          startColumnIndex: 6,
-          endColumnIndex: 8,
-        },
-        cell: {
-          userEnteredFormat: {
-            backgroundColor: BRASS_HL,
-            textFormat: { bold: true, foregroundColor: BODY_FG },
-          },
-        },
-        fields: "userEnteredFormat(backgroundColor,textFormat)",
-      },
-    });
-  });
-
-  try {
-    const chunkSize = 40;
-    for (let i = 0; i < requests.length; i += chunkSize) {
-      await sheets.spreadsheets.batchUpdate({
-        spreadsheetId: spreadsheetId(),
-        requestBody: { requests: requests.slice(i, i + chunkSize) },
-      });
-    }
-  } catch (error) {
-    logger.error("google_sheets_style_failed", {
-      err: error instanceof Error ? error.message : String(error),
-    });
-  }
-}
-
 export async function fullResyncToSheet(): Promise<void> {
   if (!isConfigured()) return;
   if (resyncInFlight) {
@@ -389,21 +142,12 @@ export async function fullResyncToSheet(): Promise<void> {
     if (!sheets) return;
 
     const sessions = listAllSessionsForSheet();
-    const rows = sessions.map(buildDataRow);
+    const rows = sessions.map((session, index) => buildDataRow(session, index + 1));
     const tab = tabName();
-    const sheetId = await resolveTabSheetId(sheets);
-    if (sheetId == null) return;
-
-    await sheets.spreadsheets.values.update({
-      spreadsheetId: spreadsheetId(),
-      range: `${tab}!A1`,
-      valueInputOption: "USER_ENTERED",
-      requestBody: { values: [Array.from(HEADER_ROW)] },
-    });
 
     await sheets.spreadsheets.values.clear({
       spreadsheetId: spreadsheetId(),
-      range: `${tab}!A2:P`,
+      range: `${tab}!${DATA_RANGE}`,
     });
 
     if (rows.length > 0) {
@@ -415,12 +159,11 @@ export async function fullResyncToSheet(): Promise<void> {
       });
     }
 
-    await applyFullSheetStyle(sheets, sheetId, sessions);
-
     logger.info("google_sheets_resync_ok", {
       rows: rows.length,
       spreadsheetId: spreadsheetId(),
       tab,
+      mode: "data_only",
     });
   } catch (error) {
     logger.error("google_sheets_resync_failed", {
