@@ -224,6 +224,16 @@ export interface AnalyticsDashboard {
     count: number;
   }>;
   scoreBuckets: Array<{ key: string; label: string; count: number }>;
+  byMatchLabel?: Array<{ key: string; label: string; count: number }>;
+  dataQuality?: {
+    neverRankedSpecialtyCodes?: string[];
+    highScoreSessions?: number;
+    lowScoreSessions?: number;
+    averageFinalScore?: number | null;
+    averageOverallBac?: number | null;
+    sessionsMissingRiasec?: number;
+  };
+  filters?: Record<string, unknown>;
 }
 
 export const LABEL_STYLES: Record<MatchLabel, string> = {
